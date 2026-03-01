@@ -42,6 +42,33 @@ skills_repo_ready() {
   find ".agents/skills" -name "SKILL.md" -type f | grep -q .
 }
 
+recover_skills_submodule() {
+  if ! command -v git >/dev/null 2>&1; then
+    warn "git not found; cannot auto-recover Repo-B skills submodule."
+    return 1
+  fi
+  if [[ ! -f ".gitmodules" ]]; then
+    warn ".gitmodules not found; cannot auto-recover Repo-B skills submodule."
+    return 1
+  fi
+  if ! grep -q 'path = .agents/skills' .gitmodules; then
+    warn ".gitmodules has no .agents/skills entry; cannot auto-recover Repo-B skills."
+    return 1
+  fi
+
+  log "Repo-B skills are missing; attempting submodule recovery (.agents/skills)"
+  if ! git submodule update --init --recursive .agents/skills; then
+    warn "submodule recovery command failed for .agents/skills"
+    return 1
+  fi
+  if ! skills_repo_ready; then
+    warn "submodule recovery completed but .agents/skills still lacks SKILL.md files"
+    return 1
+  fi
+  log "Repo-B skills recovered successfully"
+  return 0
+}
+
 load_real_agent_cmd() {
   if [[ -n "$REAL_AGENT_CMD" ]]; then
     return 0
@@ -186,7 +213,7 @@ log "verifying pinned Python deps"
 
 log "checking Repo-B skills mount (.agents/skills)"
 if ! skills_repo_ready; then
-  fail "missing .agents/skills SKILL.md files. Initialize Repo-B skills first (recommended: git submodule update --init --recursive)."
+  recover_skills_submodule || fail "missing .agents/skills SKILL.md files after auto-recovery attempt. Run: git submodule update --init --recursive .agents/skills"
 fi
 
 if [[ "$SKIP_GIT_HOOKS" -eq 0 ]]; then

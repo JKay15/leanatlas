@@ -4,6 +4,7 @@
 Fail conditions:
 - missing `--skip-lean-warmup` option
 - missing Repo-B skills readiness check
+- missing Repo-B skills auto-recovery check
 - missing importGraph dependency check
 - missing Lean warmup commands (`lake build LeanAtlas`, `lake lint`)
 """
@@ -32,9 +33,15 @@ def main() -> int:
 
     _require("--skip-lean-warmup" in text, "missing --skip-lean-warmup option", errors)
     _require("skills_repo_ready()" in text, "missing skills_repo_ready function", errors)
+    _require("recover_skills_submodule()" in text, "missing recover_skills_submodule function", errors)
     _require(
-        'missing .agents/skills SKILL.md files' in text,
-        "missing hard failure message for absent Repo-B skills",
+        "git submodule update --init --recursive .agents/skills" in text,
+        "missing Repo-B skills submodule recovery command",
+        errors,
+    )
+    _require(
+        "missing .agents/skills SKILL.md files after auto-recovery attempt" in text,
+        "missing hard failure message after Repo-B skills auto-recovery",
         errors,
     )
     _require(
@@ -58,4 +65,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

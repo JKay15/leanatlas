@@ -30,6 +30,7 @@ bash scripts/bootstrap.sh
 Notes:
 - The script syncs Python from `uv.lock`, validates dependency pins, warms Lean dependencies, and verifies `lean-lsp-mcp`.
 - Bootstrap also verifies Repo-B skills are mounted (`.agents/skills/**`) and runs Lean warmup gates:
+  - if skills are missing, bootstrap auto-runs `git submodule update --init --recursive .agents/skills`
   - `importGraph` package presence check
   - `lake build LeanAtlas`
   - `lake lint`

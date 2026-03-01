@@ -20,6 +20,9 @@ If you already cloned without submodules:
 git submodule update --init --recursive
 ```
 
+Bootstrap also includes an auto-recovery attempt for missing `.agents/skills`:
+- `git submodule update --init --recursive .agents/skills`
+
 ## Start here (Codex users)
 - Read `AGENTS.md` (repo root).
 - See `docs/agents/README.md` for how instructions and ExecPlans are organized.
