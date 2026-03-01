@@ -28,6 +28,7 @@ REQUIRED_FILES = [
   SETUP / "TEST_ENV_INVENTORY.md",
   EXT / "lean-lsp-mcp.md",
   EXT / "domain-mcp.md",
+  EXT / "pre-commit.md",
   EXT / "ripgrep.md",
 ]
 
@@ -79,6 +80,8 @@ def main() -> int:
     return die("QUICKSTART.md must include uv fallback command for core tests")
   if "LEANATLAS_REAL_AGENT_CMD" not in quickstart:
     return die("QUICKSTART.md must explain LEANATLAS_REAL_AGENT_CMD setup for Phase6 real-agent checks")
+  if "scripts/install_repo_git_hooks.sh" not in quickstart:
+    return die("QUICKSTART.md must explain repo-local git hook installer usage")
   if "TLS" not in quickstart and "handshake" not in quickstart:
     return die("QUICKSTART.md must document TLS/handshake fallback behavior")
 

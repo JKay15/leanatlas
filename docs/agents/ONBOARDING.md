@@ -93,6 +93,7 @@ On first prompt, Codex should:
 4) If the user chooses A or B:
    - execute only missing steps using repo Python policy
    - ensure Repo-B skills are mounted (`.agents/skills/**`)
+   - install repo-local git discipline hooks (`bash scripts/install_repo_git_hooks.sh`)
    - run Lean warmup verification (`importGraph` check + `lake build LeanAtlas` + `lake lint`)
    - keep diffs minimal
    - write the state file

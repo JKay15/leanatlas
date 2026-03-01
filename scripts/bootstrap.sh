@@ -8,6 +8,7 @@ SKIP_LAKE_UPDATE=0
 SKIP_LEAN_WARMUP=0
 SKIP_MCP=0
 SKIP_UV_SYNC=0
+SKIP_GIT_HOOKS=0
 FORCE_UV_SYNC=0
 DOMAIN_MCP_FROM="${LEANATLAS_DOMAIN_MCP_UVX_FROM:-}"
 DOMAIN_MCP_CMD="${LEANATLAS_DOMAIN_MCP_COMMAND:-}"
@@ -24,6 +25,7 @@ Options:
   --skip-lean-warmup         Skip Lean warmup checks (`importGraph` + `lake build` + `lake lint`)
   --skip-mcp                 Skip MCP smoke installation checks
   --skip-uv-sync             Skip `uv sync --locked` (requires existing .venv)
+  --skip-git-hooks           Skip repo-local git hook installation
   --force-uv-sync            Force `uv sync --locked` even when .venv already looks healthy
   --domain-mcp-from <spec>   Override domain MCP uvx source (also via LEANATLAS_DOMAIN_MCP_UVX_FROM)
   --domain-mcp-cmd <name>    Override domain MCP command name (default: domain-mcp)
@@ -107,6 +109,10 @@ while (($# > 0)); do
       SKIP_UV_SYNC=1
       shift
       ;;
+    --skip-git-hooks)
+      SKIP_GIT_HOOKS=1
+      shift
+      ;;
     --force-uv-sync)
       FORCE_UV_SYNC=1
       shift
@@ -145,9 +151,10 @@ venv_ready() {
   [[ -x "$PY_BIN" ]] || return 1
   "$PY_BIN" - <<'PY' >/dev/null 2>&1
 import importlib
-for mod in ("yaml", "jsonschema", "drain3"):
+for mod in ("yaml", "jsonschema", "drain3", "pre_commit"):
   importlib.import_module(mod)
 PY
+  [[ -x ".venv/bin/pre-commit" ]] || return 1
 }
 
 if [[ "$SKIP_UV_SYNC" -eq 0 ]]; then
@@ -180,6 +187,13 @@ log "verifying pinned Python deps"
 log "checking Repo-B skills mount (.agents/skills)"
 if ! skills_repo_ready; then
   fail "missing .agents/skills SKILL.md files. Initialize Repo-B skills first (recommended: git submodule update --init --recursive)."
+fi
+
+if [[ "$SKIP_GIT_HOOKS" -eq 0 ]]; then
+  log "installing repo-local git discipline hooks"
+  bash scripts/install_repo_git_hooks.sh
+else
+  log "skip git hook installation by user request"
 fi
 
 log "checking Lean toolchain"

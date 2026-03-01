@@ -130,6 +130,13 @@ else
   "$PY_BIN" tests/setup/deps_smoke.py
 fi
 
+log "verifying repo-local git hooks"
+if ! "$PY_BIN" tools/onboarding/verify_git_hooks.py >/dev/null 2>&1; then
+  warn "git hooks missing or stale; reinstalling repo-local hooks"
+  bash scripts/install_repo_git_hooks.sh
+fi
+"$PY_BIN" tools/onboarding/verify_git_hooks.py
+
 read -r LSP_UVX_FROM LSP_CMD < <("$PY_BIN" - <<'PY'
 import json
 from pathlib import Path

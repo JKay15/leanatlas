@@ -53,6 +53,7 @@ Verification:
 ```bash
 uv run --locked python -c "import importlib.metadata as m; print('jsonschema', m.version('jsonschema')); print('PyYAML', m.version('PyYAML'))"
 uv run --locked python -c "import importlib.metadata as m; print('drain3', m.version('drain3'))"
+uv run --locked python -c "import importlib.metadata as m; print('pre-commit', m.version('pre-commit'))"
 uv run --locked python tests/run.py --profile core
 ```
 
@@ -63,6 +64,15 @@ Runtime command policy:
 
 Notes:
 - If integrating with legacy tools needing `requirements.txt`, export from `uv.lock` when needed, but `requirements.txt` is not the source of truth.
+- Repo-local git hook gates use pre-commit from `.venv`; no Codex global skill install is required.
+
+### B.1) pre-commit (repo-local git hooks)
+- Purpose: enforce commit message + branch policy locally before push.
+- Version pin: `tools/deps/pins.json` (`dependencies.pre_commit.pin.version`), mirrored in `pyproject.toml` + `uv.lock`.
+- Install/verify:
+  - `docs/setup/external/pre-commit.md`
+  - `bash scripts/install_repo_git_hooks.sh`
+  - `bash scripts/install_repo_git_hooks.sh --check`
 
 ---
 
@@ -105,6 +115,6 @@ For a deterministic, source-scanned inventory of everything referenced in test c
 - `tests/contract/check_test_env_inventory_up_to_date.py` (gate)
 
 This inventory covers:
-- external commands used by tests/runners (`lake`, `uv`, `uvx`, `bash`, `codex`, `domain-mcp`, `rg`, `python`, `git`)
-- third-party Python modules used by tests/runners (`jsonschema`, `yaml`, `drain3`)
+- external commands used by tests/runners (`lake`, `uv`, `uvx`, `bash`, `codex`, `domain-mcp`, `rg`, `python`, `pre-commit`, `git`)
+- third-party Python modules used by tests/runners (`jsonschema`, `yaml`, `drain3`, `pre_commit`)
 - `LEANATLAS_*` environment variables consumed by test/runners

@@ -28,6 +28,7 @@ Tiers are inclusive: higher tiers include lower ones.
 | `attemptlog_jsonl` | `phase1` | `reports,attemptlog` | 10 | Ensure AttemptLog.jsonl exists in examples and every line validates against schema. | `./.venv/bin/python tests/contract/check_attemptlog_jsonl.py` |
 | `automation_dry_runs` | `crosscutting` | `automation,tdd` | 30 | Execute dry-runs for active/core automations (TDD for background advisor runs). | `./.venv/bin/python tests/automation/run_dry_runs.py` |
 | `automation_registry` | `crosscutting` | `automation,registry` | 10 | Validate automations/registry.json against schema and contract. | `./.venv/bin/python tests/automation/validate_registry.py` |
+| `bootstrap_git_hooks_policy` | `crosscutting` | `setup,git,policy` | 5 | Enforce bootstrap/doctor repo-local git hook installation policy and required config artifacts. | `./.venv/bin/python tests/contract/check_bootstrap_git_hooks_policy.py` |
 | `bootstrap_lean_warmup_policy` | `crosscutting` | `setup,lean,policy` | 5 | Enforce bootstrap Lean warmup behavior: skills mount check + importGraph check + lake build/lint. | `./.venv/bin/python tests/contract/check_bootstrap_lean_warmup_policy.py` |
 | `bootstrap_venv_fallback_policy` | `crosscutting` | `setup,deps,policy` | 5 | Enforce bootstrap .venv-first behavior, offline uv-sync fallback, and explicit force-sync path. | `./.venv/bin/python tests/contract/check_bootstrap_venv_fallback_policy.py` |
 | `canonical_json` | `crosscutting` | `determinism,json` | 10 | Enforce canonical JSON formatting on committed truth sources (prevents noisy diffs). | `./.venv/bin/python tests/determinism/check_canonical_json.py` |
@@ -53,6 +54,7 @@ Tiers are inclusive: higher tiers include lower ones.
 | `file_index_reachability` | `crosscutting` | `agents,navigation,contracts` | 10 | Ensure root AGENTS links to a full file index and FILE_INDEX.md stays deterministic/up-to-date. | `./.venv/bin/python tests/contract/check_file_index_reachability.py` |
 | `gc_propose_reachability_mvp` | `phase3` | `gc,propose,reachability` | 10 | Ensure GCGate.propose is not a stub: stale unreachable seeds must trigger quarantine proposal (reachability MVP). | `./.venv/bin/python tests/contract/check_gc_propose_reachability_mvp.py` |
 | `gc_state_seed_ids` | `phase3` | `gc,identity` | 10 | Enforce gc_state seed_id uses Lean module names and maps to real .lean files. | `./.venv/bin/python tests/contract/check_gc_state_seed_ids.py` |
+| `git_policy_contracts` | `crosscutting` | `git,policy,contracts` | 5 | Validate repo-local git policy linters with deterministic valid/invalid samples. | `./.venv/bin/python tests/contract/check_git_policy_contracts.py` |
 | `hard_requirements_contract` | `crosscutting` | `docs,contracts` | 10 | Guardrail: HARD_REQUIREMENTS contract exists and includes required sections. | `./.venv/bin/python tests/contract/check_hard_requirements_contract.py` |
 | `judge_determinism` | `phase2` | `workflow,judge` | 10 | Enforce determinism of Judge decisions for identical evidence inputs. | `./.venv/bin/python tests/contract/check_judge_determinism.py` |
 | `kb_mining_suggestions` | `crosscutting` | `skills,kb,bench` | 10 | Mine KB growth suggestions from run artifacts (deterministic + stable). | `./.venv/bin/python tests/bench/check_kb_mining_suggestions.py` |
@@ -98,4 +100,3 @@ Tiers are inclusive: higher tiers include lower ones.
 ## Change rules (mandatory)
 - Add/move/delete a test script ⇒ must update `tests/manifest.json` and regenerate this matrix.
 - PR gate checks that this matrix matches the registry (mismatch = fail).
-

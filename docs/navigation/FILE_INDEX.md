@@ -39,6 +39,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `.agents/skills/leanatlas-skills-growth/SKILL.md`
 - `.gitignore`
 - `.gitmodules`
+- `.pre-commit-config.yaml`
 - `AGENTS.md`
 - `AGENTS.override.md`
 - `DOC_PACK_ID.json`
@@ -194,6 +195,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/setup/external/domain-mcp.md`
 - `docs/setup/external/lean-lsp-mcp.md`
 - `docs/setup/external/msc2020.md`
+- `docs/setup/external/pre-commit.md`
 - `docs/setup/external/ripgrep.md`
 - `docs/testing/E2E_CATALOG.md`
 - `docs/testing/MENTOR_KEYWORDS_CLASSIC_THEOREMS.md`
@@ -210,6 +212,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `scripts/clobber.sh`
 - `scripts/doctor.sh`
 - `scripts/import_edges_from_source.lean`
+- `scripts/install_repo_git_hooks.sh`
 - `scripts/lake_lint_driver.sh`
 - `scripts/lake_test_driver.sh`
 - `tests/AGENTS.md`
@@ -356,6 +359,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_attemptlog_jsonl.py`
 - `tests/contract/check_automation_closed_loops.py`
 - `tests/contract/check_automation_install_template_sync.py`
+- `tests/contract/check_bootstrap_git_hooks_policy.py`
 - `tests/contract/check_bootstrap_lean_warmup_policy.py`
 - `tests/contract/check_bootstrap_venv_fallback_policy.py`
 - `tests/contract/check_capability_manifests.py`
@@ -372,6 +376,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_force_deposit_policy.py`
 - `tests/contract/check_gc_propose_reachability_mvp.py`
 - `tests/contract/check_gc_state_seed_ids.py`
+- `tests/contract/check_git_policy_contracts.py`
 - `tests/contract/check_hard_requirements_contract.py`
 - `tests/contract/check_judge_determinism.py`
 - `tests/contract/check_manifest_completeness.py`
@@ -595,7 +600,10 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tools/mcp/README.md`
 - `tools/mcp/healthcheck.py`
 - `tools/module_graph/edges_to_dot.py`
+- `tools/onboarding/check_branch_name.py`
+- `tools/onboarding/check_commit_message.py`
 - `tools/onboarding/finalize_onboarding.py`
+- `tools/onboarding/verify_git_hooks.py`
 - `tools/problem_state/reconcile.py`
 - `tools/promote/README.md`
 - `tools/promote/fixtures/plan_minimal.json`
@@ -611,4 +619,3 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tools/workflow/run_cmd.py`
 - `tools/workflow/shared_cache.py`
 - `uv.lock`
-

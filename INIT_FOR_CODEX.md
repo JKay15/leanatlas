@@ -76,6 +76,20 @@ Pass when:
 
 If Step 0.5 already passed fully, Step 1 may be marked as "satisfied" and skipped.
 
+## Step 1.5 — Repo-local Git discipline hooks
+
+Run:
+
+```bash
+bash scripts/install_repo_git_hooks.sh
+bash scripts/install_repo_git_hooks.sh --check
+```
+
+Pass when:
+
+* hook installer succeeds,
+* `--check` reports `[git-hooks][PASS]`.
+
 ## Step 2 — Contract + schema suite (fast gate)
 
 Run:

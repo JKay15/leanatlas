@@ -68,6 +68,7 @@ KNOWN_COMMAND_ALLOW = {
     "lake",
     "python",
     "python3",
+    "pre-commit",
     "rg",
     "uv",
     "uvx",
@@ -238,6 +239,7 @@ def _render(cmds: DefaultDict[str, Set[str]], envs: DefaultDict[str, Set[str]], 
 
     role = {
         "python": "Primary runtime for all registered tests and tooling.",
+        "pre-commit": "Repo-local git hooks and commit/branch policy enforcement.",
         "uv": "Locked Python environment sync/check path.",
         "uvx": "Pinned external tool execution (MCP checks).",
         "lake": "Lean build/lint/test execution and cache warmup.",

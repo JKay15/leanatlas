@@ -82,6 +82,17 @@ def main() -> int:
       return die('uv sync --locked timed out')
     except subprocess.CalledProcessError as e:
       return die(f'uv sync --locked failed: {e}')
+
+    pre_commit_bin = ROOT / ".venv" / "bin" / "pre-commit"
+    if not pre_commit_bin.exists():
+      return die("STRICT requires .venv/bin/pre-commit (run uv sync --locked)")
+    print("[deps] STRICT mode enabled: checking repo-local pre-commit ...")
+    try:
+      subprocess.run([str(pre_commit_bin), "--version"], check=True, timeout=60, cwd=str(ROOT))
+    except subprocess.TimeoutExpired:
+      return die("pre-commit --version timed out")
+    except subprocess.CalledProcessError as e:
+      return die(f"pre-commit --version failed: {e}")
     print("[deps] STRICT mode enabled: running pinned lean-lsp-mcp --help ...")
     cmd = ["uvx", "--from", uvx_from, tool, "--help"]
     try:

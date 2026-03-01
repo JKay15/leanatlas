@@ -33,6 +33,10 @@ Notes:
   - `importGraph` package presence check
   - `lake build LeanAtlas`
   - `lake lint`
+- Bootstrap installs repo-local git hooks via `scripts/install_repo_git_hooks.sh`:
+  - `pre-commit` hook (basic hygiene checks)
+  - `commit-msg` hook (Conventional Commit policy)
+  - `pre-push` hook (branch naming policy)
 - If external Domain MCP is not configured, the script prints a warning and shows the fallback path.
 
 ## 2) One-shot health check
@@ -58,6 +62,9 @@ Notes:
 - Root `AGENTS.md` onboarding block is compacted automatically to reduce routine context usage.
 - The archived verbose onboarding text remains available at
   `docs/agents/archive/AGENTS_ONBOARDING_VERBOSE.md`.
+- Git hook policy can be repaired manually at any time:
+  - `bash scripts/install_repo_git_hooks.sh`
+  - `bash scripts/install_repo_git_hooks.sh --check`
 
 ## 3) Run core tests
 
@@ -97,6 +104,7 @@ After creating them in Codex App:
 
 - Missing `uv`/`uvx`: install via `docs/setup/external/lean-lsp-mcp.md`.
 - Missing `lake`: install Lean toolchain first (`lean-toolchain` is the source of truth).
+- Git hooks missing/stale: run `bash scripts/install_repo_git_hooks.sh`.
 - Domain MCP not installed: verify `tools/deps/pins.json` has `lean_domain_mcp.run.uvx_from`, or set `LEANATLAS_DOMAIN_MCP_UVX_FROM` and rerun bootstrap.
 - `LEANATLAS_REAL_AGENT_CMD` missing: rerun `bootstrap` or set it manually, for example:
   `export LEANATLAS_REAL_AGENT_CMD='codex exec - < "$LEANATLAS_EVAL_PROMPT"'`.

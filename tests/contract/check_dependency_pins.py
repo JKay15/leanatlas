@@ -23,6 +23,7 @@ UVLOCK = ROOT / "uv.lock"
 SETUP_DEPS = ROOT / "docs" / "setup" / "DEPENDENCIES.md"
 LSP_DOC = ROOT / "docs" / "setup" / "external" / "lean-lsp-mcp.md"
 DOMAIN_MCP_DOC = ROOT / "docs" / "setup" / "external" / "domain-mcp.md"
+PRE_COMMIT_DOC = ROOT / "docs" / "setup" / "external" / "pre-commit.md"
 LAKEFILE = ROOT / "lakefile.lean"
 
 BANNED_SUBSTRINGS = [
@@ -41,6 +42,7 @@ REQUIRED_DEP_IDS = [
   "python_uv_project",
   "uv",
   "ripgrep",
+  "pre_commit",
   "lean_lsp_mcp",
   "lean_domain_mcp",
 ]
@@ -109,6 +111,16 @@ def main() -> int:
   domain_cmd = domain.get("run", {}).get("command", "")
   if domain_cmd != "domain-mcp":
     return die(f"lean_domain_mcp.run.command must be 'domain-mcp', got: {domain_cmd!r}")
+
+  pre_commit = deps["pre_commit"]
+  pre_commit_ver = (pre_commit.get("pin", {}) or {}).get("version", "")
+  if not isinstance(pre_commit_ver, str) or not pre_commit_ver:
+    return die("pre_commit.pin.version must be a non-empty string")
+  if not re.fullmatch(r"\d+\.\d+\.\d+", pre_commit_ver):
+    return die(f"pre_commit.pin.version must look like X.Y.Z, got: {pre_commit_ver!r}")
+  pre_commit_cmd = pre_commit.get("run", {}).get("command", "")
+  if pre_commit_cmd != "pre-commit":
+    return die(f"pre_commit.run.command must be 'pre-commit', got: {pre_commit_cmd!r}")
 
   # Python tooling must follow uv project standard.
   if not PYPROJECT.exists():
@@ -187,6 +199,12 @@ def main() -> int:
   domain_text = DOMAIN_MCP_DOC.read_text(encoding="utf-8")
   if domain_commit not in domain_text:
     return die("domain-mcp install doc must contain the pinned commit SHA")
+
+  if not PRE_COMMIT_DOC.exists():
+    return die("Missing docs/setup/external/pre-commit.md")
+  pre_commit_text = PRE_COMMIT_DOC.read_text(encoding="utf-8")
+  if pre_commit_ver not in pre_commit_text:
+    return die("pre-commit install doc must contain the pinned version string")
 
   print("[deps.pins] OK")
   return 0

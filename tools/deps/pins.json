@@ -78,6 +78,20 @@
         "lake build"
       ]
     },
+    "pre_commit": {
+      "kind": "python_tool",
+      "notes": "Repo-local git hook runner for commit/branch policy enforcement.",
+      "pin": {
+        "version": "4.5.1"
+      },
+      "run": {
+        "command": "pre-commit"
+      },
+      "verify": [
+        "./.venv/bin/pre-commit --version",
+        "bash scripts/install_repo_git_hooks.sh --check"
+      ]
+    },
     "python": {
       "kind": "runtime",
       "min_version": "3.10",
@@ -90,7 +104,8 @@
       "direct_pins": {
         "PyYAML": "6.0.3",
         "drain3": "0.9.11",
-        "jsonschema": "4.26.0"
+        "jsonschema": "4.26.0",
+        "pre-commit": "4.5.1"
       },
       "files": [
         "pyproject.toml",

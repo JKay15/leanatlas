@@ -1541,6 +1541,49 @@
         "policy",
         "commands"
       ]
+    },
+    {
+      "area": [
+        "setup",
+        "git",
+        "policy"
+      ],
+      "goal": "Enforce bootstrap/doctor repo-local git hook installation policy and required config artifacts.",
+      "id": "bootstrap_git_hooks_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_bootstrap_git_hooks_policy.py",
+      "tags": [
+        "setup",
+        "git",
+        "policy",
+        "onboarding"
+      ]
+    },
+    {
+      "area": [
+        "git",
+        "policy",
+        "contracts"
+      ],
+      "goal": "Validate repo-local git policy linters with deterministic valid/invalid samples.",
+      "id": "git_policy_contracts",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_git_policy_contracts.py",
+      "tags": [
+        "git",
+        "policy",
+        "contracts"
+      ]
     }
   ],
   "version": "2"

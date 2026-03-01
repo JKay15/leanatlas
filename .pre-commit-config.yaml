@@ -1,0 +1,27 @@
+minimum_pre_commit_version: "4.0.0"
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-json
+
+  - repo: local
+    hooks:
+      - id: commit-msg-conventional
+        name: commit-msg conventional policy (LeanAtlas)
+        entry: python tools/onboarding/check_commit_message.py
+        language: system
+        stages: [commit-msg]
+        pass_filenames: true
+
+      - id: branch-name-policy
+        name: branch name policy (LeanAtlas)
+        entry: python tools/onboarding/check_branch_name.py
+        language: system
+        stages: [pre-push]
+        pass_filenames: false

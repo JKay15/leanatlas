@@ -36,7 +36,12 @@ def main() -> int:
 
     # Health probe contract
     _require("venv_ready()" in text, "missing venv_ready function", errors)
-    _require('for mod in ("yaml", "jsonschema", "drain3")' in text, "venv_ready must check yaml/jsonschema/drain3", errors)
+    _require(
+        'for mod in ("yaml", "jsonschema", "drain3", "pre_commit")' in text,
+        "venv_ready must check yaml/jsonschema/drain3/pre_commit",
+        errors,
+    )
+    _require('[[ -x ".venv/bin/pre-commit" ]]' in text, "venv_ready must verify .venv/bin/pre-commit exists", errors)
 
     # Redundant sync skip contract
     _require(

@@ -10,6 +10,7 @@ requires-python = ">=3.10"
 # PEP 735 dependency groups. uv treats `dev` specially and syncs it by default.
 dev = [
   "jsonschema==4.26.0",
+  "pre-commit==4.5.1",
   "PyYAML==6.0.3",
   # Log-template mining for deterministic Skills/KB growth triggers.
   # Pinned to avoid drift; see tools/deps/pins.json.
