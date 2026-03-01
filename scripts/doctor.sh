@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 DOMAIN_MCP_FROM="${LEANATLAS_DOMAIN_MCP_UVX_FROM:-}"
-DOMAIN_MCP_CMD="${LEANATLAS_DOMAIN_MCP_COMMAND:-domain-mcp}"
+DOMAIN_MCP_CMD="${LEANATLAS_DOMAIN_MCP_COMMAND:-}"
 STRICT="${LEANATLAS_STRICT_DEPS:-0}"
 REAL_AGENT_CMD="${LEANATLAS_REAL_AGENT_CMD:-}"
 ONBOARDING_DIR=".cache/leanatlas/onboarding"
@@ -138,6 +138,26 @@ d = pins["dependencies"]["lean_lsp_mcp"]
 print(d["run"]["uvx_from"], d["run"]["command"])
 PY
 )
+
+read -r PIN_DOMAIN_FROM PIN_DOMAIN_CMD < <("$PY_BIN" - <<'PY'
+import json
+from pathlib import Path
+pins = json.loads(Path("tools/deps/pins.json").read_text(encoding="utf-8"))
+d = pins["dependencies"].get("lean_domain_mcp", {})
+run = d.get("run", {})
+print(run.get("uvx_from", ""), run.get("command", "domain-mcp"))
+PY
+)
+
+if [[ -z "$DOMAIN_MCP_FROM" ]]; then
+  DOMAIN_MCP_FROM="$PIN_DOMAIN_FROM"
+fi
+if [[ -z "$DOMAIN_MCP_CMD" ]]; then
+  DOMAIN_MCP_CMD="$PIN_DOMAIN_CMD"
+fi
+if [[ -z "$DOMAIN_MCP_CMD" ]]; then
+  DOMAIN_MCP_CMD="domain-mcp"
+fi
 
 log "checking pinned lean-lsp-mcp command"
 uvx --from "$LSP_UVX_FROM" "$LSP_CMD" --help >/dev/null

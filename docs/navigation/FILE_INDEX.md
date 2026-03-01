@@ -13,7 +13,12 @@ Use this index only when detailed file-level discovery is needed; do not preload
 
 ## Indexed Files
 
+- `.agents/skills/.gitignore`
 - `.agents/skills/README.md`
+- `.agents/skills/docs/agents/kb/README.md`
+- `.agents/skills/docs/agents/kb/domain_prune_mistakes.md`
+- `.agents/skills/docs/agents/kb/lean_import_failures.md`
+- `.agents/skills/docs/agents/kb/triaged_patterns.md`
 - `.agents/skills/leanatlas-agent-eval/SKILL.md`
 - `.agents/skills/leanatlas-automations/SKILL.md`
 - `.agents/skills/leanatlas-automations/references/coverage.yaml`
@@ -33,6 +38,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `.agents/skills/leanatlas-run-workflow-tests/SKILL.md`
 - `.agents/skills/leanatlas-skills-growth/SKILL.md`
 - `.gitignore`
+- `.gitmodules`
 - `AGENTS.md`
 - `AGENTS.override.md`
 - `DOC_PACK_ID.json`

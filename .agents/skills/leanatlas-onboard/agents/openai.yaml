@@ -1,7 +1,0 @@
-interface:
-  display_name: LeanAtlas Onboarding
-  short_description: Welcome banner + consented repo initialization (env, contracts, core tests, automation prompts).
-  default_prompt: |
-    Run the LeanAtlas first-run onboarding flow.
-    Follow AGENTS.md and docs/agents/ONBOARDING.md.
-    Ask for explicit consent before any installs or file writes.

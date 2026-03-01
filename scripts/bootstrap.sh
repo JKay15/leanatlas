@@ -10,7 +10,7 @@ SKIP_MCP=0
 SKIP_UV_SYNC=0
 FORCE_UV_SYNC=0
 DOMAIN_MCP_FROM="${LEANATLAS_DOMAIN_MCP_UVX_FROM:-}"
-DOMAIN_MCP_CMD="${LEANATLAS_DOMAIN_MCP_COMMAND:-domain-mcp}"
+DOMAIN_MCP_CMD="${LEANATLAS_DOMAIN_MCP_COMMAND:-}"
 REAL_AGENT_CMD="${LEANATLAS_REAL_AGENT_CMD:-}"
 ONBOARDING_DIR=".cache/leanatlas/onboarding"
 REAL_AGENT_ENV_FILE="$ONBOARDING_DIR/real_agent_cmd.env"
@@ -220,6 +220,26 @@ print(d["run"]["uvx_from"], d["run"]["command"])
 PY
 )
 
+read -r PIN_DOMAIN_FROM PIN_DOMAIN_CMD < <("$PY_BIN" - <<'PY'
+import json
+from pathlib import Path
+pins = json.loads(Path("tools/deps/pins.json").read_text(encoding="utf-8"))
+d = pins["dependencies"].get("lean_domain_mcp", {})
+run = d.get("run", {})
+print(run.get("uvx_from", ""), run.get("command", "domain-mcp"))
+PY
+)
+
+if [[ -z "$DOMAIN_MCP_FROM" ]]; then
+  DOMAIN_MCP_FROM="$PIN_DOMAIN_FROM"
+fi
+if [[ -z "$DOMAIN_MCP_CMD" ]]; then
+  DOMAIN_MCP_CMD="$PIN_DOMAIN_CMD"
+fi
+if [[ -z "$DOMAIN_MCP_CMD" ]]; then
+  DOMAIN_MCP_CMD="domain-mcp"
+fi
+
 log "checking pinned lean-lsp-mcp"
 uvx --from "$LSP_UVX_FROM" "$LSP_CMD" --help >/dev/null
 
@@ -231,7 +251,7 @@ elif command -v "$DOMAIN_MCP_CMD" >/dev/null 2>&1; then
   "$DOMAIN_MCP_CMD" --smoke >/dev/null
 else
   warn "domain MCP external source not configured."
-  warn "Set LEANATLAS_DOMAIN_MCP_UVX_FROM and rerun bootstrap to install external domain MCP."
+  warn "Set LEANATLAS_DOMAIN_MCP_UVX_FROM (or add lean_domain_mcp pin in tools/deps/pins.json) and rerun bootstrap."
   warn "Fallback dev check: python tools/lean_domain_mcp/domain_mcp_server.py --msc2020-mini --smoke"
 fi
 

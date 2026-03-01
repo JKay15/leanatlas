@@ -19,10 +19,11 @@ Run at repo root:
 bash scripts/bootstrap.sh
 ```
 
-If your Domain MCP is hosted externally (recommended):
+Domain MCP pin is loaded from `tools/deps/pins.json` automatically.
+If you need to override it temporarily:
 
 ```bash
-export LEANATLAS_DOMAIN_MCP_UVX_FROM='git+https://github.com/ORG/DOMAIN_MCP_REPO@COMMIT_SHA'
+export LEANATLAS_DOMAIN_MCP_UVX_FROM='git+https://github.com/JKay15/lean-domain-mcp@291b0f453cfa2db6708671205fab792e465c574f'
 bash scripts/bootstrap.sh
 ```
 
@@ -96,7 +97,7 @@ After creating them in Codex App:
 
 - Missing `uv`/`uvx`: install via `docs/setup/external/lean-lsp-mcp.md`.
 - Missing `lake`: install Lean toolchain first (`lean-toolchain` is the source of truth).
-- Domain MCP not installed: set `LEANATLAS_DOMAIN_MCP_UVX_FROM` and rerun bootstrap.
+- Domain MCP not installed: verify `tools/deps/pins.json` has `lean_domain_mcp.run.uvx_from`, or set `LEANATLAS_DOMAIN_MCP_UVX_FROM` and rerun bootstrap.
 - `LEANATLAS_REAL_AGENT_CMD` missing: rerun `bootstrap` or set it manually, for example:
   `export LEANATLAS_REAL_AGENT_CMD='codex exec - < "$LEANATLAS_EVAL_PROMPT"'`.
 - `uv run --locked` fails with TLS/network handshake: if `./.venv/bin/python` already works, use local `.venv` commands and skip redundant sync; then fix proxy/network before forced resync.

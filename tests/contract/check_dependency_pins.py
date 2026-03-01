@@ -22,6 +22,7 @@ PYPROJECT = ROOT / "pyproject.toml"
 UVLOCK = ROOT / "uv.lock"
 SETUP_DEPS = ROOT / "docs" / "setup" / "DEPENDENCIES.md"
 LSP_DOC = ROOT / "docs" / "setup" / "external" / "lean-lsp-mcp.md"
+DOMAIN_MCP_DOC = ROOT / "docs" / "setup" / "external" / "domain-mcp.md"
 LAKEFILE = ROOT / "lakefile.lean"
 
 BANNED_SUBSTRINGS = [
@@ -41,6 +42,7 @@ REQUIRED_DEP_IDS = [
   "uv",
   "ripgrep",
   "lean_lsp_mcp",
+  "lean_domain_mcp",
 ]
 
 
@@ -96,6 +98,17 @@ def main() -> int:
   uvx_from = lsp.get("run", {}).get("uvx_from", "")
   if commit not in uvx_from:
     return die("lean_lsp_mcp.run.uvx_from must include the pinned commit SHA")
+
+  domain = deps["lean_domain_mcp"]
+  domain_commit = domain.get("pin", {}).get("commit", "")
+  if not re.fullmatch(r"[0-9a-f]{40}", domain_commit):
+    return die(f"lean_domain_mcp.pin.commit must be a 40-hex SHA, got: {domain_commit!r}")
+  domain_uvx_from = domain.get("run", {}).get("uvx_from", "")
+  if domain_commit not in domain_uvx_from:
+    return die("lean_domain_mcp.run.uvx_from must include the pinned commit SHA")
+  domain_cmd = domain.get("run", {}).get("command", "")
+  if domain_cmd != "domain-mcp":
+    return die(f"lean_domain_mcp.run.command must be 'domain-mcp', got: {domain_cmd!r}")
 
   # Python tooling must follow uv project standard.
   if not PYPROJECT.exists():
@@ -168,6 +181,12 @@ def main() -> int:
     return die("lean-lsp-mcp install doc must contain the pinned commit SHA")
   if tag not in lsp_text:
     return die("lean-lsp-mcp install doc must contain the pinned tag string")
+
+  if not DOMAIN_MCP_DOC.exists():
+    return die("Missing docs/setup/external/domain-mcp.md")
+  domain_text = DOMAIN_MCP_DOC.read_text(encoding="utf-8")
+  if domain_commit not in domain_text:
+    return die("domain-mcp install doc must contain the pinned commit SHA")
 
   print("[deps.pins] OK")
   return 0

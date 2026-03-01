@@ -16,6 +16,24 @@
         "lake exe graph --help"
       ]
     },
+    "lean_domain_mcp": {
+      "kind": "mcp_server",
+      "notes": "Repo C source pin for LeanAtlas Domain Ontology MCP.",
+      "pin": {
+        "commit": "291b0f453cfa2db6708671205fab792e465c574f"
+      },
+      "run": {
+        "command": "domain-mcp",
+        "uvx_from": "git+https://github.com/JKay15/lean-domain-mcp@291b0f453cfa2db6708671205fab792e465c574f"
+      },
+      "source": {
+        "type": "git",
+        "url": "https://github.com/JKay15/lean-domain-mcp"
+      },
+      "verify": [
+        "uvx --from git+https://github.com/JKay15/lean-domain-mcp@291b0f453cfa2db6708671205fab792e465c574f domain-mcp --smoke"
+      ]
+    },
     "lean_lsp_mcp": {
       "kind": "mcp_server",
       "notes": "Use commit pin by default to prevent uvx from pulling to drifting upstream versions.",
@@ -110,6 +128,6 @@
       ]
     }
   },
-  "updated_at": "2026-02-24",
+  "updated_at": "2026-03-01",
   "version": "1"
 }

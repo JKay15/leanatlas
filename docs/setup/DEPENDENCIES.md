@@ -68,12 +68,18 @@ Notes:
 
 ## 2) Strongly recommended (for MCP/retrieval/triage acceleration)
 
-### C) lean-lsp-mcp (MCP server)
+### C) lean-domain-mcp (Domain Ontology MCP, Repo C)
+- Purpose: domain routing / domain expansion / domain-root suggestions.
+- Version pin: `tools/deps/pins.json` (`dependencies.lean_domain_mcp.pin.commit`).
+- Source repo: `https://github.com/JKay15/lean-domain-mcp`
+- Install/verify: `docs/setup/external/domain-mcp.md`
+
+### D) lean-lsp-mcp (MCP server)
 - Purpose: Lean LSP diagnostics/code-actions/search/verify acceleration for proof loops.
 - Version pin: `tools/deps/pins.json` (commit pin by default).
 - Install/verify: `docs/setup/external/lean-lsp-mcp.md`
 
-### D) ripgrep (`rg`)
+### E) ripgrep (`rg`)
 - Purpose:
   - local search backend for `lean-lsp-mcp`
   - deterministic grep fallback when MCP is unavailable
@@ -83,7 +89,7 @@ Notes:
 
 ## 3) Optional (phase extensions)
 
-### E) SQLite (MSC2020 MCP / domain dictionary)
+### F) SQLite (MSC2020 MCP / domain dictionary)
 - Purpose: local storage/query for MSC2020/LOCAL domain dictionary.
 - Note: `lean-domain-mcp` is Repo C in the three-repo topology and is consumed via pinned install/submodule policy; `lean-lsp-mcp` remains external.
 - Interface contract: `docs/contracts/MCP_MSC2020_CONTRACT.md`

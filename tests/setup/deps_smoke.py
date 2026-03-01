@@ -55,8 +55,12 @@ def main() -> int:
   lsp = pins["dependencies"]["lean_lsp_mcp"]
   uvx_from = lsp["run"]["uvx_from"]
   tool = lsp["run"]["command"]
-  domain_cmd = os.environ.get("LEANATLAS_DOMAIN_MCP_COMMAND", "domain-mcp").strip() or "domain-mcp"
-  domain_from = os.environ.get("LEANATLAS_DOMAIN_MCP_UVX_FROM", "").strip()
+  domain = pins["dependencies"].get("lean_domain_mcp", {})
+  domain_run = domain.get("run", {}) if isinstance(domain, dict) else {}
+  pinned_domain_cmd = str(domain_run.get("command", "domain-mcp")).strip() or "domain-mcp"
+  pinned_domain_from = str(domain_run.get("uvx_from", "")).strip()
+  domain_cmd = os.environ.get("LEANATLAS_DOMAIN_MCP_COMMAND", pinned_domain_cmd).strip() or pinned_domain_cmd
+  domain_from = os.environ.get("LEANATLAS_DOMAIN_MCP_UVX_FROM", pinned_domain_from).strip()
 
   # Optional stronger checks (may require network on first run).
   strict = os.environ.get("LEANATLAS_STRICT_DEPS", "0") == "1"

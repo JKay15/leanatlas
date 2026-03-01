@@ -26,8 +26,12 @@ git submodule update --init --recursive
 
 Repo A expects:
 
-- Skills repo (Repo B): `.agents/skills/`
+- Skills repo (Repo B): `.agents/skills/` (git submodule)
 - Domain MCP repo (Repo C): installed during bootstrap from pinned ref; optional debug mountpoint `services/lean-domain-mcp/` as a pinned submodule.
+
+Current Repo B submodule source:
+- URL: `https://github.com/JKay15/leanatlas-skills.git`
+- Commit pin (from Repo A gitlink): `c6278464589f32fb1b5d9d4dd5ed42839982b4e4`
 
 Local Codex Home skills (for example under `$CODEX_HOME/skills` or `~/.codex/skills`) are machine-local tools and must not be committed to Repo A.
 
@@ -57,6 +61,12 @@ Example update flow:
 ```bash
 cd .agents/skills && git fetch && git checkout <NEW_COMMIT>
 cd ../.. && git status
+```
+
+Inspect pinned submodule commit from Repo A root:
+
+```bash
+git submodule status .agents/skills
 ```
 
 Then verify from Repo A root:

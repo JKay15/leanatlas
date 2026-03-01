@@ -28,13 +28,16 @@ From Repo A usage perspective, it is installed during clone/bootstrap from a pin
 
 You need:
 - Python >= 3.10 (see `tools/deps/pins.json`)
-- External source configured (`LEANATLAS_DOMAIN_MCP_UVX_FROM` recommended)
+- Pinned external source (from `tools/deps/pins.json`):
+  - repo: `https://github.com/JKay15/lean-domain-mcp`
+  - commit: `291b0f453cfa2db6708671205fab792e465c574f`
 - Run bootstrap
 
 Example:
 
 ```bash
-export LEANATLAS_DOMAIN_MCP_UVX_FROM='git+https://github.com/ORG/DOMAIN_MCP_REPO@COMMIT_SHA'
+# Optional override (bootstrap now defaults to the pinned source in pins.json).
+export LEANATLAS_DOMAIN_MCP_UVX_FROM='git+https://github.com/JKay15/lean-domain-mcp@291b0f453cfa2db6708671205fab792e465c574f'
 bash scripts/bootstrap.sh
 ```
 
@@ -45,13 +48,19 @@ bash scripts/bootstrap.sh
 Preferred external command check (command can be overridden by `LEANATLAS_DOMAIN_MCP_COMMAND`, default `domain-mcp`):
 
 ```bash
+uvx --from git+https://github.com/JKay15/lean-domain-mcp@291b0f453cfa2db6708671205fab792e465c574f domain-mcp --smoke
+```
+
+If `domain-mcp` is already installed in your environment:
+
+```bash
 domain-mcp --smoke
 ```
 
-During migration, if only repo-local dev server exists, temporary fallback is:
+For Repo C local development, fallback is:
 
 ```bash
-python tools/lean_domain_mcp/domain_mcp_server.py --msc2020-mini --smoke
+python -m lean_domain_mcp.domain_mcp_server --msc2020-mini --smoke
 ```
 
 Expected result: exit code 0 with health output.
