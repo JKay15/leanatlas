@@ -22,11 +22,13 @@
 <!-- ONBOARDING_BLOCK_START -->
 On first prompt in a fresh clone (missing `.cache/leanatlas/onboarding/state.json`),
 run `.agents/skills/leanatlas-onboard/SKILL.md` and `docs/agents/ONBOARDING.md` before any normal reply.
+Also route to onboarding when state exists but `operational_ready != true` or `steps.automations != "ok"`.
 
 Hard trigger rule:
 - This applies to any first user message, including greetings like `hi`.
 - Do not reply with a generic question before onboarding routing.
 - First response must be: banner + A/B/C consent menu.
+- Do not proceed with normal task execution until automation readiness is verified.
 
 The full long-form onboarding block is archived at:
 - `docs/agents/archive/AGENTS_ONBOARDING_VERBOSE.md`

@@ -17,11 +17,11 @@ It is not a separate CLI installer.
 What we can do reliably (repo-owned):
 
 * Print an ASCII logo / banner.
-* Detect whether onboarding has already been completed via a local state file.
+* Detect whether onboarding is environment-complete and operational-ready via a local state file.
 * Explain required environment pieces and why they matter.
 * Ask for explicit consent (a clear “YES/NO” interaction in chat).
 * Run initialization commands and produce artifacts.
-* Generate Codex App automation prompts and a robustness checklist.
+* Generate and drive Codex App automation installation from the repo checklist.
 
 What we cannot guarantee (app-owned UI features):
 
@@ -32,7 +32,7 @@ What we cannot guarantee (app-owned UI features):
 
 ## State file (first-run detection)
 
-Onboarding completion is recorded here (gitignored):
+Onboarding state is recorded here (gitignored):
 
 * `.cache/leanatlas/onboarding/state.json`
 
@@ -44,17 +44,21 @@ Minimal expected fields:
   "schema_version": "0.1.0",
   "completed": true,
   "completed_at": "2026-02-27T00:00:00Z",
+  "operational_ready": true,
+  "operational_ready_at": "2026-02-27T00:15:00Z",
   "steps": {
     "bootstrap": "ok",
     "doctor": "ok",
-    "real_agent_cmd": "ok"
+    "real_agent_cmd": "ok",
+    "automations": "ok"
   }
 }
 ```
 
 Notes:
 
-* This is not a security boundary; it’s a UX convenience.
+* `completed=true` means environment setup is done.
+* `operational_ready=true` means active automations are installed/verified and normal task work may proceed.
 * If a new version of the repo changes onboarding requirements, bump `schema_version`.
 
 ## The onboarding skill
@@ -79,7 +83,7 @@ Banner source of truth:
 On first prompt (any content, including a simple `hi`), Codex should:
 
 1) Read `.cache/leanatlas/onboarding/state.json`.
-2) If missing/outdated:
+2) If missing/outdated, or if `operational_ready != true`:
    - print the banner
    - show a 3-option consent menu:
      - **A)** “Python-only” (uv + .venv + core contracts)
@@ -102,12 +106,10 @@ On first prompt (any content, including a simple `hi`), Codex should:
 5) End with:
    - a short summary
    - where artifacts were written
-   - mandatory next step for full project operation: install all `status=active` automations in Codex App
+   - mandatory operational gate: install/verify all `status=active` automations in Codex App
    - what remains optional (for example: Phase6 real-agent eval)
 
-### Required post-onboarding step: install active automations in Codex App
-
-Onboarding is not fully complete until the user installs active automations in Codex App UI.
+### Required operational gate: install active automations in Codex App
 
 Codex must explicitly tell the user:
 
@@ -115,8 +117,15 @@ Codex must explicitly tell the user:
    - `docs/agents/AUTOMATIONS.md`
    - `automations/registry.json`
    - `docs/agents/templates/AUTOMATION_INSTALL_CHECKLIST.md`
-2) Create one Codex App automation per `status=active` registry entry.
-3) Manually trigger each once and confirm artifacts are written under `artifacts/**`.
+2) Generate one install block per active automation and present them in checklist order.
+3) Ask for per-item confirmation after each automation is created in Codex App UI.
+4) Manually trigger each once and verify artifacts under `artifacts/**`.
+5) Mark readiness only after verification succeeds:
+   - `./.venv/bin/python tools/onboarding/verify_automation_install.py --mark-done`
+
+Hard behavior rule:
+- If the automation gate is not complete, do not proceed with normal proof/maintainer tasks.
+- Reply with automation install/verification guidance until the gate passes.
 
 Current required set:
 - `nightly_reporting_integrity`

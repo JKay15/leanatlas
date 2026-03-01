@@ -5,7 +5,8 @@ Use this template immediately after onboarding `A` or `B` completes.
 Goal:
 - install all required active automations in Codex App UI,
 - avoid missing any closed-loop automation,
-- verify each automation writes artifacts to the expected location.
+- verify each automation writes artifacts to the expected location,
+- block normal project work until automation readiness is recorded.
 
 ## Source of truth
 
@@ -26,6 +27,7 @@ Rules:
 - Present blocks in the exact checklist order.
 - After each automation is created in Codex App UI, ask for a short "done" confirmation.
 - After all are created, ask me to manually trigger each once and verify artifact paths.
+- Do not ask me to author prompt text manually; generate full blocks directly.
 - Do not skip any active automation id.
 ```
 
@@ -54,3 +56,9 @@ After creating all eight automations, manually trigger each once and confirm:
 - `nightly_chat_feedback_deposition` -> `artifacts/feedback/chat_feedback/**`, `artifacts/feedback/ledger/**`, `artifacts/feedback/traceability/**`
 
 If any path is missing, keep the thread open and debug that automation before closing onboarding.
+
+After all paths are confirmed, mark onboarding automation readiness:
+
+```bash
+./.venv/bin/python tools/onboarding/verify_automation_install.py --mark-done
+```

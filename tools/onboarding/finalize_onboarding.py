@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Finalize onboarding state and compact AGENTS.md after full setup succeeds.
+"""Finalize onboarding state and compact AGENTS.md after environment setup succeeds.
 
 Contract:
-- `bootstrap` + `doctor` must both pass before onboarding is marked completed.
+- `bootstrap` + `doctor` + `real_agent_cmd` mark environment setup as completed.
+- Active automations must be installed/verified before onboarding is operationally ready.
 - Once completed, keep root AGENTS compact to reduce routine prompt context.
 - Preserve the verbose onboarding text in docs/agents/archive/ (committed, low-frequency).
 """
@@ -71,7 +72,7 @@ def main() -> int:
     ap.add_argument(
         "--step",
         required=True,
-        choices=["bootstrap", "doctor", "core_tests", "phase6_dummy", "real_agent_cmd"],
+        choices=["bootstrap", "doctor", "core_tests", "phase6_dummy", "real_agent_cmd", "automations"],
     )
     ap.add_argument("--repo-root", default=None, help="Override repository root (for tests)")
     ap.add_argument("--no-compact", action="store_true", help="Do not compact AGENTS.md even when completed")
@@ -100,9 +101,13 @@ def main() -> int:
         and steps.get("doctor") == "ok"
         and steps.get("real_agent_cmd") == "ok"
     )
+    operational_ready = bool(completed and steps.get("automations") == "ok")
     state["completed"] = bool(completed)
+    state["operational_ready"] = operational_ready
     if completed and not state.get("completed_at"):
         state["completed_at"] = _utc_now()
+    if operational_ready and not state.get("operational_ready_at"):
+        state["operational_ready_at"] = _utc_now()
 
     _write_json(state_path, state)
 
@@ -113,6 +118,7 @@ def main() -> int:
     print(
         "[onboarding] "
         f"step={args.step} completed={state.get('completed')} "
+        f"operational_ready={state.get('operational_ready')} "
         f"state={state_path.relative_to(repo_root)} compacted={compacted}"
     )
     return 0

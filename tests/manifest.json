@@ -59,6 +59,26 @@
     {
       "area": [
         "agent_eval",
+        "coverage"
+      ],
+      "goal": "Ensure Phase6 mentor keyword taskpack covers all required keywords (deterministic).",
+      "id": "agent_eval_pack_keyword_coverage",
+      "kind": "python_script",
+      "phase": [
+        "phase6"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/agent_eval/check_pack_keyword_coverage.py",
+      "tags": [
+        "agent_eval",
+        "coverage",
+        "phase6"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
         "e2e",
         "real_agent"
       ],
@@ -82,26 +102,6 @@
       "profile": "nightly",
       "runtime_budget_sec": 1800,
       "script": "tests/agent_eval/exec_pack_real_agent_nightly.py"
-    },
-    {
-      "area": [
-        "agent_eval",
-        "coverage"
-      ],
-      "goal": "Ensure Phase6 mentor keyword taskpack covers all required keywords (deterministic).",
-      "id": "agent_eval_pack_keyword_coverage",
-      "kind": "python_script",
-      "phase": [
-        "phase6"
-      ],
-      "profile": "core",
-      "runtime_budget_sec": 5,
-      "script": "tests/agent_eval/check_pack_keyword_coverage.py",
-      "tags": [
-        "agent_eval",
-        "coverage",
-        "phase6"
-      ]
     },
     {
       "area": [
@@ -457,18 +457,24 @@
     {
       "area": [
         "setup",
-        "deps",
+        "git",
         "policy"
       ],
-      "goal": "Enforce bootstrap .venv-first behavior, offline uv-sync fallback, and explicit force-sync path.",
-      "id": "bootstrap_venv_fallback_policy",
+      "goal": "Enforce bootstrap/doctor repo-local git hook installation policy and required config artifacts.",
+      "id": "bootstrap_git_hooks_policy",
       "kind": "python_script",
       "phase": [
         "crosscutting"
       ],
       "profile": "core",
       "runtime_budget_sec": 5,
-      "script": "tests/contract/check_bootstrap_venv_fallback_policy.py"
+      "script": "tests/contract/check_bootstrap_git_hooks_policy.py",
+      "tags": [
+        "setup",
+        "git",
+        "policy",
+        "onboarding"
+      ]
     },
     {
       "area": [
@@ -485,6 +491,22 @@
       "profile": "core",
       "runtime_budget_sec": 5,
       "script": "tests/contract/check_bootstrap_lean_warmup_policy.py"
+    },
+    {
+      "area": [
+        "setup",
+        "deps",
+        "policy"
+      ],
+      "goal": "Enforce bootstrap .venv-first behavior, offline uv-sync fallback, and explicit force-sync path.",
+      "id": "bootstrap_venv_fallback_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_bootstrap_venv_fallback_policy.py"
     },
     {
       "area": [
@@ -685,6 +707,38 @@
     },
     {
       "area": [
+        "testing",
+        "registry",
+        "assets"
+      ],
+      "goal": "Ensure tests/manifest.json fully registers executable YAML assets and wrapper expansions are exact.",
+      "id": "contract_manifest_completeness",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_manifest_completeness.py"
+    },
+    {
+      "area": [
+        "workflow",
+        "cache",
+        "contract"
+      ],
+      "goal": "Enforce shared Lake cache policy across runners and guard resume/fresh strategy drift.",
+      "id": "contract_shared_cache_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_shared_cache_policy.py"
+    },
+    {
+      "area": [
         "agents",
         "skills",
         "contract"
@@ -846,38 +900,6 @@
     {
       "area": [
         "e2e",
-        "execution",
-        "direct_runner"
-      ],
-      "expands": {
-        "cases": [
-          "core_budget_exhausted",
-          "core_name_notation",
-          "core_statement_false",
-          "core_tactic_failure",
-          "core_toolbox_consumer",
-          "core_tooling_failure",
-          "core_type_mismatch",
-          "smoke_missing_assumption",
-          "smoke_missing_import"
-        ]
-      },
-      "expands_spec": {
-        "kind": "e2e_cases_all"
-      },
-      "goal": "Soak-tier direct runner: execute all enabled E2E cases through tests/e2e/run_cases.py (not wrapper-only).",
-      "id": "e2e_run_cases_all",
-      "kind": "python_script",
-      "phase": [
-        "phase2"
-      ],
-      "profile": "soak",
-      "runtime_budget_sec": 2400,
-      "script": "tests/e2e/run_cases.py"
-    },
-    {
-      "area": [
-        "e2e",
         "execution"
       ],
       "expands": {
@@ -954,6 +976,38 @@
       "profile": "soak",
       "runtime_budget_sec": 900,
       "script": "tests/e2e/exec_scenarios_smoke.py"
+    },
+    {
+      "area": [
+        "e2e",
+        "execution",
+        "direct_runner"
+      ],
+      "expands": {
+        "cases": [
+          "core_budget_exhausted",
+          "core_name_notation",
+          "core_statement_false",
+          "core_tactic_failure",
+          "core_toolbox_consumer",
+          "core_tooling_failure",
+          "core_type_mismatch",
+          "smoke_missing_assumption",
+          "smoke_missing_import"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_cases_all"
+      },
+      "goal": "Soak-tier direct runner: execute all enabled E2E cases through tests/e2e/run_cases.py (not wrapper-only).",
+      "id": "e2e_run_cases_all",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 2400,
+      "script": "tests/e2e/run_cases.py"
     },
     {
       "area": [
@@ -1113,6 +1167,27 @@
     },
     {
       "area": [
+        "git",
+        "policy",
+        "contracts"
+      ],
+      "goal": "Validate repo-local git policy linters with deterministic valid/invalid samples.",
+      "id": "git_policy_contracts",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_git_policy_contracts.py",
+      "tags": [
+        "git",
+        "policy",
+        "contracts"
+      ]
+    },
+    {
+      "area": [
         "docs",
         "contracts"
       ],
@@ -1164,22 +1239,6 @@
     },
     {
       "area": [
-        "testing",
-        "registry",
-        "assets"
-      ],
-      "goal": "Ensure tests/manifest.json fully registers executable YAML assets and wrapper expansions are exact.",
-      "id": "contract_manifest_completeness",
-      "kind": "python_script",
-      "phase": [
-        "crosscutting"
-      ],
-      "profile": "core",
-      "runtime_budget_sec": 10,
-      "script": "tests/contract/check_manifest_completeness.py"
-    },
-    {
-      "area": [
         "docs",
         "memory"
       ],
@@ -1211,6 +1270,29 @@
       "tags": [
         "agents",
         "onboarding",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "agents",
+        "onboarding",
+        "automation",
+        "contracts"
+      ],
+      "goal": "Enforce hard automation readiness gate in onboarding docs/skill/AGENTS and require verification command.",
+      "id": "onboarding_automation_gate",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_onboarding_automation_gate.py",
+      "tags": [
+        "agents",
+        "onboarding",
+        "automation",
         "contract"
       ]
     },
@@ -1369,22 +1451,6 @@
     },
     {
       "area": [
-        "workflow",
-        "cache",
-        "contract"
-      ],
-      "goal": "Enforce shared Lake cache policy across runners and guard resume/fresh strategy drift.",
-      "id": "contract_shared_cache_policy",
-      "kind": "python_script",
-      "phase": [
-        "crosscutting"
-      ],
-      "profile": "core",
-      "runtime_budget_sec": 5,
-      "script": "tests/contract/check_shared_cache_policy.py"
-    },
-    {
-      "area": [
         "stress",
         "soak"
       ],
@@ -1456,6 +1522,52 @@
     },
     {
       "area": [
+        "setup",
+        "deps",
+        "inventory"
+      ],
+      "goal": "Ensure docs/setup/TEST_ENV_INVENTORY.md is up-to-date with deterministic source scan.",
+      "id": "test_env_inventory_up_to_date",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_test_env_inventory_up_to_date.py"
+    },
+    {
+      "area": [
+        "testing",
+        "matrix"
+      ],
+      "goal": "Ensure docs/testing/TEST_MATRIX.md is up-to-date with the registry (deterministic regen).",
+      "id": "test_matrix_up_to_date",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_test_matrix_up_to_date.py"
+    },
+    {
+      "area": [
+        "testing",
+        "registry"
+      ],
+      "goal": "Enforce that all test scripts are registered in tests/manifest.json with required metadata.",
+      "id": "test_registry",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_test_registry.py"
+    },
+    {
+      "area": [
         "bench",
         "telemetry",
         "tool_usage",
@@ -1478,52 +1590,6 @@
     },
     {
       "area": [
-        "testing",
-        "matrix"
-      ],
-      "goal": "Ensure docs/testing/TEST_MATRIX.md is up-to-date with the registry (deterministic regen).",
-      "id": "test_matrix_up_to_date",
-      "kind": "python_script",
-      "phase": [
-        "crosscutting"
-      ],
-      "profile": "core",
-      "runtime_budget_sec": 10,
-      "script": "tests/contract/check_test_matrix_up_to_date.py"
-    },
-    {
-      "area": [
-        "setup",
-        "deps",
-        "inventory"
-      ],
-      "goal": "Ensure docs/setup/TEST_ENV_INVENTORY.md is up-to-date with deterministic source scan.",
-      "id": "test_env_inventory_up_to_date",
-      "kind": "python_script",
-      "phase": [
-        "crosscutting"
-      ],
-      "profile": "core",
-      "runtime_budget_sec": 10,
-      "script": "tests/contract/check_test_env_inventory_up_to_date.py"
-    },
-    {
-      "area": [
-        "testing",
-        "registry"
-      ],
-      "goal": "Enforce that all test scripts are registered in tests/manifest.json with required metadata.",
-      "id": "test_registry",
-      "kind": "python_script",
-      "phase": [
-        "crosscutting"
-      ],
-      "profile": "core",
-      "runtime_budget_sec": 10,
-      "script": "tests/contract/check_test_registry.py"
-    },
-    {
-      "area": [
         "deps",
         "policy"
       ],
@@ -1540,49 +1606,6 @@
         "deps",
         "policy",
         "commands"
-      ]
-    },
-    {
-      "area": [
-        "setup",
-        "git",
-        "policy"
-      ],
-      "goal": "Enforce bootstrap/doctor repo-local git hook installation policy and required config artifacts.",
-      "id": "bootstrap_git_hooks_policy",
-      "kind": "python_script",
-      "phase": [
-        "crosscutting"
-      ],
-      "profile": "core",
-      "runtime_budget_sec": 5,
-      "script": "tests/contract/check_bootstrap_git_hooks_policy.py",
-      "tags": [
-        "setup",
-        "git",
-        "policy",
-        "onboarding"
-      ]
-    },
-    {
-      "area": [
-        "git",
-        "policy",
-        "contracts"
-      ],
-      "goal": "Validate repo-local git policy linters with deterministic valid/invalid samples.",
-      "id": "git_policy_contracts",
-      "kind": "python_script",
-      "phase": [
-        "crosscutting"
-      ],
-      "profile": "core",
-      "runtime_budget_sec": 5,
-      "script": "tests/contract/check_git_policy_contracts.py",
-      "tags": [
-        "git",
-        "policy",
-        "contracts"
       ]
     }
   ],

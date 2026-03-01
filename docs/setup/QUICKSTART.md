@@ -79,9 +79,10 @@ Fallback (only when `.venv` is not created yet):
 uv run --locked python tests/run.py --profile core
 ```
 
-## 4) Install Codex App automations (required for full project behavior)
+## 4) Install Codex App automations (hard operational gate)
 
-Environment setup alone is not enough. You must install active automations in Codex App UI.
+Environment setup alone is not enough. Active automations are mandatory for normal LeanAtlas operation.
+Until automation readiness is recorded, onboarding is environment-complete but operationally blocked.
 
 Source of truth:
 - `docs/agents/AUTOMATIONS.md`
@@ -100,6 +101,8 @@ Current required automations:
 After creating them in Codex App:
 - trigger each once manually,
 - verify outputs are written under `artifacts/**`.
+- mark readiness in onboarding state:
+  - `./.venv/bin/python tools/onboarding/verify_automation_install.py --mark-done`
 
 ## 5) Common issues
 

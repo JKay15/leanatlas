@@ -382,6 +382,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_manifest_completeness.py`
 - `tests/contract/check_memory_coverage_has_user_requirements.py`
 - `tests/contract/check_onboarding_agents_compaction.py`
+- `tests/contract/check_onboarding_automation_gate.py`
 - `tests/contract/check_patch_scope_policy.py`
 - `tests/contract/check_phase3_e2e_scenarios.py`
 - `tests/contract/check_problem_state_reconcile.py`
@@ -603,6 +604,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tools/onboarding/check_branch_name.py`
 - `tools/onboarding/check_commit_message.py`
 - `tools/onboarding/finalize_onboarding.py`
+- `tools/onboarding/verify_automation_install.py`
 - `tools/onboarding/verify_git_hooks.py`
 - `tools/problem_state/reconcile.py`
 - `tools/promote/README.md`

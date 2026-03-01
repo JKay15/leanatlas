@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Contract: onboarding completion must compact root AGENTS.md.
+"""Contract: onboarding environment completion must compact root AGENTS.md.
 
 Checks:
 1) archive docs exist (verbose + compact blocks)
 2) finalize script marks completion only after bootstrap+doctor+real_agent_cmd
+3) operational readiness requires the extra `automations` step
 3) finalize script rewrites AGENTS onboarding block to compact form
 """
 
@@ -66,6 +67,15 @@ def main() -> int:
         if not state.get("completed"):
             print("[onboarding.compaction][FAIL] completed=false after bootstrap+doctor+real_agent_cmd")
             return 2
+        if state.get("operational_ready"):
+            print("[onboarding.compaction][FAIL] operational_ready=true before automations step")
+            return 2
+
+        _run("automations", tmp_root)
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        if not state.get("operational_ready"):
+            print("[onboarding.compaction][FAIL] operational_ready=false after automations step")
+            return 2
 
         agents_text = (tmp_root / "AGENTS.md").read_text(encoding="utf-8")
         if START not in agents_text or END not in agents_text:
@@ -82,6 +92,15 @@ def main() -> int:
             return 2
         if "Do not reply with a generic question before onboarding routing." not in agents_text:
             print("[onboarding.compaction][FAIL] compact block missing generic-reply guard")
+            return 2
+        if "operational_ready != true" not in agents_text:
+            print("[onboarding.compaction][FAIL] compact block missing operational readiness gate")
+            return 2
+        if "steps.automations != \"ok\"" not in agents_text:
+            print("[onboarding.compaction][FAIL] compact block missing automations step gate")
+            return 2
+        if "Do not proceed with normal task execution until automation readiness is verified." not in agents_text:
+            print("[onboarding.compaction][FAIL] compact block missing automation blocking rule")
             return 2
 
     print("[onboarding.compaction] OK")

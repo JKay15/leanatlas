@@ -9,6 +9,7 @@ It is intentionally low-frequency and should not be preloaded during normal proo
 
 On the first user prompt in a fresh clone (missing `.cache/leanatlas/onboarding/state.json`),
 Codex must run a short onboarding flow before any normal reply (including when the user only says `hi`):
+If the state exists but `operational_ready != true` (or `steps.automations != "ok"`), route to the automation install gate before normal task work.
 
 1) Print the LeanAtlas banner:
 ```text
@@ -37,6 +38,11 @@ Codex must run a short onboarding flow before any normal reply (including when t
 - `bash scripts/bootstrap.sh`
 - `bash scripts/doctor.sh`
 - `python tests/run.py --profile core`
+- `python tools/onboarding/verify_automation_install.py --mark-done`
+
+Operational gate:
+- Environment setup completion alone is not enough.
+- Do not proceed with normal proof/maintainer tasks until automation readiness is recorded.
 
 Routing rule:
 - Use `.agents/skills/leanatlas-onboard/SKILL.md` as the first-run execution guide.

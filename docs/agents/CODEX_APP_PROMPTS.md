@@ -56,6 +56,8 @@ After I choose:
 - If C: do nothing and continue.
 
 Write onboarding state to .cache/leanatlas/onboarding/state.json.
+Then install/verify active automations and mark readiness:
+`.venv/bin/python tools/onboarding/verify_automation_install.py --mark-done`.
 ```
 
 ## Maintainer: "find missing requirements and implement"
@@ -159,29 +161,23 @@ Report:
 - Any missing required files.
 ```
 
-## Codex App Automations: generate an automation bundle
+## Codex App Automations: install required active automations
 
-Automations are configured in the Codex App UI, but you can use this prompt to generate a ready-to-paste bundle.
+Automations are configured in the Codex App UI. Use this prompt to drive installation of all active automations (no manual authoring by the user).
 
 ```text
-Create an "automation bundle" for this repo.
+Install all active Codex App automations for this repo.
 
 Inputs:
 - Read docs/agents/AUTOMATIONS.md and automations/registry.json.
 
 Outputs:
-- 3 automation definitions (smoke/core/nightly): each with a name, schedule suggestion, and a prompt body.
-- Each prompt must:
-  - bootstrap env if needed
-  - run the relevant commands
-  - summarize results
-  - archive artifacts under artifacts/automation_runs/<timestamp>/
-
-Also include a robustness checklist:
-- cold start
-- warm cache
-- missing .venv
-- flaky network
+- One install block per active automation id, in checklist order.
+- Each block must include name, schedule, cwd(s), and prompt body.
+- Ask for a short "done" confirmation after each item.
+- After all are created, ask for one manual trigger per automation.
+- Verify artifacts using:
+  `.venv/bin/python tools/onboarding/verify_automation_install.py --mark-done`
 
 Do not ask me to run commands.
 ```
