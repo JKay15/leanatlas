@@ -136,16 +136,19 @@ Pass when:
 
 This proves the runner + grader contract (paths, required files, hard gates).
 
-Run a single dummy pack attempt:
+Run:
 
 ```bash
-./.venv/bin/python tools/agent_eval/run_pack.py --mode dummy --limit 1
-./.venv/bin/python tools/agent_eval/grade_pack.py --latest
+./.venv/bin/python tests/agent_eval/check_pack_runner_and_grader_with_dummy_agent.py
 ```
 
 Pass when:
 
-* the grader reports `passed=true` for the dummy attempt.
+* the script prints `[OK] pack runner + grader dummy e2e`.
+
+This script runs the current CLI path:
+* `run_pack.py --pack ... --mode run --agent-cmd "python tools/agent_eval/dummy_agent.py"`
+* `grade_pack.py --eval-dir ...`
 
 Important:
 
@@ -156,8 +159,8 @@ Important:
 Run:
 
 ```bash
-./.venv/bin/python tools/agent_eval/run_pack.py --mode plan --limit 1
-./.venv/bin/python tools/agent_eval/run_scenario.py --mode plan --limit 1
+./.venv/bin/python tools/agent_eval/run_pack.py --pack tests/agent_eval/packs/core_smoke_dummy/pack.yaml --mode plan --limit 1
+./.venv/bin/python tools/agent_eval/run_scenario.py --scenario tests/agent_eval/scenarios/core_dummy_smoke_v0/scenario.yaml --mode plan
 ```
 
 Pass when:
@@ -202,19 +205,22 @@ Notes:
 Run:
 
 ```bash
+./.venv/bin/python tests/contract/check_file_index_reachability.py
 ./.venv/bin/python tests/contract/check_agents_navigation_coverage.py
 ./.venv/bin/python tests/contract/check_test_matrix_up_to_date.py
 ```
 
 Pass when:
 
+* file index reachability passes,
 * navigation coverage passes,
 * `docs/testing/TEST_MATRIX.md` is up to date.
 
-If the matrix is stale, regenerate it:
+If generated docs are stale, regenerate them:
 
 ```bash
-./.venv/bin/python tools/tests/generate_test_matrix.py > docs/testing/TEST_MATRIX.md
+./.venv/bin/python tools/docs/generate_file_index.py --write
+./.venv/bin/python tools/tests/generate_test_matrix.py --write
 ```
 
 ## Done state

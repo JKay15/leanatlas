@@ -1,4 +1,4 @@
-/--
+/-
 LeanAtlas root module.
 
 This repository is intentionally minimal: most “meat” lives in Problems/ and agent workflow tooling.
