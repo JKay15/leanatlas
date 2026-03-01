@@ -19,6 +19,7 @@
 ## 1) Dependency overview
 
 - Dependency summary: see `DEPENDENCIES.md`
+- Test-derived environment inventory (commands/env vars/modules): see `TEST_ENV_INVENTORY.md`
 - First run for new users: see `QUICKSTART.md`
 - One-click scripts: `scripts/bootstrap.sh`, `scripts/doctor.sh`
 - External tool installation details: see `external/`

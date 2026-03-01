@@ -92,6 +92,8 @@ On first prompt, Codex should:
    - if all checks pass, report that setup prerequisites are already satisfied and skip redundant install/update steps.
 4) If the user chooses A or B:
    - execute only missing steps using repo Python policy
+   - ensure Repo-B skills are mounted (`.agents/skills/**`)
+   - run Lean warmup verification (`importGraph` check + `lake build LeanAtlas` + `lake lint`)
    - keep diffs minimal
    - write the state file
    - once `bootstrap` + `doctor` + `real_agent_cmd` all pass, compact root `AGENTS.md` onboarding block

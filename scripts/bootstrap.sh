@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 SKIP_LAKE_UPDATE=0
+SKIP_LEAN_WARMUP=0
 SKIP_MCP=0
 SKIP_UV_SYNC=0
 FORCE_UV_SYNC=0
@@ -20,6 +21,7 @@ Usage: bash scripts/bootstrap.sh [options]
 
 Options:
   --skip-lake-update         Skip `lake update` warmup
+  --skip-lean-warmup         Skip Lean warmup checks (`importGraph` + `lake build` + `lake lint`)
   --skip-mcp                 Skip MCP smoke installation checks
   --skip-uv-sync             Skip `uv sync --locked` (requires existing .venv)
   --force-uv-sync            Force `uv sync --locked` even when .venv already looks healthy
@@ -32,6 +34,11 @@ USAGE
 log() { printf '[bootstrap] %s\n' "$*"; }
 warn() { printf '[bootstrap][WARN] %s\n' "$*"; }
 fail() { printf '[bootstrap][FAIL] %s\n' "$*" >&2; exit 2; }
+
+skills_repo_ready() {
+  [[ -d ".agents/skills" ]] || return 1
+  find ".agents/skills" -name "SKILL.md" -type f | grep -q .
+}
 
 load_real_agent_cmd() {
   if [[ -n "$REAL_AGENT_CMD" ]]; then
@@ -86,6 +93,10 @@ while (($# > 0)); do
   case "$1" in
     --skip-lake-update)
       SKIP_LAKE_UPDATE=1
+      shift
+      ;;
+    --skip-lean-warmup)
+      SKIP_LEAN_WARMUP=1
       shift
       ;;
     --skip-mcp)
@@ -166,6 +177,11 @@ fi
 log "verifying pinned Python deps"
 "$PY_BIN" tests/contract/check_dependency_pins.py
 
+log "checking Repo-B skills mount (.agents/skills)"
+if ! skills_repo_ready; then
+  fail "missing .agents/skills SKILL.md files. Initialize Repo-B skills first (recommended: git submodule update --init --recursive)."
+fi
+
 log "checking Lean toolchain"
 lake --version >/dev/null
 
@@ -174,6 +190,19 @@ if [[ "$SKIP_LAKE_UPDATE" -eq 0 ]]; then
   lake update
 else
   log "skip lake update by user request"
+fi
+
+if [[ "$SKIP_LEAN_WARMUP" -eq 0 ]]; then
+  log "verifying importGraph dependency"
+  [[ -d ".lake/packages/importGraph" ]] || fail "importGraph package is missing under .lake/packages/importGraph (run lake update)."
+
+  log "warming Lean build graph (lake build LeanAtlas)"
+  lake build LeanAtlas
+
+  log "running lake lint gate"
+  lake lint
+else
+  log "skip Lean warmup by user request"
 fi
 
 if [[ "$SKIP_MCP" -eq 1 ]]; then

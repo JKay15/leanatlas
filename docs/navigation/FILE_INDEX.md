@@ -156,6 +156,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/review/content_review_template.md`
 - `docs/review/file_mapping_template.md`
 - `docs/review/gptpro_full_rebuild_prompt.md`
+- `docs/review/gptpro_skill_discovery_prompt.md`
 - `docs/review/test_coverage_matrix_template.md`
 - `docs/schemas/AgentEvalReport.schema.json`
 - `docs/schemas/AgentEvalScenario.schema.json`
@@ -183,6 +184,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/setup/QUICKSTART.md`
 - `docs/setup/README.md`
 - `docs/setup/SUBMODULES.md`
+- `docs/setup/TEST_ENV_INVENTORY.md`
 - `docs/setup/external/domain-mcp.md`
 - `docs/setup/external/lean-lsp-mcp.md`
 - `docs/setup/external/msc2020.md`
@@ -348,6 +350,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_attemptlog_jsonl.py`
 - `tests/contract/check_automation_closed_loops.py`
 - `tests/contract/check_automation_install_template_sync.py`
+- `tests/contract/check_bootstrap_lean_warmup_policy.py`
 - `tests/contract/check_bootstrap_venv_fallback_policy.py`
 - `tests/contract/check_capability_manifests.py`
 - `tests/contract/check_chat_feedback_digest_policy.py`
@@ -380,6 +383,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_shared_cache_policy.py`
 - `tests/contract/check_skills_standard_headers.py`
 - `tests/contract/check_telemetry_collection_policy.py`
+- `tests/contract/check_test_env_inventory_up_to_date.py`
 - `tests/contract/check_test_matrix_up_to_date.py`
 - `tests/contract/check_test_registry.py`
 - `tests/contract/check_tool_usage_accounting_policy.py`
@@ -591,6 +595,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tools/promote/fixtures/plan_minimal.json`
 - `tools/promote/promote.py`
 - `tools/retrieval/domain_prune.py`
+- `tools/tests/generate_test_env_inventory.py`
 - `tools/tests/generate_test_matrix.py`
 - `tools/workflow/budgets.py`
 - `tools/workflow/env_stamp.py`

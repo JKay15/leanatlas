@@ -25,6 +25,7 @@ REQUIRED_FILES = [
   SETUP / "README.md",
   SETUP / "QUICKSTART.md",
   SETUP / "SUBMODULES.md",
+  SETUP / "TEST_ENV_INVENTORY.md",
   EXT / "lean-lsp-mcp.md",
   EXT / "domain-mcp.md",
   EXT / "ripgrep.md",

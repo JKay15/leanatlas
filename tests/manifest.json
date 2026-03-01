@@ -472,6 +472,22 @@
     },
     {
       "area": [
+        "setup",
+        "lean",
+        "policy"
+      ],
+      "goal": "Enforce bootstrap Lean warmup behavior: skills mount check + importGraph check + lake build/lint.",
+      "id": "bootstrap_lean_warmup_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_bootstrap_lean_warmup_policy.py"
+    },
+    {
+      "area": [
         "determinism",
         "json"
       ],
@@ -1474,6 +1490,22 @@
       "profile": "core",
       "runtime_budget_sec": 10,
       "script": "tests/contract/check_test_matrix_up_to_date.py"
+    },
+    {
+      "area": [
+        "setup",
+        "deps",
+        "inventory"
+      ],
+      "goal": "Ensure docs/setup/TEST_ENV_INVENTORY.md is up-to-date with deterministic source scan.",
+      "id": "test_env_inventory_up_to_date",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_test_env_inventory_up_to_date.py"
     },
     {
       "area": [

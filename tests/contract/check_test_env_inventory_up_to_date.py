@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""Ensure docs/setup/TEST_ENV_INVENTORY.md matches generator output.
+
+This keeps environment requirements derived from tests auditable and current.
+"""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+GEN = ROOT / "tools" / "tests" / "generate_test_env_inventory.py"
+OUT = ROOT / "docs" / "setup" / "TEST_ENV_INVENTORY.md"
+
+
+def main() -> int:
+    if not OUT.exists():
+        print(f"[test-env][FAIL] missing {OUT.relative_to(ROOT)}", file=sys.stderr)
+        return 2
+
+    p = subprocess.run([sys.executable, str(GEN)], cwd=str(ROOT), capture_output=True, text=True)
+    if p.returncode != 0:
+        print("[test-env][FAIL] generator failed", file=sys.stderr)
+        print(p.stdout)
+        print(p.stderr, file=sys.stderr)
+        return 2
+
+    expected = p.stdout
+    actual = OUT.read_text(encoding="utf-8")
+
+    if actual != expected:
+        print("[test-env][FAIL] TEST_ENV_INVENTORY.md is out of date.", file=sys.stderr)
+        print("[test-env] Regenerate with:", file=sys.stderr)
+        print("  ./.venv/bin/python tools/tests/generate_test_env_inventory.py --write", file=sys.stderr)
+        return 2
+
+    print("[test-env] OK")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

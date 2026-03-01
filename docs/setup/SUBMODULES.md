@@ -29,6 +29,8 @@ Repo A expects:
 - Skills repo (Repo B): `.agents/skills/`
 - Domain MCP repo (Repo C): installed during bootstrap from pinned ref; optional debug mountpoint `services/lean-domain-mcp/` as a pinned submodule.
 
+Local Codex Home skills (for example under `$CODEX_HOME/skills` or `~/.codex/skills`) are machine-local tools and must not be committed to Repo A.
+
 Hard rule:
 
 - Do not remount Repo B at a different path.

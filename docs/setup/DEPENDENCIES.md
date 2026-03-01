@@ -87,3 +87,18 @@ Notes:
 - Purpose: local storage/query for MSC2020/LOCAL domain dictionary.
 - Note: `lean-domain-mcp` is Repo C in the three-repo topology and is consumed via pinned install/submodule policy; `lean-lsp-mcp` remains external.
 - Interface contract: `docs/contracts/MCP_MSC2020_CONTRACT.md`
+
+---
+
+## 4) Test-Derived Environment Coverage (Do Not Miss)
+
+For a deterministic, source-scanned inventory of everything referenced in test codepaths, use:
+
+- `docs/setup/TEST_ENV_INVENTORY.md` (generated artifact)
+- `tools/tests/generate_test_env_inventory.py` (generator)
+- `tests/contract/check_test_env_inventory_up_to_date.py` (gate)
+
+This inventory covers:
+- external commands used by tests/runners (`lake`, `uv`, `uvx`, `bash`, `codex`, `domain-mcp`, `rg`, `python`, `git`)
+- third-party Python modules used by tests/runners (`jsonschema`, `yaml`, `drain3`)
+- `LEANATLAS_*` environment variables consumed by test/runners
