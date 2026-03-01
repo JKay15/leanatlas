@@ -77,6 +77,12 @@ def main() -> int:
         if "AGENTS_ONBOARDING_VERBOSE.md" not in agents_text:
             print("[onboarding.compaction][FAIL] compact block not applied")
             return 2
+        if "including greetings like `hi`" not in agents_text:
+            print("[onboarding.compaction][FAIL] compact block missing first-message greeting trigger rule")
+            return 2
+        if "Do not reply with a generic question before onboarding routing." not in agents_text:
+            print("[onboarding.compaction][FAIL] compact block missing generic-reply guard")
+            return 2
 
     print("[onboarding.compaction] OK")
     return 0

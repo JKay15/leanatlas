@@ -76,7 +76,7 @@ Banner source of truth:
 
 ## Recommended onboarding behavior (exact)
 
-On first prompt, Codex should:
+On first prompt (any content, including a simple `hi`), Codex should:
 
 1) Read `.cache/leanatlas/onboarding/state.json`.
 2) If missing/outdated:

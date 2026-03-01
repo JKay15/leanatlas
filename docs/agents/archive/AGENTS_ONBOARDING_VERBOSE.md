@@ -8,7 +8,7 @@ It is intentionally low-frequency and should not be preloaded during normal proo
 ## Verbatim Block
 
 On the first user prompt in a fresh clone (missing `.cache/leanatlas/onboarding/state.json`),
-Codex must run a short onboarding flow:
+Codex must run a short onboarding flow before any normal reply (including when the user only says `hi`):
 
 1) Print the LeanAtlas banner:
 ```text
