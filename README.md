@@ -6,6 +6,20 @@ This is a LeanAtlas scaffold focused on **Codex-first workflows**:
 - A Codex documentation system (AGENTS.md + `.agents/skills/` + ExecPlans)
 - External tooling is documented + smoke-verified (docs/setup)
 
+## Clone
+Use submodule-aware clone so Repo-B skills are present on first run:
+
+```bash
+git clone --recurse-submodules https://github.com/JKay15/leanatlas.git
+cd leanatlas
+```
+
+If you already cloned without submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
 ## Start here (Codex users)
 - Read `AGENTS.md` (repo root).
 - See `docs/agents/README.md` for how instructions and ExecPlans are organized.
