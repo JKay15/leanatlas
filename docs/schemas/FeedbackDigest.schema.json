@@ -1,0 +1,218 @@
+{
+  "$id": "https://leanatlas.dev/schemas/FeedbackDigest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "generated_at_utc": {
+      "type": "string"
+    },
+    "item_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "items": {
+      "items": {
+        "additionalProperties": true,
+        "properties": {
+          "agent_build_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "category": {
+            "enum": [
+              "contracts",
+              "tests",
+              "automations",
+              "skills",
+              "setup",
+              "tooling",
+              "docs"
+            ],
+            "type": "string"
+          },
+          "closure_criteria": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "feedback_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "frequency_hint": {
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "links": {
+            "additionalProperties": false,
+            "properties": {
+              "docs": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "prs": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "release_notes": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "tests": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "prs",
+              "tests",
+              "docs",
+              "release_notes"
+            ],
+            "type": "object"
+          },
+          "required_actions": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "session_id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "S0",
+              "S1",
+              "S2",
+              "S3"
+            ],
+            "type": "string"
+          },
+          "sla_hours": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "source_file": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "triaged",
+              "closed",
+              "resolved",
+              "done"
+            ],
+            "type": "string"
+          },
+          "target_bucket": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "text": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "triage_class": {
+            "enum": [
+              "contract_drift",
+              "how_to_gap",
+              "bug_missing_test",
+              "one_off_preference"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "feedback_id",
+          "session_id",
+          "agent_build_id",
+          "source_file",
+          "text",
+          "category",
+          "triage_class",
+          "severity",
+          "sla_hours",
+          "frequency_hint",
+          "target_bucket",
+          "status",
+          "required_actions",
+          "closure_criteria",
+          "links"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "const": "leanatlas.chat_feedback_digest"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "source_root": {
+      "type": "string"
+    },
+    "summary": {
+      "additionalProperties": true,
+      "properties": {
+        "by_category": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "by_severity": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "by_target_bucket": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "by_category",
+        "by_severity",
+        "by_target_bucket"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "generated_at_utc",
+    "source_root",
+    "item_count",
+    "items",
+    "summary"
+  ],
+  "title": "Chat Feedback Digest",
+  "type": "object"
+}

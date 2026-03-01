@@ -1,0 +1,66 @@
+schema: leanatlas.agent_eval_task
+schema_version: 0.1.0
+task_id: mk_poly_solvability_by_radicals
+problem_slug: mk_poly_solvability_by_radicals
+kind: PROOF_LOOP
+keywords:
+- polynomial_solvable
+- solvable_by_radicals
+references:
+  - "REF:MATHLIB_ABEL_RUFFINI"
+  - "REF:DUMMIT_SOLVABILITY_NOTES_2020"
+  - "REF:RAMOND_ABEL_RUFFINI_2020"
+prompt: |
+  Goal: formalize a representative “solvable by radicals” result.
+
+  Rules:
+  - Prefer reusing existing mathlib modules over reinventing definitions.
+  - If the full goal is too large for the current proof budget/library coverage, TRIAGE as BUDGET
+    with a concrete downgrade proposal.
+variants:
+- variant_id: v0_full_iff
+  gptpro_hint: |
+    Try to prove the full classical criterion:
+      “solvable by radicals iff solvable Galois group”.
+
+    If the reverse direction is missing, do not fake it. TRIAGE as BUDGET and propose a downgrade.
+  expected:
+    final_status: TRIAGED
+    triage_family: BUDGET
+    triage_code: BUDGET_TOO_LARGE_IFF
+  skill_delta:
+    expected_new_kb_tags:
+    - abel_ruffini_scope_downgrade
+  tags:
+  - TRIAGED
+- variant_id: v1_forward_direction
+  fixture_overlay_dir: tests/agent_eval/tasks/mk_poly_solvability_by_radicals/variants/v1_forward_direction/fixture_overlay
+  gptpro_hint: |
+    (correct) In this variant, the **maintainer has already downgraded Spec.lean** to the
+    forward direction formalized in mathlib.
+
+    Import:
+      `Mathlib.FieldTheory.AbelRuffini`
+
+    Target shape (schematically):
+      `IsSolvableByRad F α → IsSolvable (minpoly F α).Gal`
+
+    In this mathlib version, `solvableByRad.isSolvable` takes a subtype element
+    `⟨α, hα⟩ : solvableByRad F E`. Use this stable pattern:
+      `intro hα`
+      `have hs : IsSolvable (minpoly F (⟨α, hα⟩ : solvableByRad F E)).Gal :=`
+      `  solvableByRad.isSolvable (F := F) (E := E) ⟨α, hα⟩`
+      `rw [show minpoly F (⟨α, hα⟩ : solvableByRad F E) = minpoly F α from`
+      `  (minpoly.algebraMap_eq (RingHom.injective _) _).symm] at hs`
+      `exact hs`
+  expected:
+    final_status: SUCCESS
+  skill_delta:
+    expected_new_kb_tags:
+    - abel_ruffini_forward_direction
+  tool_delta:
+    expected_new_modules: []
+    expected_new_decls: []
+    max_new_modules: 3
+  tags:
+  - SUCCESS

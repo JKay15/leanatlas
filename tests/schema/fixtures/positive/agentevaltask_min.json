@@ -1,0 +1,29 @@
+{
+  "kind": "PROOF_LOOP",
+  "prompt": "Prove the target in Problems/proof_loop_demo (dummy task for schema validation).",
+  "schema": "leanatlas.agent_eval_task",
+  "schema_version": "0.1.0",
+  "task_id": "proof_loop_demo",
+  "variants": [
+    {
+      "expected": {
+        "final_status": "TRIAGED",
+        "triage_code": "NAME_NOT_FOUND",
+        "triage_family": "NAME"
+      },
+      "gptpro_hint": "(intentionally wrong) Try to use a lemma that does not exist.",
+      "skill_delta": {
+        "expected_new_kb_tags": [
+          "name-not-found"
+        ],
+        "expected_new_skills": []
+      },
+      "tool_delta": {
+        "expected_new_decls": [],
+        "expected_new_modules": [],
+        "max_new_modules": 0
+      },
+      "variant_id": "v0_wrong_hint"
+    }
+  ]
+}

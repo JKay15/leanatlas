@@ -1,0 +1,16 @@
+{
+  "eval_id": "ev1",
+  "passed": true,
+  "scenario_id": "mini_scn",
+  "schema": "leanatlas.agent_eval_scenario_report",
+  "schema_version": "0.1.0",
+  "stamp": "2026-02-24T000000Z",
+  "step_results": [
+    {
+      "kind": "RUN",
+      "passed": true,
+      "report_path": "steps/s1/AgentEvalReport.json",
+      "step_uid": "s1"
+    }
+  ]
+}

@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "automations": {
+      "items": {
+        "properties": {
+          "advisor": {
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "exec_cmd": {
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              "outputs": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "probe": {
+                "type": "object"
+              },
+              "skill": {
+                "type": "string"
+              },
+              "when": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "deterministic": {
+            "properties": {
+              "artifacts": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "steps": {
+                "items": {
+                  "properties": {
+                    "cmd": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "cmd"
+                  ],
+                  "type": "object"
+                },
+                "minItems": 1,
+                "type": "array"
+              }
+            },
+            "required": [
+              "steps"
+            ],
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "OPERATOR",
+              "MAINTAINER"
+            ],
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "planned",
+              "deprecated"
+            ],
+            "type": "string"
+          },
+          "tdd": {
+            "properties": {
+              "dry_run": {
+                "properties": {
+                  "cmd": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "cmd"
+                ],
+                "type": "object"
+              },
+              "profile": {
+                "enum": [
+                  "core",
+                  "nightly"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "profile",
+              "dry_run"
+            ],
+            "type": "object"
+          },
+          "trigger": {
+            "properties": {
+              "cadence": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "schedule",
+                  "event"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          },
+          "verify": {
+            "properties": {
+              "steps": {
+                "items": {
+                  "properties": {
+                    "cmd": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "minItems": 1,
+                      "type": "array"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "cmd"
+                  ],
+                  "type": "object"
+                },
+                "minItems": 1,
+                "type": "array"
+              }
+            },
+            "required": [
+              "steps"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "mode",
+          "trigger",
+          "deterministic",
+          "verify"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "automations"
+  ],
+  "title": "AutomationRegistry",
+  "type": "object"
+}

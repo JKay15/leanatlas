@@ -1,0 +1,32 @@
+{
+  "agent_build_id": "b1",
+  "captured_at_utc": "2026-02-28T00:00:00Z",
+  "closure_criteria": [
+    "how_to_doc_merged"
+  ],
+  "evidence_excerpt": "onboarding doc is unclear",
+  "expected_behavior": "clear install checklist",
+  "feedback_id": "fb_abc123",
+  "first_seen_at_utc": "2026-02-28T00:00:00Z",
+  "frequency_hint": "unknown",
+  "links": {
+    "docs": [],
+    "prs": [],
+    "release_notes": [],
+    "tests": []
+  },
+  "observed_behavior": "onboarding doc is unclear",
+  "required_actions": [
+    "update_how_to_docs"
+  ],
+  "schema": "leanatlas.feedback_ledger_line",
+  "schema_version": "0.1.0",
+  "session_id": "s1",
+  "severity": "S2",
+  "sla_hours": 72,
+  "source_file": "artifacts/feedback/inbox/a.md",
+  "status": "open",
+  "target_bucket": "docs/agents",
+  "triage_class": "how_to_gap",
+  "user_intent_summary": "Need clearer onboarding docs"
+}

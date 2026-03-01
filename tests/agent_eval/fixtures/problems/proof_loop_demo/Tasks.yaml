@@ -1,0 +1,5 @@
+# Domain hints for retrieval/pruning.
+# This is a demo; keep minimal.
+msc_primary: "03"    # Mathematical logic and foundations
+keywords:
+  - demo

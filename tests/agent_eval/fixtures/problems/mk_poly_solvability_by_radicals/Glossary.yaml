@@ -1,0 +1,3 @@
+terms:
+  - term: solvable by radicals
+    meaning: "A polynomial is solvable by radicals if its roots can be obtained by iteratively adjoining n-th roots."

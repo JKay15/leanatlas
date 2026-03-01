@@ -1,0 +1,1515 @@
+{
+  "tests": [
+    {
+      "area": [
+        "agent_eval",
+        "fixtures"
+      ],
+      "goal": "Ensure every Phase6 AgentEval task with problem_slug has a fixture problem workspace.",
+      "id": "agent_eval_fixtures_present",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/agent_eval/check_fixtures_exist.py",
+      "tags": [
+        "agent_eval",
+        "fixture",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
+        "e2e"
+      ],
+      "covers_phase6_executables": [
+        "tools/agent_eval/run_pack.py",
+        "tools/agent_eval/grade_pack.py",
+        "tools/agent_eval/dummy_agent.py"
+      ],
+      "expands": {
+        "agent_eval_packs": [
+          "core_smoke_dummy"
+        ]
+      },
+      "expands_spec": {
+        "ids": [
+          "core_smoke_dummy"
+        ],
+        "kind": "agent_eval_packs_explicit"
+      },
+      "goal": "E2E smoke: run_pack (run mode) + grade_pack using the deterministic dummy agent.",
+      "id": "agent_eval_pack_dummy_e2e",
+      "kind": "python_script",
+      "phase": [
+        "phase6"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 120,
+      "script": "tests/agent_eval/check_pack_runner_and_grader_with_dummy_agent.py",
+      "tags": [
+        "agent_eval",
+        "e2e",
+        "dummy_agent"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
+        "e2e",
+        "real_agent"
+      ],
+      "expands": {
+        "agent_eval_packs": [
+          "mentor_keywords_v0"
+        ]
+      },
+      "expands_spec": {
+        "ids": [
+          "mentor_keywords_v0"
+        ],
+        "kind": "agent_eval_packs_explicit"
+      },
+      "goal": "Nightly real-agent smoke: run one pack case in run mode via external --agent-cmd and verify runtime artifacts.",
+      "id": "agent_eval_pack_real_agent_nightly",
+      "kind": "python_script",
+      "phase": [
+        "phase6"
+      ],
+      "profile": "nightly",
+      "runtime_budget_sec": 1800,
+      "script": "tests/agent_eval/exec_pack_real_agent_nightly.py"
+    },
+    {
+      "area": [
+        "agent_eval",
+        "coverage"
+      ],
+      "goal": "Ensure Phase6 mentor keyword taskpack covers all required keywords (deterministic).",
+      "id": "agent_eval_pack_keyword_coverage",
+      "kind": "python_script",
+      "phase": [
+        "phase6"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/agent_eval/check_pack_keyword_coverage.py",
+      "tags": [
+        "agent_eval",
+        "coverage",
+        "phase6"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
+        "references"
+      ],
+      "goal": "Ensure mentor-keyword tasks + fixtures cite curated reference IDs (no random URLs in task.yaml).",
+      "id": "agent_eval_references_integrity",
+      "kind": "python_script",
+      "phase": [
+        "phase6"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/agent_eval/check_task_references_integrity.py",
+      "tags": [
+        "agent_eval",
+        "contract",
+        "references"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
+        "runner"
+      ],
+      "expands": {
+        "agent_eval_packs": [
+          "mentor_keywords_v0"
+        ]
+      },
+      "expands_spec": {
+        "ids": [
+          "mentor_keywords_v0"
+        ],
+        "kind": "agent_eval_packs_explicit"
+      },
+      "goal": "Smoke-test: Phase6 agent-eval runner can materialize a single workspace.",
+      "id": "agent_eval_runner_materialize_smoke",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 20,
+      "script": "tests/agent_eval/check_runner_materialize_mode.py",
+      "tags": [
+        "agent_eval",
+        "runner",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
+        "runner"
+      ],
+      "expands": {
+        "agent_eval_packs": [
+          "mentor_keywords_v0"
+        ]
+      },
+      "expands_spec": {
+        "ids": [
+          "mentor_keywords_v0"
+        ],
+        "kind": "agent_eval_packs_explicit"
+      },
+      "goal": "Smoke-test: Phase6 agent-eval runner produces a Plan.json in plan mode.",
+      "id": "agent_eval_runner_plan_smoke",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/agent_eval/check_runner_plan_mode.py",
+      "tags": [
+        "agent_eval",
+        "runner",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
+        "scenario"
+      ],
+      "goal": "Ensure AgentEval scenarios cover INTERLEAVING/REGRESSION/PRESSURE taxonomy.",
+      "id": "agent_eval_scenario_class_coverage",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/agent_eval/check_scenario_class_coverage.py",
+      "tags": [
+        "agent_eval",
+        "scenario",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
+        "e2e"
+      ],
+      "covers_phase6_executables": [
+        "tools/agent_eval/run_scenario.py",
+        "tools/agent_eval/grade_scenario.py",
+        "tools/agent_eval/dummy_agent.py"
+      ],
+      "expands": {
+        "agent_eval_scenarios": [
+          "core_dummy_smoke_v0"
+        ]
+      },
+      "expands_spec": {
+        "ids": [
+          "core_dummy_smoke_v0"
+        ],
+        "kind": "agent_eval_scenarios_explicit"
+      },
+      "goal": "E2E smoke: run_scenario (run mode) + grade_scenario using the deterministic dummy agent.",
+      "id": "agent_eval_scenario_dummy_e2e",
+      "kind": "python_script",
+      "phase": [
+        "phase6"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 120,
+      "script": "tests/agent_eval/check_scenario_runner_and_grader_with_dummy_agent.py",
+      "tags": [
+        "agent_eval",
+        "e2e",
+        "dummy_agent"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
+        "e2e",
+        "scenario",
+        "real_agent"
+      ],
+      "expands": {
+        "agent_eval_scenarios": [
+          "mentor_keywords_interleaving_v0"
+        ]
+      },
+      "expands_spec": {
+        "ids": [
+          "mentor_keywords_interleaving_v0"
+        ],
+        "kind": "agent_eval_scenarios_explicit"
+      },
+      "goal": "Nightly real-agent smoke: run one interleaving scenario in run mode via external --agent-cmd and verify runtime artifacts.",
+      "id": "agent_eval_scenario_real_agent_nightly",
+      "kind": "python_script",
+      "phase": [
+        "phase6"
+      ],
+      "profile": "nightly",
+      "runtime_budget_sec": 2400,
+      "script": "tests/agent_eval/exec_scenario_real_agent_nightly.py"
+    },
+    {
+      "area": [
+        "agent_eval",
+        "runner",
+        "scenario"
+      ],
+      "expands": {
+        "agent_eval_scenarios": [
+          "mentor_keywords_interleaving_v0"
+        ]
+      },
+      "expands_spec": {
+        "ids": [
+          "mentor_keywords_interleaving_v0"
+        ],
+        "kind": "agent_eval_scenarios_explicit"
+      },
+      "goal": "Smoke-test: Phase6 agent-eval scenario runner produces ScenarioPlan.json in plan mode.",
+      "id": "agent_eval_scenario_runner_plan_smoke",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/agent_eval/check_scenario_runner_plan_mode.py",
+      "tags": [
+        "agent_eval",
+        "runner",
+        "scenario",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
+        "contracts"
+      ],
+      "goal": "Scenario grader must compute deterministic tool-reuse metrics from tool-surface snapshots.",
+      "id": "agent_eval_scenario_tool_reuse_scoring",
+      "kind": "python_script",
+      "phase": [
+        "phase6"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/agent_eval/check_scenario_tool_reuse_scoring.py",
+      "tags": [
+        "agent_eval",
+        "contract",
+        "tool_reuse"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
+        "contracts"
+      ],
+      "expands": {
+        "agent_eval_scenarios": [
+          "core_dummy_smoke_v0",
+          "mentor_keywords_interleaving_v0",
+          "mentor_keywords_pressure_v0",
+          "mentor_keywords_regression_v0",
+          "mentor_keywords_tool_reuse_chain_v0",
+          "mentor_keywords_tool_reuse_v0"
+        ]
+      },
+      "expands_spec": {
+        "kind": "agent_eval_scenarios_all"
+      },
+      "goal": "Validate Phase6 AgentEval scenario.yaml files against schema + referential integrity.",
+      "id": "agent_eval_validate_scenarios",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/agent_eval/validate_scenarios.py",
+      "tags": [
+        "agent_eval",
+        "scenario",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
+        "contracts"
+      ],
+      "goal": "Validate Phase6 AgentEval task.yaml files against schema (structure-only; no LLM).",
+      "id": "agent_eval_validate_tasks",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/agent_eval/validate_tasks.py",
+      "tags": [
+        "agent_eval",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "agents",
+        "navigation"
+      ],
+      "goal": "Ensure AGENTS.md navigation reaches functional directories (discoverability contract).",
+      "id": "agents_nav_coverage",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_agents_navigation_coverage.py",
+      "tags": [
+        "agents",
+        "navigation",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "agents",
+        "contracts"
+      ],
+      "goal": "Enforce AGENTS*.md size cap so Codex always ingests instructions.",
+      "id": "agents_size",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_agents_size.py"
+    },
+    {
+      "area": [
+        "reports",
+        "attemptlog"
+      ],
+      "goal": "Ensure AttemptLog.jsonl exists in examples and every line validates against schema.",
+      "id": "attemptlog_jsonl",
+      "kind": "python_script",
+      "phase": [
+        "phase1"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_attemptlog_jsonl.py"
+    },
+    {
+      "area": [
+        "automation",
+        "tdd"
+      ],
+      "goal": "Execute dry-runs for active/core automations (TDD for background advisor runs).",
+      "id": "automation_dry_runs",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 30,
+      "script": "tests/automation/run_dry_runs.py"
+    },
+    {
+      "area": [
+        "automation",
+        "registry"
+      ],
+      "goal": "Validate automations/registry.json against schema and contract.",
+      "id": "automation_registry",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/automation/validate_registry.py"
+    },
+    {
+      "area": [
+        "setup",
+        "deps",
+        "policy"
+      ],
+      "goal": "Enforce bootstrap .venv-first behavior, offline uv-sync fallback, and explicit force-sync path.",
+      "id": "bootstrap_venv_fallback_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_bootstrap_venv_fallback_policy.py"
+    },
+    {
+      "area": [
+        "determinism",
+        "json"
+      ],
+      "goal": "Enforce canonical JSON formatting on committed truth sources (prevents noisy diffs).",
+      "id": "canonical_json",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/determinism/check_canonical_json.py"
+    },
+    {
+      "area": [
+        "contract",
+        "capabilities"
+      ],
+      "goal": "Capability manifests exist (phase3/4/5) and validate against schema.",
+      "id": "capability_manifests",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_capability_manifests.py"
+    },
+    {
+      "area": [
+        "automation",
+        "contracts",
+        "feedback",
+        "skills",
+        "phase3"
+      ],
+      "goal": "Enforce required active automations for phase3 governance, skills growth closure, and chat-feedback deposition loops.",
+      "id": "contract_automation_closed_loops",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_automation_closed_loops.py",
+      "tags": [
+        "automation",
+        "contract",
+        "closed_loop"
+      ]
+    },
+    {
+      "area": [
+        "automation",
+        "docs",
+        "onboarding"
+      ],
+      "goal": "Ensure onboarding automation install template stays synchronized with active automation ids.",
+      "id": "contract_automation_install_template_sync",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_automation_install_template_sync.py",
+      "tags": [
+        "automation",
+        "template",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "feedback",
+        "contracts"
+      ],
+      "goal": "Enforce chat feedback digest governance fields (triage_class, severity, sla_hours, required_actions, closure_criteria, links).",
+      "id": "contract_chat_feedback_digest_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_chat_feedback_digest_policy.py",
+      "tags": [
+        "feedback",
+        "contract",
+        "digest"
+      ]
+    },
+    {
+      "area": [
+        "feedback",
+        "contracts",
+        "automation"
+      ],
+      "goal": "Ensure chat feedback deposition ingests only tagged/structured feedback and never raw transcripts/prompts.",
+      "id": "contract_chat_feedback_filtering_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_chat_feedback_filtering_policy.py",
+      "tags": [
+        "feedback",
+        "contract",
+        "filtering"
+      ]
+    },
+    {
+      "area": [
+        "reporting",
+        "evidence"
+      ],
+      "goal": "AttemptLog exec_spans must point to real files and sha256 must match.",
+      "id": "contract_exec_span_evidence",
+      "kind": "python_script",
+      "phase": [
+        "phase6"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 2,
+      "script": "tests/contract/check_exec_span_evidence.py",
+      "tags": [
+        "contract",
+        "evidence"
+      ]
+    },
+    {
+      "area": [
+        "feedback",
+        "contracts",
+        "automation"
+      ],
+      "goal": "Ensure feedback ledger append script is append-only and deduplicates by feedback_id.",
+      "id": "contract_feedback_ledger_append_only",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_feedback_ledger_append_only.py",
+      "tags": [
+        "feedback",
+        "ledger",
+        "append_only"
+      ]
+    },
+    {
+      "area": [
+        "feedback",
+        "contracts",
+        "traceability"
+      ],
+      "goal": "Ensure traceability matrix reports closed-item link violations and supports strict gating.",
+      "id": "contract_feedback_traceability_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_feedback_traceability_policy.py",
+      "tags": [
+        "feedback",
+        "traceability",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "deposition",
+        "contracts",
+        "crosscutting"
+      ],
+      "goal": "Enforce explicit force-deposit policy across promotion reuse gate, KB mining, and feedback deposition.",
+      "id": "contract_force_deposit_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_force_deposit_policy.py",
+      "tags": [
+        "contracts",
+        "force_deposit",
+        "crosscutting"
+      ]
+    },
+    {
+      "area": [
+        "agents",
+        "skills",
+        "contract"
+      ],
+      "goal": "Enforce SKILL.md routing headers (Use when / Don't use when / Outputs / Must-run checks).",
+      "id": "contract_skills_standard_headers",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_skills_standard_headers.py",
+      "tags": [
+        "contract",
+        "skills"
+      ]
+    },
+    {
+      "area": [
+        "tooling",
+        "evidence"
+      ],
+      "goal": "tools/ must not import subprocess directly (use run_cmd wrapper).",
+      "id": "contract_tools_subprocess_wrapper",
+      "kind": "python_script",
+      "phase": [
+        "phase6"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 2,
+      "script": "tests/contract/check_tools_subprocess_wrapper.py",
+      "tags": [
+        "contract",
+        "tooling"
+      ]
+    },
+    {
+      "area": [
+        "deps",
+        "pins"
+      ],
+      "goal": "Enforce third-party dependency pins (no floating versions) and docs alignment.",
+      "id": "dependency_pins",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_dependency_pins.py"
+    },
+    {
+      "area": [
+        "setup",
+        "smoke"
+      ],
+      "goal": "Nightly: verify pinned external tools can be found and respond (ripgrep, mcp clients, etc).",
+      "id": "deps_smoke",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "nightly",
+      "runtime_budget_sec": 60,
+      "script": "tests/setup/deps_smoke.py"
+    },
+    {
+      "area": [
+        "docs",
+        "docpack"
+      ],
+      "goal": "Ensure critical Codex doc-pack files exist and OPERATOR workflow mentions MCP/Automations.",
+      "id": "docpack_completeness",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_doc_pack_completeness.py"
+    },
+    {
+      "area": [
+        "setup",
+        "deps",
+        "policy"
+      ],
+      "goal": "Enforce doctor uses repo-local .venv python first with deterministic system-python fallback only when needed.",
+      "id": "doctor_python_preference_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_doctor_python_preference_policy.py"
+    },
+    {
+      "area": [
+        "e2e",
+        "execution"
+      ],
+      "expands": {
+        "cases": [
+          "core_budget_exhausted",
+          "core_name_notation",
+          "core_statement_false",
+          "core_tactic_failure",
+          "core_toolbox_consumer",
+          "core_tooling_failure",
+          "core_type_mismatch"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_cases_tier",
+        "tier": "core"
+      },
+      "goal": "Soak-tier core: execute core-tier E2E golden cases (requires local Lean/Lake; skips if absent).",
+      "id": "e2e_exec_cases_core",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 1200,
+      "script": "tests/e2e/exec_cases_core.py",
+      "tags": [
+        "e2e",
+        "cases",
+        "runner"
+      ]
+    },
+    {
+      "area": [
+        "e2e",
+        "execution"
+      ],
+      "expands": {
+        "cases": [
+          "smoke_missing_assumption",
+          "smoke_missing_import"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_cases_tier",
+        "tier": "smoke"
+      },
+      "goal": "Soak-tier smoke: execute E2E golden cases (requires local Lean/Lake; skips if absent).",
+      "id": "e2e_exec_cases_smoke",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 900,
+      "script": "tests/e2e/exec_cases_smoke.py"
+    },
+    {
+      "area": [
+        "e2e",
+        "execution",
+        "direct_runner"
+      ],
+      "expands": {
+        "cases": [
+          "core_budget_exhausted",
+          "core_name_notation",
+          "core_statement_false",
+          "core_tactic_failure",
+          "core_toolbox_consumer",
+          "core_tooling_failure",
+          "core_type_mismatch",
+          "smoke_missing_assumption",
+          "smoke_missing_import"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_cases_all"
+      },
+      "goal": "Soak-tier direct runner: execute all enabled E2E cases through tests/e2e/run_cases.py (not wrapper-only).",
+      "id": "e2e_run_cases_all",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 2400,
+      "script": "tests/e2e/run_cases.py"
+    },
+    {
+      "area": [
+        "e2e",
+        "execution"
+      ],
+      "expands": {
+        "scenarios": [
+          "scenario_chain_core_3"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_scenarios_tier",
+        "tier": "core"
+      },
+      "goal": "Soak-tier core: execute core-tier E2E scenarios (requires local Lean/Lake; skips if absent).",
+      "id": "e2e_exec_scenarios_core",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 1800,
+      "script": "tests/e2e/exec_scenarios_core.py",
+      "tags": [
+        "e2e",
+        "scenario",
+        "runner"
+      ]
+    },
+    {
+      "area": [
+        "e2e",
+        "scenarios",
+        "phase3"
+      ],
+      "expands": {
+        "scenarios": [
+          "scenario_chain_core_all",
+          "scenario_cleanup_idempotence",
+          "scenario_toolbox_regression"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_scenarios_tier",
+        "tier": "nightly"
+      },
+      "goal": "Soak-tier: execute nightly-tier E2E scenarios (long chains + regressions; requires local Lean/Lake; skips if absent).",
+      "id": "e2e_exec_scenarios_nightly",
+      "kind": "python_script",
+      "phase": [
+        "phase3"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 1800,
+      "script": "tests/e2e/exec_scenarios_nightly.py"
+    },
+    {
+      "area": [
+        "e2e",
+        "execution"
+      ],
+      "expands": {
+        "scenarios": [
+          "scenario_phase3_gc_apply_smoke"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_scenarios_tier",
+        "tier": "smoke"
+      },
+      "goal": "Soak-tier smoke: execute E2E scenarios (requires local Lean/Lake; skips if absent).",
+      "id": "e2e_exec_scenarios_smoke",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 900,
+      "script": "tests/e2e/exec_scenarios_smoke.py"
+    },
+    {
+      "area": [
+        "e2e",
+        "execution",
+        "scenario",
+        "direct_runner"
+      ],
+      "expands": {
+        "scenarios": [
+          "scenario_chain_core_3",
+          "scenario_chain_core_all",
+          "scenario_cleanup_idempotence",
+          "scenario_phase3_gc_apply_smoke",
+          "scenario_toolbox_regression"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_scenarios_all"
+      },
+      "goal": "Soak-tier direct runner: execute all enabled E2E scenarios through tests/e2e/run_scenarios.py (not wrapper-only).",
+      "id": "e2e_run_scenarios_all",
+      "kind": "python_script",
+      "phase": [
+        "phase2",
+        "phase3"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 2400,
+      "script": "tests/e2e/run_scenarios.py"
+    },
+    {
+      "area": [
+        "e2e",
+        "cases"
+      ],
+      "expands": {
+        "cases": [
+          "core_budget_exhausted",
+          "core_name_notation",
+          "core_statement_false",
+          "core_tactic_failure",
+          "core_toolbox_consumer",
+          "core_tooling_failure",
+          "core_type_mismatch",
+          "smoke_missing_assumption",
+          "smoke_missing_import"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_cases_all"
+      },
+      "goal": "Validate E2E golden case YAML structure and expected final_status coverage.",
+      "id": "e2e_validate_cases",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/e2e/validate_cases.py"
+    },
+    {
+      "area": [
+        "e2e",
+        "scenarios"
+      ],
+      "expands": {
+        "scenarios": [
+          "scenario_chain_core_3",
+          "scenario_chain_core_all",
+          "scenario_cleanup_idempotence",
+          "scenario_phase3_gc_apply_smoke",
+          "scenario_toolbox_regression"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_scenarios_all"
+      },
+      "goal": "Validate E2E scenario YAML structure (sequence/pressure testing spec).",
+      "id": "e2e_validate_scenarios",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/e2e/validate_scenarios.py"
+    },
+    {
+      "area": [
+        "docs",
+        "language",
+        "contract"
+      ],
+      "goal": "Enforce English-only policy in repository docs/instructions/code comments (no CJK text).",
+      "id": "english_only_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_english_only_policy.py"
+    },
+    {
+      "area": [
+        "agents",
+        "navigation",
+        "contracts"
+      ],
+      "goal": "Ensure root AGENTS links to a full file index and FILE_INDEX.md stays deterministic/up-to-date.",
+      "id": "file_index_reachability",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_file_index_reachability.py",
+      "tags": [
+        "agents",
+        "navigation",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "gc",
+        "propose",
+        "reachability"
+      ],
+      "goal": "Ensure GCGate.propose is not a stub: stale unreachable seeds must trigger quarantine proposal (reachability MVP).",
+      "id": "gc_propose_reachability_mvp",
+      "kind": "python_script",
+      "phase": [
+        "phase3"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_gc_propose_reachability_mvp.py"
+    },
+    {
+      "area": [
+        "gc",
+        "identity"
+      ],
+      "goal": "Enforce gc_state seed_id uses Lean module names and maps to real .lean files.",
+      "id": "gc_state_seed_ids",
+      "kind": "python_script",
+      "phase": [
+        "phase3"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_gc_state_seed_ids.py"
+    },
+    {
+      "area": [
+        "docs",
+        "contracts"
+      ],
+      "goal": "Guardrail: HARD_REQUIREMENTS contract exists and includes required sections.",
+      "id": "hard_requirements_contract",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_hard_requirements_contract.py",
+      "tags": [
+        "docs",
+        "contracts",
+        "guardrail"
+      ]
+    },
+    {
+      "area": [
+        "workflow",
+        "judge"
+      ],
+      "goal": "Enforce determinism of Judge decisions for identical evidence inputs.",
+      "id": "judge_determinism",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_judge_determinism.py"
+    },
+    {
+      "area": [
+        "skills",
+        "kb",
+        "bench"
+      ],
+      "goal": "Mine KB growth suggestions from run artifacts (deterministic + stable).",
+      "id": "kb_mining_suggestions",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/bench/check_kb_mining_suggestions.py"
+    },
+    {
+      "area": [
+        "testing",
+        "registry",
+        "assets"
+      ],
+      "goal": "Ensure tests/manifest.json fully registers executable YAML assets and wrapper expansions are exact.",
+      "id": "contract_manifest_completeness",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_manifest_completeness.py"
+    },
+    {
+      "area": [
+        "docs",
+        "memory"
+      ],
+      "goal": "Guardrail: MEMORY_COVERAGE must include the user's explicit engineering requirements.",
+      "id": "memory_coverage_user_requirements",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_memory_coverage_has_user_requirements.py"
+    },
+    {
+      "area": [
+        "agents",
+        "onboarding",
+        "contracts"
+      ],
+      "goal": "Ensure onboarding finalization writes state and compacts root AGENTS.md after bootstrap+doctor.",
+      "id": "onboarding_agents_compaction",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_onboarding_agents_compaction.py",
+      "tags": [
+        "agents",
+        "onboarding",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "workflow",
+        "patchscope"
+      ],
+      "goal": "Enforce PatchScope policy (OPERATOR cannot touch forbidden paths).",
+      "id": "patch_scope_policy",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_patch_scope_policy.py"
+    },
+    {
+      "area": [
+        "e2e",
+        "phase3",
+        "tools"
+      ],
+      "goal": "Ensure at least one smoke-tier executable E2E scenario exercises Phase3 tool entrypoints via run_cmd.",
+      "id": "phase3_scenarios_present",
+      "kind": "python_script",
+      "phase": [
+        "phase3"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_phase3_e2e_scenarios.py"
+    },
+    {
+      "area": [
+        "problems",
+        "state_machine",
+        "contracts"
+      ],
+      "goal": "Reconcile State.json from a RunReport deterministically (schema-valid + canonical).",
+      "id": "problem_state_reconcile",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_problem_state_reconcile.py"
+    },
+    {
+      "area": [
+        "problems",
+        "contracts"
+      ],
+      "goal": "Ensure Problems/_template/State.json exists and is schema-valid.",
+      "id": "problem_template_state",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 3,
+      "script": "tests/contract/check_problem_template_state.py"
+    },
+    {
+      "area": [
+        "reports",
+        "layout"
+      ],
+      "goal": "Validate example report directory layout is complete and consistent.",
+      "id": "reports_layout",
+      "kind": "python_script",
+      "phase": [
+        "phase1"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_reports_layout.py"
+    },
+    {
+      "area": [
+        "retrieval",
+        "trace"
+      ],
+      "goal": "Enforce RetrievalTrace invariants (contiguous steps, budget counters, references).",
+      "id": "retrievaltrace_invariants",
+      "kind": "python_script",
+      "phase": [
+        "phase1",
+        "phase2"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_retrievaltrace_invariants.py"
+    },
+    {
+      "area": [
+        "reports",
+        "markdown"
+      ],
+      "goal": "Ensure RunReport.md has minimum headings/sections for fast human audit.",
+      "id": "runreport_md",
+      "kind": "python_script",
+      "phase": [
+        "phase1"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_runreport_md.py"
+    },
+    {
+      "area": [
+        "reports",
+        "refs"
+      ],
+      "goal": "Ensure RunReport JSON cross-references (diagnostic_ids, step refs) are internally consistent.",
+      "id": "runreport_refs",
+      "kind": "python_script",
+      "phase": [
+        "phase1"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_runreport_refs.py"
+    },
+    {
+      "area": [
+        "schemas",
+        "fixtures"
+      ],
+      "goal": "Validate all committed JSON schemas using positive/negative fixtures.",
+      "id": "schema",
+      "kind": "python_script",
+      "phase": [
+        "phase1"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/schema/validate_schemas.py"
+    },
+    {
+      "area": [
+        "setup",
+        "docs"
+      ],
+      "goal": "Ensure setup docs list install + verification commands for all pinned external tools.",
+      "id": "setup_docs",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_setup_docs.py"
+    },
+    {
+      "area": [
+        "workflow",
+        "cache",
+        "contract"
+      ],
+      "goal": "Enforce shared Lake cache policy across runners and guard resume/fresh strategy drift.",
+      "id": "contract_shared_cache_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_shared_cache_policy.py"
+    },
+    {
+      "area": [
+        "stress",
+        "soak"
+      ],
+      "expands": {
+        "cases": [
+          "core_budget_exhausted",
+          "core_name_notation",
+          "core_statement_false",
+          "core_tactic_failure",
+          "core_toolbox_consumer",
+          "core_tooling_failure",
+          "core_type_mismatch"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_cases_tier",
+        "tier": "core"
+      },
+      "goal": "Soak-tier stress core run: execute tests/stress/soak.py defaults (10 iterations, core tier) to catch long-horizon state leaks.",
+      "id": "stress_soak_core",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 5400,
+      "script": "tests/stress/soak.py"
+    },
+    {
+      "area": [
+        "stress",
+        "soak"
+      ],
+      "expands": {
+        "cases": [
+          "smoke_missing_assumption",
+          "smoke_missing_import"
+        ]
+      },
+      "expands_spec": {
+        "kind": "e2e_cases_tier",
+        "tier": "smoke"
+      },
+      "goal": "Soak-tier stress smoke: 1-iteration soak run to detect state leaks across cases (requires local Lean/Lake; skips if absent).",
+      "id": "stress_soak_smoke",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 1800,
+      "script": "tests/stress/exec_soak_smoke.py"
+    },
+    {
+      "area": [
+        "automation",
+        "telemetry",
+        "contract"
+      ],
+      "goal": "Enforce telemetry collection ordering and stale-data prevention for telemetry-consuming automations.",
+      "id": "telemetry_collection_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_telemetry_collection_policy.py"
+    },
+    {
+      "area": [
+        "bench",
+        "telemetry",
+        "tool_usage",
+        "contract"
+      ],
+      "goal": "Enforce deterministic tool usage accounting from AttemptLog exec_spans in mine_attempt_logs output.",
+      "id": "tool_usage_accounting_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_tool_usage_accounting_policy.py",
+      "tags": [
+        "telemetry",
+        "tooling",
+        "usage"
+      ]
+    },
+    {
+      "area": [
+        "testing",
+        "matrix"
+      ],
+      "goal": "Ensure docs/testing/TEST_MATRIX.md is up-to-date with the registry (deterministic regen).",
+      "id": "test_matrix_up_to_date",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_test_matrix_up_to_date.py"
+    },
+    {
+      "area": [
+        "testing",
+        "registry"
+      ],
+      "goal": "Enforce that all test scripts are registered in tests/manifest.json with required metadata.",
+      "id": "test_registry",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_test_registry.py"
+    },
+    {
+      "area": [
+        "deps",
+        "policy"
+      ],
+      "goal": "Enforce Python command policy in docs/skills/automations and ban the legacy tier flag in critical entry docs.",
+      "id": "uv_only_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_uv_only_policy.py",
+      "tags": [
+        "deps",
+        "policy",
+        "commands"
+      ]
+    }
+  ],
+  "version": "2"
+}

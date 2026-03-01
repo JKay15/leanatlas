@@ -1,0 +1,52 @@
+version: '0.2'
+phase: phase4
+commands:
+  - id: domain.mcp.server
+    entrypoint: python tools/lean_domain_mcp/domain_mcp_server.py --bundle <path> [--overlay <path>] [--repo-root <path>]
+    description: Domain Ontology MCP server (stdio). Provider=MSC2020 bundle + optional local overlay.
+    inputs:
+      - --bundle <path>
+      - --overlay <path> (repeatable, optional)
+      - --repo-root <path> (optional)
+    outputs:
+      - 'stdio MCP tools: domain/info, domain/lookup, domain/get, domain/path, domain/expand, domain/roots (+ optional msc_* aliases)'
+    schemas:
+      - docs/contracts/MCP_MSC2020_CONTRACT.md
+    deps:
+      - python (>=3.10)
+      - MSC2020 CSV (optional; for full bundle ingest)
+    smoke:
+      - python tools/lean_domain_mcp/domain_mcp_server.py --msc2020-mini --smoke
+
+  - id: msc.ingest.csv
+    entrypoint: python tools/lean_domain_mcp/ingest_msc2020_csv.py --input <MSC_2020.csv> --output <bundle.json> --data-version <v>
+    description: Deterministic MSC2020 CSV ingest -> domain-ontology bundle JSON.
+    inputs:
+      - --input <path>
+      - --output <path>
+      - --data-version <string>
+      - --source-id msc2020 (optional)
+    outputs:
+      - <bundle.json>
+    schemas:
+      - docs/contracts/MCP_MSC2020_CONTRACT.md
+    deps:
+      - python (>=3.10)
+    smoke:
+      - python tools/lean_domain_mcp/ingest_msc2020_csv.py --input tools/lean_domain_mcp/data/msc2020_mini.csv --output /tmp/msc2020.bundle.json --data-version msc2020-mini
+
+  - id: retrieval.domain_prune
+    entrypoint: python tools/retrieval/domain_prune.py --bundle <bundle.json> --overlay <overlay.json> --domain <id|code>
+    description: Deterministic helper to suggest repo directory pruning roots for a domain set (refuses to prune if mapping missing).
+    inputs:
+      - --domain <id|code> (repeatable)
+      - --bundle <path> (optional)
+      - --overlay <path> (repeatable, optional)
+    outputs:
+      - JSON to stdout or --out <path>
+    schemas:
+      - docs/contracts/RETRIEVAL_TRACE_CONTRACT.md
+    deps:
+      - python (>=3.10)
+    smoke:
+      - python tools/retrieval/domain_prune.py --domain msc2020:03E20

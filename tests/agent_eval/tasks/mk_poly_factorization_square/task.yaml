@@ -1,0 +1,50 @@
+schema: leanatlas.agent_eval_task
+schema_version: 0.1.0
+task_id: mk_poly_factorization_square
+problem_slug: mk_poly_factorization_square
+kind: PROOF_LOOP
+description: 'Mentor keyword pack: polynomial ''solvable'' in the concrete sense (has
+  explicit factorization / root).'
+keywords:
+- polynomial_solvable
+- algebra_polynomial
+references:
+  - "REF:MATHCENTRE_DIFF_SQUARES_2009"
+  - "REF:MATHLIB_POLYNOMIAL_BASIC"
+prompt: |
+  You are Codex running LeanAtlas in OPERATOR mode.
+  Goal: prove a small, fully formalizable algebra lemma about explicit solvability:
+
+    Over a field K, if b^2 = a then (X^2 - C a) = (X - C b) * (X + C b).
+
+  (Exact statement can vary by polynomial normalization; keep it simple in mathlib.)
+
+  Requirements:
+  - Prefer using `Polynomial` ring tactics (`ring`, `simp`, `by ext`) and existing lemmas.
+  - Follow the proof-loop workflow and produce evidence artifacts.
+variants:
+- variant_id: v0_wrong_hint_missing_lemma
+  gptpro_hint: |
+    (intentionally wrong) Use `Polynomial.factor_X2_sub_sq` directly.
+    If the lemma name is wrong / not found, treat it as FIXABLE: expand and prove by algebraic normalization.
+  expected:
+    final_status: SUCCESS
+  notes: Wrong lemma name is FIXABLE inside Proof.lean; a good agent should recover.
+  tags:
+  - FIXABLE
+- variant_id: v1_correct_hint_expand
+  gptpro_hint: |
+    (correct) Expand (X - C b) * (X + C b) and simplify using b^2 = a.
+    Use `by ext` to compare coefficients, and `ring` or `simp [mul_add, add_mul]`.
+  expected:
+    final_status: SUCCESS
+  tool_delta:
+    max_new_modules: 1
+  skill_delta:
+    expected_new_kb_tags:
+    - algebra/polynomial_factorization_patterns
+    - retrieval/polynomial_simp_ring
+    - triage/fixable_name_mismatch
+  notes: Should succeed with standard polynomial algebra tactics.
+  tags:
+  - SUCCESS

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "seeds": {
+      "additionalProperties": {
+        "additionalProperties": true,
+        "properties": {
+          "domain": {
+            "additionalProperties": true,
+            "description": "Optional domain hints (MSC2020/LOCAL). Not authoritative; may be regenerated.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "additionalProperties": true,
+            "description": "Open-world explanation payload. Should be stable references, not timestamps.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "refs": {
+            "additionalProperties": true,
+            "description": "Reference links to GCReport/Plan artifacts, PR ids, etc.",
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "state": {
+            "enum": [
+              "active",
+              "quarantined",
+              "archived"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "type": "object"
+      },
+      "description": "Map: seed_id (Lean module name, must start with LeanAtlas.) -> state record.",
+      "type": "object"
+    },
+    "version": {
+      "pattern": "^0\\.[0-9]+$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "seeds"
+  ],
+  "title": "GCState",
+  "type": "object"
+}

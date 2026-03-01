@@ -1,0 +1,63 @@
+{
+  "$id": "https://leanatlas.local/schemas/GCPlan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "actions": {
+      "items": {
+        "additionalProperties": true,
+        "oneOf": [
+          {
+            "required": [
+              "seed_id",
+              "action",
+              "evidence"
+            ]
+          },
+          {
+            "required": [
+              "seed",
+              "action",
+              "evidence"
+            ]
+          }
+        ],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "seed": {
+            "type": "string"
+          },
+          "seed_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "meta": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "policy": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "policy",
+    "actions"
+  ],
+  "title": "GCPlan",
+  "type": "object"
+}

@@ -1,0 +1,23 @@
+{
+  "data_version": "local@EXAMPLE",
+  "generated_at_utc": "1970-01-01T00:00:00Z",
+  "new_nodes": [],
+  "overrides": {
+    "msc2020:03E20": {
+      "aliases": [
+        "recursion theory",
+        "computability"
+      ],
+      "directory_roots": [],
+      "keywords": [
+        "turing",
+        "recursive"
+      ],
+      "notes": [
+        "Example overlay: do not treat as authoritative taxonomy content."
+      ]
+    }
+  },
+  "schema_version": "leanatlas.domain_ontology.overlay.v1",
+  "source_id": "local"
+}

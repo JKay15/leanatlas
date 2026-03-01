@@ -1,0 +1,50 @@
+schema: leanatlas.agent_eval_task
+schema_version: 0.1.0
+task_id: mk_convex_log_barrier_gap
+problem_slug: mk_convex_log_barrier_gap
+kind: PROOF_LOOP
+description: |
+  Mentor keyword pack: interior-point / tangent-line inequality for the log barrier,
+  phrased as a nonnegativity gap.
+keywords:
+  - interior_point
+  - tangent_plane
+  - convex_inequality
+references:
+  - "REF:BV_CVXBOOK_2004"
+  - "REF:TOPSOE_LOGBNDS"
+  - "REF:MATHLIB_LOG_BASIC"
+prompt: |
+  You are Codex running LeanAtlas in OPERATOR mode.
+
+  Goal: prove the (classic) log-barrier gap inequality:
+
+    For x > 0,  0 ≤ x - 1 - log x.
+
+  This task is intentionally placed *after* a promotion overlay introduces
+  `LeanAtlas.Toolbox.Convex.LogBarrier`.
+
+  Requirements:
+  - Prefer reusing the toolbox lemma `log_le_sub_one_of_pos'`.
+  - Keep edits inside this problem directory (OPERATOR patch scope).
+  - Follow the proof-loop workflow and produce evidence artifacts.
+variants:
+  - variant_id: v0_reuse_promoted_tool
+    gptpro_hint: |
+      Import `LeanAtlas.Toolbox.Convex.LogBarrier` (already in Spec.lean).
+      Use the lemma:
+
+        `LeanAtlas.Toolbox.Convex.LogBarrier.log_le_sub_one_of_pos' hx`
+
+      which gives `log x ≤ x - 1` for `0 < x`. Then rearrange to `0 ≤ x - 1 - log x`.
+      `linarith` should finish.
+    expected:
+      final_status: SUCCESS
+    tool_delta:
+      max_new_modules: 0
+    skill_delta:
+      expected_new_kb_tags:
+        - convex/log_barrier_tangent
+        - reuse/toolbox_prefer_existing
+    tags:
+      - SUCCESS

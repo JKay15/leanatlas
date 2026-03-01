@@ -1,0 +1,60 @@
+{
+  "context": {
+    "git_sha": "deadbeef0",
+    "lean_toolchain": "lean",
+    "mathlib_rev": "pin",
+    "tools": {
+      "environment_stamp": {
+        "lean_toolchain": "leanprover/lean4:v4.x.x",
+        "mathlib_rev": "mathlib-pin-placeholder",
+        "pinned_tools": {},
+        "pins_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "diagnostics": [],
+  "entrypoints": {
+    "files": {
+      "cache": "Cache.lean",
+      "proof": "Proof.lean",
+      "scratch": "Scratch.lean",
+      "spec": "Spec.lean"
+    }
+  },
+  "extensions": {},
+  "mode": "OPERATOR",
+  "problem_slug": "p",
+  "retrieval_trace_path": "RetrievalTrace.json",
+  "run_id": "pos_success_min",
+  "schema": "leanatlas.run_report",
+  "schema_version": "0.3.0",
+  "stages": {
+    "build": {
+      "status": "OK"
+    },
+    "retrieval": {
+      "status": "OK"
+    },
+    "verify": {
+      "status": "OK"
+    }
+  },
+  "status": "SUCCESS",
+  "summary": {
+    "one_line": "ok",
+    "title": "t"
+  },
+  "targets": [
+    {
+      "decl": "Main",
+      "file": "Proof.lean",
+      "id": "t0",
+      "role": "MAIN"
+    }
+  ],
+  "verification": {
+    "axioms": [],
+    "no_sorry": true,
+    "warnings": []
+  }
+}

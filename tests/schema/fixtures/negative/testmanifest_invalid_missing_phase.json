@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "area": [
+        "schemas"
+      ],
+      "goal": "Validate JSON schemas via fixtures.",
+      "id": "schema",
+      "kind": "python_script",
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/schema/validate_schemas.py"
+    }
+  ],
+  "version": "2"
+}

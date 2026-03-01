@@ -1,0 +1,140 @@
+schema: leanatlas.agent_eval_scenario
+schema_version: 0.1.0
+
+scenario_id: mentor_keywords_tool_reuse_chain_v0
+scenario_class: REGRESSION
+title: "Mentor keywords: tool reuse chain"
+description: |
+  Regression-style scenario that simulates a realistic "proof → promote → reuse" cycle.
+
+  Design goal:
+  - After each SUCCESS, a maintainer patch promotes a tiny wrapper module into `LeanAtlas/Toolbox/*`.
+  - We then re-run at least one task to verify:
+      (a) the promoted module is reachable via imports (ToolSurface closure), and
+      (b) the deterministic tool-reuse scorer counts it as REUSED.
+
+  Notes:
+  - Promotions are applied via overlays (MAINTAINER mode).
+  - This scenario is NIGHTLY-only because it is intentionally long and stateful.
+
+tier: nightly
+execution:
+  enabled: true
+  workspace: shared
+
+steps:
+  # --- interior point / tangent plane: log-barrier inequality ---
+  - kind: run_task
+    label: log_barrier_triage
+    task_id: mk_convex_log_barrier
+    variant_id: v0_wrong_hint_missing_domain
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: fix_log_domain
+    mode: MAINTAINER
+    overlay: overlays/fix_log_domain
+
+  - kind: run_task
+    label: log_barrier_success
+    task_id: mk_convex_log_barrier
+    variant_id: v1_correct_hint_mathlib_lemma
+    reset_problem: false
+
+  - kind: apply_overlay
+    label: promote_log_barrier_tool
+    mode: MAINTAINER
+    overlay: overlays/promote_log_barrier_tool
+
+  - kind: run_task
+    label: log_barrier_reuse
+    task_id: mk_convex_log_barrier
+    variant_id: v1_correct_hint_mathlib_lemma
+    reset_problem: true
+    repeat: 2
+
+  # --- queueing theory: Lindley recursion (M/G/1 kernel) ---
+  - kind: run_task
+    label: lindley_success
+    task_id: mk_queue_mg1_lindley
+    variant_id: v1_correct_hint_induction
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: promote_lindley_tool
+    mode: MAINTAINER
+    overlay: overlays/promote_lindley_tool
+
+  - kind: run_task
+    label: lindley_reuse
+    task_id: mk_queue_mg1_lindley
+    variant_id: v1_correct_hint_induction
+    reset_problem: true
+
+  # --- Little's law (slot/double-counting identity) ---
+  - kind: run_task
+    label: little_slot_success
+    task_id: mk_queue_littles_law_slot
+    variant_id: v1_correct_hint_double_count
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: promote_little_slot_tool
+    mode: MAINTAINER
+    overlay: overlays/promote_little_slot_tool
+
+  - kind: run_task
+    label: little_slot_reuse
+    task_id: mk_queue_littles_law_slot
+    variant_id: v1_correct_hint_double_count
+    reset_problem: true
+
+  # --- algebra: polynomial factorization ---
+  - kind: run_task
+    label: poly_factor_success
+    task_id: mk_poly_factorization_square
+    variant_id: v1_correct_hint_expand
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: promote_poly_factor_tool
+    mode: MAINTAINER
+    overlay: overlays/promote_poly_factor_tool
+
+  - kind: run_task
+    label: poly_factor_reuse
+    task_id: mk_poly_factorization_square
+    variant_id: v1_correct_hint_expand
+    reset_problem: true
+
+  # --- Abel–Ruffini: triage + downgrade to provable direction ---
+  - kind: run_task
+    label: abelruffini_triage
+    task_id: mk_poly_solvability_by_radicals
+    variant_id: v0_full_iff
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: downgrade_abelruffini_forward
+    mode: MAINTAINER
+    overlay: overlays/downgrade_abelruffini_forward
+
+  - kind: run_task
+    label: abelruffini_success
+    task_id: mk_poly_solvability_by_radicals
+    variant_id: v1_forward_direction
+    reset_problem: false
+
+  - kind: apply_overlay
+    label: promote_abelruffini_tool
+    mode: MAINTAINER
+    overlay: overlays/promote_abelruffini_tool
+
+  - kind: run_task
+    label: abelruffini_reuse
+    task_id: mk_poly_solvability_by_radicals
+    variant_id: v1_forward_direction
+    reset_problem: true
+
+  - kind: clean
+    label: final_clean

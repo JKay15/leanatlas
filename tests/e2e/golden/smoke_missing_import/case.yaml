@@ -1,0 +1,14 @@
+id: smoke_missing_import
+tier: smoke
+execution:
+  enabled: true
+  budgets:
+    limits:
+      max_wall_time_ms: 600000
+expected:
+  final_status: SUCCESS
+coverage_tags:
+- family:IMPORT
+- stage:build
+patch_sequence:
+- patches/001

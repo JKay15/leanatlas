@@ -1,0 +1,181 @@
+# LeanAtlas reference collection: Mentor keyword classics
+# Purpose: Provide *verifiable* sources for the "mentor keyword" agent-eval tasks.
+# Contract:
+#   - Each mentor keyword task.yaml must cite at least 2 entries from this file via `REF:<id>`.
+#   - Prefer stable, reputable sources (textbooks, peer-reviewed papers, university notes).
+#   - URLs are allowed in-repo; assistant responses should use web citations instead of raw URLs.
+
+schema: leanatlas.references
+schema_version: 0.1.0
+collection_id: mentor_keywords_classics
+updated_utc: 2026-02-24
+
+entries:
+  # --- Convex / interior point / tangent plane ---
+  - id: BV_CVXBOOK_2004
+    kind: book
+    title: Convex Optimization
+    authors:
+      - Stephen Boyd
+      - Lieven Vandenberghe
+    year: 2004
+    publisher: Cambridge University Press
+    url: https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf
+    used_for:
+      - Interior-point / barrier-method context
+      - Log barrier -log(x) as a standard barrier
+    notes: |
+      Widely used reference for convex optimization.
+      See Chapter 11 (Barrier methods) for barrier/interior-point framing.
+
+  - id: TOPSOE_LOGBNDS
+    kind: paper
+    title: Some bounds for the logarithmic function
+    authors:
+      - Flemming Topsøe
+    affiliation: University of Copenhagen
+    year: null
+    url: https://rgmia.org/papers/v7n2/pade.pdf
+    used_for:
+      - The classical inequality ln x ≤ x − 1 for x > 0
+      - Companion inequality 1 − 1/x ≤ ln x
+    notes: |
+      Section 1 "Basic inequalities", inequality (1) states 1 − 1/x ≤ ln x ≤ x − 1.
+
+  - id: MATHLIB_LOG_BASIC
+    kind: formal_library
+    title: Mathlib4 docs — Mathlib/Analysis/SpecialFunctions/Log/Basic
+    authors:
+      - leanprover-community
+    year: null
+    url: https://leanprover-community.github.io/mathlib4_docs/Mathlib/Analysis/SpecialFunctions/Log/Basic.html
+    used_for:
+      - Lemma `Real.log_le_sub_one_of_pos` (formal statement used in Lean)
+    notes: |
+      Use this as the *formal* truth source for the Lean lemma names and types.
+
+  # --- Queueing / Lindley recursion / M/G/1 ---
+  - id: VLASIOU_LINDLEY_THESIS_2006
+    kind: thesis
+    title: Lindley-type recursions
+    authors:
+      - Maria Vlasiou
+    year: 2006
+    institution: Technische Universiteit Eindhoven (TU/e) / Eurandom
+    url: https://pure.tue.nl/ws/files/2407803/200611281.pdf
+    used_for:
+      - Lindley recursion and queueing motivation
+      - Stability/recurrence discussion (background)
+    notes: |
+      Contains a dedicated section "Lindley’s recursion" and queueing interpretations.
+
+  - id: LEAHU_GG1_2013
+    kind: paper
+    title: Perturbation analysis of waiting times in the G/G/1 queue
+    authors:
+      - Haralambie Leahu
+      - Bernd Heidergott
+      - Arie Hordijk
+    year: 2013
+    venue: Discrete Event Dynamic Systems
+    doi: 10.1007/s10626-012-0144-0
+    url: https://www.researchgate.net/publication/329586771_Perturbation_Analysis_of_Waiting_Times_in_the_GG1_Queue
+    used_for:
+      - Explicit statement of Lindley’s recursion W_{n+1} = max{0, W_n + S_n − T_{n+1}}
+    notes: |
+      ResearchGate hosts a copy; use DOI for canonical citation.
+
+  # --- Queueing / Little's law (incl. sample-path) ---
+  - id: LITTLE_OR_1961
+    kind: paper
+    title: "A Proof for the Queuing Formula: L = λW"
+    authors:
+      - John D. C. Little
+    year: 1961
+    venue: Operations Research
+    volume: 9
+    number: 3
+    pages: 383-387
+    doi: 10.1287/opre.9.3.383
+    url: https://www.isye.gatech.edu/~spyros/courses/IE7201/Fall-13/Little-OR-paper.pdf
+    used_for:
+      - The original statement and proof of Little’s Law
+
+  - id: LITTLE_50TH_2011
+    kind: paper
+    title: Little’s Law as Viewed on Its 50th Anniversary
+    authors:
+      - John D. C. Little
+    year: 2011
+    venue: Operations Research
+    url: https://people.cs.umass.edu/~emery/classes/cmpsci691st/readings/OS/Littles-Law-50-Years-Later.pdf
+    used_for:
+      - Modern exposition + sample-path framing
+      - Clean area-under-curve argument
+
+  - id: WHITT_ZHANG_PLL_2018
+    kind: paper
+    title: Periodic Little’s law
+    authors:
+      - Ward Whitt
+      - Xiaoyang Zhang
+    year: 2018
+    url: https://www.columbia.edu/~ww2040/PeriodicLittlesLaw-6.pdf
+    used_for:
+      - Discrete/periodic formulations close to time-slot models
+
+  # --- Polynomials / solvable by radicals / Abel–Ruffini ---
+  - id: MATHLIB_ABEL_RUFFINI
+    kind: formal_library
+    title: Mathlib4 docs — Mathlib.FieldTheory.AbelRuffini
+    authors:
+      - leanprover-community
+    year: null
+    url: https://leanprover-community.github.io/mathlib4_docs/Mathlib/FieldTheory/AbelRuffini.html
+    used_for:
+      - Formal statement used by our Lean task scaffold
+
+  - id: DUMMIT_SOLVABILITY_NOTES_2020
+    kind: lecture_notes
+    title: "Math 5111 (Algebra 1) — Lecture #24: Solvability in radicals"
+    authors:
+      - David S. Dummit
+    year: 2020
+    institution: Northeastern University
+    url: https://dummit.cos.northeastern.edu/teaching_fa20_5111/5111_lecture_24_solvability_in_radicals.pdf
+    used_for:
+      - Standard textbook-level exposition connecting solvability in radicals ↔ solvable Galois group
+
+  - id: RAMOND_ABEL_RUFFINI_2020
+    kind: paper
+    title: "Abel–Ruffini’s Theorem: Complex but Not Complicated"
+    authors:
+      - Paul Ramond
+    year: null
+    url: https://mathcenter.oxford.emory.edu/site/math108/abel/abels_impossibility_proof.pdf
+    used_for:
+      - A readable proof sketch and statement of Abel–Ruffini (unsolvability of general quintic)
+
+  # --- Polynomials / basic factorization (difference of squares) ---
+  - id: MATHCENTRE_DIFF_SQUARES_2009
+    kind: lecture_notes
+    title: Factorising the difference of two squares
+    authors:
+      - mathcentre
+    year: 2009
+    institution: The Mathematics Learning Centre (UK)
+    url: https://www.mathcentre.ac.uk/resources/Algebra%20leaflets/mc-diff2squares-2009-1.pdf
+    used_for:
+      - Identity a^2 − b^2 = (a − b)(a + b)
+
+
+  - id: MATHLIB_POLYNOMIAL_BASIC
+    kind: formal_library
+    title: Mathlib4 docs — Mathlib.Algebra.Polynomial.Basic
+    authors:
+      - leanprover-community
+    year: null
+    url: https://leanprover-community.github.io/mathlib4_docs/Mathlib/Algebra/Polynomial/Basic.html
+    used_for:
+      - Lean names/types for `Polynomial` basics (X, C, coeff, etc.)
+      - A stable anchor for polynomial identities used in the factorization tasks

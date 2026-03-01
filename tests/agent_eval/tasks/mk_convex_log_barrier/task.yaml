@@ -1,0 +1,64 @@
+schema: leanatlas.agent_eval_task
+schema_version: 0.1.0
+task_id: mk_convex_log_barrier
+problem_slug: mk_convex_log_barrier
+kind: PROOF_LOOP
+description: 'Mentor keyword pack: interior point / log barrier tangent inequality
+  (convex analysis).'
+keywords:
+- interior_point
+- tangent_plane
+- convex_analysis
+domain_hint:
+  msc_primary: 90C51
+references:
+  - "REF:BV_CVXBOOK_2004"
+  - "REF:TOPSOE_LOGBNDS"
+  - "REF:MATHLIB_LOG_BASIC"
+prompt: |
+  You are Codex running LeanAtlas in OPERATOR mode.
+  Goal: prove a representative inequality that underlies log-barrier methods.
+
+  In continuous optimization, the tangent line inequality for log is:
+      log x ≤ x - 1   for x > 0.
+
+  In Lean/mathlib, `Real.log` is defined on ℝ, but this inequality is only valid
+  on the positive domain.
+
+  Workflow requirement:
+  - If the current problem statement is missing domain assumptions, you MUST TRIAGE
+    with a concrete patch proposal (e.g., add `0 < x`), because OPERATOR mode cannot
+    edit Spec.lean.
+variants:
+- variant_id: v0_wrong_hint_missing_domain
+  gptpro_hint: |
+    (intentionally wrong) Prove `∀ x : ℝ, Real.log x ≤ x - 1` without assumptions.
+    Do not change the statement.
+  expected:
+    final_status: TRIAGED
+    triage_family: ASSUMPTION
+    triage_code: MISSING_DOMAIN_ASSUMPTION
+  notes: Statement is false as written; OPERATOR must TRIAGE with a patch proposal.
+  tags:
+  - TRIAGED
+- variant_id: v1_correct_hint_mathlib_lemma
+  fixture_overlay_dir: tests/agent_eval/tasks/mk_convex_log_barrier/variants/v1_correct_hint_mathlib_lemma/fixture_overlay
+  gptpro_hint: |
+    (correct) In this variant, the **maintainer has already fixed Spec.lean** by adding `0 < x`.
+    Now prove the corrected statement.
+
+    Use existing lemma:
+      `Real.log_le_sub_one_of_pos`.
+
+    Keep the proof minimal and do not introduce new definitions.
+  expected:
+    final_status: SUCCESS
+  tool_delta:
+    max_new_modules: 1
+  skill_delta:
+    expected_new_kb_tags:
+    - convex/log_tangent_inequality
+    - triage/missing_domain_assumption
+  notes: Should succeed quickly once domain assumption is present.
+  tags:
+  - SUCCESS

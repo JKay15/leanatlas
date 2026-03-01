@@ -1,0 +1,20 @@
+{
+  "version": "0.1",
+  "meta": {
+    "phase": "fixture",
+    "note": "Minimal plan used by scenario_phase3_gc_apply_smoke"
+  },
+  "policy": {
+    "note": "fixture policy (not authoritative)"
+  },
+  "actions": [
+    {
+      "seed_id": "LeanAtlas.Incubator.Seeds.Demo.SeedA",
+      "action": "quarantine",
+      "evidence": {
+        "fixture": true,
+        "reason": "smoke"
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+id: core_name_notation
+tier: core
+execution:
+  enabled: true
+  budgets:
+    limits:
+      max_wall_time_ms: 180000
+expected:
+  final_status: SUCCESS
+coverage_tags:
+- family:NAME
+- stage:build
+patch_sequence:
+- patches/001

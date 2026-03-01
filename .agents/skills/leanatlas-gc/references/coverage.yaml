@@ -1,0 +1,4 @@
+version: "0.1"
+covers_commands:
+  - gc.propose
+  - gc.apply

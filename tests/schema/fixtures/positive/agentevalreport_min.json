@@ -1,0 +1,27 @@
+{
+  "artifacts": [
+    "Problems/proof_loop_demo/Reports/<run_id>/"
+  ],
+  "deterministic_checks": [
+    {
+      "evidence": [
+        "Problems/proof_loop_demo/Reports/<run_id>/RunReport.json"
+      ],
+      "id": "runreport_exists",
+      "notes": "schema fixture",
+      "passed": true
+    }
+  ],
+  "eval_id": "agent_eval_smoke",
+  "notes": [],
+  "passed": false,
+  "schema": "leanatlas.agent_eval_report",
+  "schema_version": "0.1.0",
+  "signals": {
+    "success_rate": 0.0,
+    "triage_accuracy": 1.0
+  },
+  "stamp": "2026-02-24T00:00:00Z",
+  "task_id": "proof_loop_demo",
+  "variant_id": "v0_wrong_hint"
+}

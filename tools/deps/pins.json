@@ -1,0 +1,115 @@
+{
+  "dependencies": {
+    "import_graph": {
+      "kind": "lean_package",
+      "notes": "Used to generate/analyze module import graphs (GCGate/visualization will be reused). It is recommended to pin to the tag aligned with the Lean toolchain.",
+      "pin": {
+        "commit": "85b59af46828c029a9168f2f9c35119bd0721e6e",
+        "rev": "v4.28.0"
+      },
+      "pinned_by": "lakefile.lean",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/leanprover-community/import-graph"
+      },
+      "verify": [
+        "lake exe graph --help"
+      ]
+    },
+    "lean_lsp_mcp": {
+      "kind": "mcp_server",
+      "notes": "Use commit pin by default to prevent uvx from pulling to drifting upstream versions.",
+      "pin": {
+        "commit": "5969dba51ec7c602fb861474fbe01bc166d81734",
+        "tag": "v0.22.0"
+      },
+      "run": {
+        "command": "lean-lsp-mcp",
+        "uvx_from": "git+https://github.com/oOo0oOo/lean-lsp-mcp@5969dba51ec7c602fb861474fbe01bc166d81734"
+      },
+      "source": {
+        "type": "git",
+        "url": "https://github.com/oOo0oOo/lean-lsp-mcp"
+      },
+      "verify": [
+        "uvx --from git+https://github.com/oOo0oOo/lean-lsp-mcp@5969dba51ec7c602fb861474fbe01bc166d81734 lean-lsp-mcp --help"
+      ]
+    },
+    "lean_toolchain": {
+      "kind": "lean_toolchain",
+      "notes": "The Lean toolchain is part of the compiled source. Do not modify it in OPERATOR mode.",
+      "pinned_by": "lean-toolchain",
+      "value": "leanprover/lean4:v4.28.0",
+      "verify": [
+        "lake --version",
+        "lake build"
+      ]
+    },
+    "mathlib": {
+      "kind": "lean_package",
+      "notes": "mathlib version must match Lean version.",
+      "pin": {
+        "rev": "v4.28.0"
+      },
+      "pinned_by": "lakefile.lean",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/leanprover-community/mathlib4"
+      },
+      "verify": [
+        "lake build"
+      ]
+    },
+    "python": {
+      "kind": "runtime",
+      "min_version": "3.10",
+      "notes": "Python for deterministic gates, schema/contract/tests.",
+      "verify": [
+        "python --version"
+      ]
+    },
+    "python_uv_project": {
+      "direct_pins": {
+        "PyYAML": "6.0.3",
+        "drain3": "0.9.11",
+        "jsonschema": "4.26.0"
+      },
+      "files": [
+        "pyproject.toml",
+        "uv.lock"
+      ],
+      "kind": "uv_project",
+      "notes": "The Python tool chain in this warehouse is managed by uv: pyproject.toml declares direct dependencies; uv.lock locks the complete parsing results (including transitive dependencies). uv.lock is generated and maintained by uv, do not modify it manually.",
+      "verify": [
+        "uv --version",
+        "uv lock --check",
+        "uv sync --locked",
+        "uv run --locked python -c \"import importlib.metadata as m; print('jsonschema', m.version('jsonschema')); print('PyYAML', m.version('PyYAML'))\"",
+        "uv run --locked python tests/run.py --profile core"
+      ]
+    },
+    "ripgrep": {
+      "kind": "cli",
+      "min_version": "13.0.0",
+      "notes": "Used for MCP local search backend with deterministic grep downgrade.",
+      "verify": [
+        "rg --version"
+      ]
+    },
+    "uv": {
+      "install": {
+        "unix": "curl -LsSf https://astral.sh/uv/0.10.4/install.sh | sh",
+        "windows": "powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh/uv/0.10.4/install.ps1 | iex\""
+      },
+      "kind": "cli",
+      "notes": "uv/uvx is used to run Python tools (such as lean-lsp-mcp) in isolation.",
+      "tested_version": "0.10.4",
+      "verify": [
+        "uv --version",
+        "uvx --version"
+      ]
+    }
+  },
+  "updated_at": "2026-02-24",
+  "version": "1"
+}

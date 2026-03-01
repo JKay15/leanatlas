@@ -1,0 +1,60 @@
+{
+  "context": {
+    "git_sha": "deadbeef0",
+    "lean_toolchain": "leanprover/lean4:v4.x.x",
+    "mathlib_rev": "mathlib-pin-placeholder",
+    "tools": {
+      "environment_stamp": {
+        "lean_toolchain": "leanprover/lean4:v4.x.x",
+        "mathlib_rev": "mathlib-pin-placeholder",
+        "pinned_tools": {},
+        "pins_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  },
+  "diagnostics": [],
+  "entrypoints": {
+    "files": {
+      "cache": "Problems/demo_problem/Cache.lean",
+      "proof": "Problems/demo_problem/Proof.lean",
+      "scratch": "Problems/demo_problem/Scratch.lean",
+      "spec": "Problems/demo_problem/Spec.lean"
+    }
+  },
+  "hotspots": [],
+  "mode": "OPERATOR",
+  "problem_slug": "demo_problem",
+  "retrieval_trace_path": "RetrievalTrace.json",
+  "run_id": "sample_run_002",
+  "schema": "leanatlas.run_report",
+  "schema_version": "0.4.0",
+  "stages": {
+    "build": {
+      "status": "OK"
+    },
+    "retrieval": {
+      "status": "SKIPPED"
+    },
+    "verify": {
+      "status": "OK"
+    }
+  },
+  "status": "SUCCESS",
+  "summary": {
+    "one_line": "Example SUCCESS report.",
+    "title": "Demo SUCCESS run"
+  },
+  "targets": [
+    {
+      "decl": "Demo.main",
+      "file": "Problems/demo_problem/Proof.lean",
+      "id": "t_main",
+      "role": "MAIN"
+    }
+  ],
+  "verification": {
+    "axioms": [],
+    "no_sorry": true,
+    "warnings": []
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "policy": {
+    "default_threshold": 10,
+    "two_phase_delete_enforced": true
+  },
+  "version": "0.1"
+}

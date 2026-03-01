@@ -1,0 +1,47 @@
+{
+  "generated_at_utc": "2026-02-28T00:00:00Z",
+  "item_count": 1,
+  "items": [
+    {
+      "agent_build_id": "b1",
+      "category": "docs",
+      "closure_criteria": [
+        "how_to_doc_merged"
+      ],
+      "feedback_id": "fb_abc123",
+      "frequency_hint": "unknown",
+      "id": "fb_abc123",
+      "links": {
+        "docs": [],
+        "prs": [],
+        "release_notes": [],
+        "tests": []
+      },
+      "required_actions": [
+        "update_how_to_docs"
+      ],
+      "session_id": "s1",
+      "severity": "S2",
+      "sla_hours": 72,
+      "source_file": "artifacts/feedback/inbox/a.md",
+      "status": "open",
+      "target_bucket": "docs/agents",
+      "text": "onboarding doc is unclear",
+      "triage_class": "how_to_gap"
+    }
+  ],
+  "schema": "leanatlas.chat_feedback_digest",
+  "schema_version": "0.1.0",
+  "source_root": "artifacts/feedback/inbox",
+  "summary": {
+    "by_category": {
+      "docs": 1
+    },
+    "by_severity": {
+      "S2": 1
+    },
+    "by_target_bucket": {
+      "docs/agents": 1
+    }
+  }
+}

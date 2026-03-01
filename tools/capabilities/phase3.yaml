@@ -1,0 +1,78 @@
+version: '0.1'
+phase: phase3
+commands:
+- id: gc.propose
+  entrypoint: uv run --locked python tools/gc/gc.py propose
+  description: Produce GCPlan/GCReport (no repo mutation).
+  inputs:
+  - --repo-root <path>
+  - --out-root <path>
+  - --mode OPERATOR
+  outputs:
+  - <out-root>/GCPlan.json
+  - <out-root>/GCReport.json
+  - <out-root>/GCReport.md
+  schemas:
+  - docs/schemas/GCPlan.schema.json
+  - docs/schemas/GCReport.schema.json
+  deps:
+  - import-graph (via lake) optional; fallback supported
+  smoke:
+  - uv run --locked python tools/gc/gc.py propose --repo-root . --out-root .cache/leanatlas/gc/propose
+    --mode OPERATOR
+
+- id: gc.apply
+  entrypoint: uv run --locked python tools/gc/gc.py apply
+  description: Apply GCPlan by mutating gc_state.json only (MAINTAINER).
+  inputs:
+  - --repo-root <path>
+  - --plan <GCPlan.json>
+  - --out-root <path>
+  - --mode MAINTAINER
+  outputs:
+  - tools/index/gc_state.json
+  - <out-root>/GCReport.json
+  - <out-root>/GCReport.md
+  schemas:
+  - docs/schemas/GCState.schema.json
+  deps: []
+  smoke:
+  - uv run --locked python tools/gc/gc.py apply --repo-root . --plan .cache/leanatlas/gc/propose/GCPlan.json
+    --out-root .cache/leanatlas/gc/apply --mode MAINTAINER
+
+- id: dedup.gate
+  entrypoint: uv run --locked python tools/dedup/dedup.py
+  description: Produce DedupReport (DedupGate). V0 implementation scans source for instance duplicates.
+  inputs:
+  - --repo-root <path>
+  - --out-root <path>
+  outputs:
+  - <out-root>/DedupReport.json
+  - <out-root>/DedupReport.md
+  schemas:
+  - docs/schemas/DedupReport.schema.json
+  deps: []
+  smoke:
+  - uv run --locked python tools/dedup/dedup.py --repo-root . --out-root .cache/leanatlas/dedup/scan
+
+- id: promote.gate
+  entrypoint: uv run --locked python tools/promote/promote.py
+  description: Produce PromotionReport (PromotionGate). Runs auditable 12-gate checks and writes PromotionReport.
+  inputs:
+  - --repo-root <path>
+  - --plan <PromotionPlan.json>
+  - --out-root <path>
+  - --mode MAINTAINER
+  outputs:
+  - <out-root>/PromotionReport.json
+  - <out-root>/PromotionReport.md
+  schemas:
+  - docs/schemas/PromotionPlan.schema.json
+  - docs/schemas/PromotionReport.schema.json
+  deps:
+  - lake (Lean toolchain)
+  - mathlib (pinned by lakefile.lean)
+  - importGraph (pinned by lakefile.lean)
+  smoke:
+  - uv run --locked python tools/promote/promote.py --repo-root . --plan tools/promote/fixtures/plan_minimal.json
+    --out-root .cache/leanatlas/promotion/gate --mode MAINTAINER

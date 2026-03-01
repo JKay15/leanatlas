@@ -1,0 +1,15 @@
+{
+  "seeds": {
+    "LeanAtlas.Incubator.Seeds.Algebra.Group.Basic": {
+      "reason": {
+        "code": "unreachable_and_stale",
+        "policy_ref": "artifacts/gc/2026-02-22/gcplan.json"
+      },
+      "refs": {
+        "gc_report": "artifacts/gc/2026-02-22/gcreport.json"
+      },
+      "state": "quarantined"
+    }
+  },
+  "version": "0.1"
+}

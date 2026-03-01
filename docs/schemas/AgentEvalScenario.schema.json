@@ -1,0 +1,223 @@
+{
+  "$id": "leanatlas.agent_eval_scenario.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "execution": {
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "workspace": {
+          "enum": [
+            "shared"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "type": "object"
+    },
+    "scenario_class": {
+      "description": "High-level scenario category for Phase6.2 coverage.",
+      "enum": [
+        "INTERLEAVING",
+        "REGRESSION",
+        "PRESSURE"
+      ],
+      "type": "string"
+    },
+    "scenario_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "leanatlas.agent_eval_scenario"
+    },
+    "schema_version": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "type": "string"
+    },
+    "steps": {
+      "items": {
+        "additionalProperties": true,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "run_task"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "task_id",
+                "variant_id"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "run_pack"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "pack_id"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "apply_overlay"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "mode",
+                "overlay"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "lake_build"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "target"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "run_cmd"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "cmd"
+              ]
+            }
+          }
+        ],
+        "properties": {
+          "cmd": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "expected_override": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "kind": {
+            "enum": [
+              "run_task",
+              "run_pack",
+              "apply_overlay",
+              "clean",
+              "lake_build",
+              "run_cmd"
+            ],
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "OPERATOR",
+              "MAINTAINER"
+            ],
+            "type": "string"
+          },
+          "overlay": {
+            "type": "string"
+          },
+          "pack_id": {
+            "type": "string"
+          },
+          "repeat": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reset_problem": {
+            "type": "boolean"
+          },
+          "target": {
+            "type": "string"
+          },
+          "task_id": {
+            "type": "string"
+          },
+          "task_variants": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object"
+          },
+          "variant_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "tier": {
+      "enum": [
+        "core",
+        "smoke",
+        "nightly",
+        "manual"
+      ],
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "execution",
+    "scenario_class",
+    "scenario_id",
+    "schema",
+    "schema_version",
+    "steps",
+    "tier"
+  ],
+  "title": "LeanAtlas AgentEval Scenario",
+  "type": "object"
+}

@@ -1,0 +1,3 @@
+terms:
+  - term: Little's law
+    meaning: "In steady state, average number in system L equals arrival rate λ times average time in system W: L = λW."

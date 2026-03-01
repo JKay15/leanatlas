@@ -1,0 +1,29 @@
+{
+  "agent_build_id": "b1",
+  "captured_at_utc": "2026-02-28T00:00:00Z",
+  "closure_criteria": [
+    "how_to_doc_merged"
+  ],
+  "feedback_id": "fb_bad",
+  "first_seen_at_utc": "2026-02-28T00:00:00Z",
+  "frequency_hint": "unknown",
+  "links": {
+    "docs": [],
+    "prs": [],
+    "release_notes": [],
+    "tests": []
+  },
+  "observed_behavior": "x",
+  "required_actions": [
+    "update_how_to_docs"
+  ],
+  "schema": "leanatlas.feedback_ledger_line",
+  "schema_version": "0.1.0",
+  "session_id": "s1",
+  "severity": "S2",
+  "sla_hours": 72,
+  "source_file": "artifacts/feedback/inbox/a.md",
+  "status": "invalid_status",
+  "target_bucket": "docs/agents",
+  "triage_class": "how_to_gap"
+}

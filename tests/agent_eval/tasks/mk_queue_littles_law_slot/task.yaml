@@ -1,0 +1,58 @@
+schema: leanatlas.agent_eval_task
+schema_version: 0.1.0
+task_id: mk_queue_littles_law_slot
+problem_slug: mk_queue_littles_law_slot
+kind: PROOF_LOOP
+description: 'Mentor keyword pack: Little''s law (time-slot / sample-path double counting).'
+keywords:
+- queueing_theory
+- littles_law
+- time_slot_model
+references:
+  - "REF:LITTLE_OR_1961"
+  - "REF:LITTLE_50TH_2011"
+  - "REF:WHITT_ZHANG_PLL_2018"
+prompt: |
+  You are Codex running LeanAtlas in OPERATOR mode.
+  Goal: formalize a *time-slot / sample-path* version of Little's law via a
+  deterministic double-counting identity (no probability required).
+
+  Suggested formulation (you may choose an equivalent clean one):
+  - Consider a finite horizon T (Nat).
+  - Define an occupancy function L : Fin T → Nat.
+  - Define a finite set of jobs J, each job has an interval of slots it occupies.
+  - Prove the double-counting identity:
+      (sum over t) L(t) = (sum over jobs j) (number of slots job j spends in system).
+  - This is the combinatorial core behind L = λ W.
+
+  Requirements:
+  - Keep it finite (Finset sums), so it is fully checkable in Lean without probability libraries.
+  - Follow the proof-loop workflow and produce evidence artifacts.
+variants:
+- variant_id: v0_wrong_hint_nonexistent_littles_law
+  gptpro_hint: |
+    (intentionally wrong) Import `QueueingTheory` from mathlib and use `LittleLaw`.
+    If that module/lemma doesn't exist, treat it as FIXABLE: switch to a pure Finset double-counting proof.
+  expected:
+    final_status: SUCCESS
+  notes: Wrong import/name is FIXABLE inside Proof.lean. A good agent should recover
+    and still solve.
+  tags:
+  - FIXABLE
+- variant_id: v1_correct_hint_double_count
+  gptpro_hint: |
+    (correct) Do pure Finset double counting.
+    Represent each job's occupancy as an indicator function over slots.
+    Then use `Finset.sum_sigma'` / `Finset.sum_comm` style lemmas to swap sums.
+  expected:
+    final_status: SUCCESS
+  tool_delta:
+    max_new_modules: 2
+  skill_delta:
+    expected_new_kb_tags:
+    - queueing/littles_law_sample_path
+    - finset/double_counting
+    - triage/fixable_import_mismatch
+  notes: Should succeed purely as finite combinatorics; no probability needed.
+  tags:
+  - SUCCESS

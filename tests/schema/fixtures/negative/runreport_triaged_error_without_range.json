@@ -1,0 +1,112 @@
+{
+  "context": {
+    "git_sha": "deadbeef0",
+    "lean_toolchain": "leanprover/lean4:v4.x.x",
+    "mathlib_rev": "mathlib-pin-placeholder",
+    "tools": {
+      "lean_lsp_mcp_version": "pin-me"
+    }
+  },
+  "diagnostics": [
+    {
+      "file": "Problems/demo_problem/Proof.lean",
+      "id": "d0",
+      "message": "typeclass instance problem (demo)",
+      "severity": "error"
+    }
+  ],
+  "entrypoints": {
+    "files": {
+      "cache": "Problems/demo_problem/Cache.lean",
+      "proof": "Problems/demo_problem/Proof.lean",
+      "scratch": "Problems/demo_problem/Scratch.lean",
+      "spec": "Problems/demo_problem/Spec.lean"
+    }
+  },
+  "extensions": {},
+  "hotspots": [
+    {
+      "diagnostic_ids": [
+        "d0"
+      ],
+      "id": "h0",
+      "stage": "build",
+      "target_id": "t_main",
+      "title": "Missing assumption: Nonempty",
+      "trace_step_indices": [
+        1
+      ]
+    }
+  ],
+  "mode": "OPERATOR",
+  "problem_slug": "demo_problem",
+  "retrieval_trace_path": "RetrievalTrace.json",
+  "run_id": "sample_run_001",
+  "schema": "leanatlas.run_report",
+  "schema_version": "0.3.0",
+  "stages": {
+    "build": {
+      "refs": {
+        "diagnostic_ids": [
+          "d0"
+        ],
+        "target_ids": [
+          "t_main"
+        ]
+      },
+      "status": "FAIL"
+    },
+    "retrieval": {
+      "status": "OK"
+    },
+    "verify": {
+      "status": "SKIPPED"
+    }
+  },
+  "status": "TRIAGED",
+  "summary": {
+    "one_line": "Example report + refs.",
+    "title": "Demo TRIAGED run"
+  },
+  "targets": [
+    {
+      "decl": "Demo.main",
+      "file": "Problems/demo_problem/Proof.lean",
+      "id": "t_main",
+      "role": "MAIN"
+    }
+  ],
+  "triage": {
+    "category": {
+      "code": "MISSING_ASSUMPTION",
+      "family": "ASSUMPTION",
+      "standard": true
+    },
+    "evidence": {
+      "diagnostic_ids": [
+        "d0"
+      ],
+      "found_candidate_lemmas": [
+        {
+          "module": "Mathlib.Logic.Function.Basic",
+          "name": "Function.Injective.hasLeftInverse"
+        }
+      ],
+      "missing_requirements": [
+        "[Nonempty α]"
+      ],
+      "target_id": "t_main"
+    },
+    "level": "ESCALATE",
+    "next_actions": [
+      {
+        "description": "Add `[Nonempty α]` to the statement.",
+        "kind": "PATCH_SPEC"
+      },
+      {
+        "description": "Replan with corrected assumptions.",
+        "kind": "REQUEST_GPTPRO_REPLAN"
+      }
+    ]
+  }
+}

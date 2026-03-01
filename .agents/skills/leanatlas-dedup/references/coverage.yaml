@@ -1,0 +1,3 @@
+version: "0.1"
+covers_commands:
+  - dedup.gate

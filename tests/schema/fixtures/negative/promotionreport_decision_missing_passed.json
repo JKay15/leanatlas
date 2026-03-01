@@ -1,0 +1,13 @@
+{
+  "decision": {
+    "reason_code": "OK"
+  },
+  "gates": [],
+  "promotion_targets": [
+    {
+      "name": "X"
+    }
+  ],
+  "summary": {},
+  "version": "0.1"
+}

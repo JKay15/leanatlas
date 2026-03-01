@@ -1,0 +1,30 @@
+{
+  "candidates": [
+    {
+      "decls": [
+        {
+          "name": "LeanAtlas.Incubator.Seeds.Example.foo"
+        }
+      ],
+      "domain": {
+        "domain_id": "MSC_00",
+        "msc": [
+          "00"
+        ]
+      },
+      "source": "LeanAtlas/Incubator/Seeds/Example"
+    }
+  ],
+  "meta": {
+    "generated_at": "2026-02-22T00:00:00Z",
+    "mode": "MAINTAINER",
+    "source": "manual"
+  },
+  "policy": {
+    "min_domain_reuse_sessions": 2,
+    "scope_prefixes": [
+      "LeanAtlas"
+    ]
+  },
+  "version": "0.1"
+}

@@ -1,0 +1,155 @@
+{
+  "$id": "https://leanatlas.dev/schemas/FeedbackLedgerLine.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "agent_build_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "captured_at_utc": {
+      "type": "string"
+    },
+    "closure_criteria": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "evidence_excerpt": {
+      "type": "string"
+    },
+    "expected_behavior": {
+      "type": "string"
+    },
+    "feedback_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "first_seen_at_utc": {
+      "type": "string"
+    },
+    "frequency_hint": {
+      "type": "string"
+    },
+    "links": {
+      "additionalProperties": false,
+      "properties": {
+        "docs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "prs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "release_notes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tests": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "prs",
+        "tests",
+        "docs",
+        "release_notes"
+      ],
+      "type": "object"
+    },
+    "observed_behavior": {
+      "type": "string"
+    },
+    "required_actions": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "schema": {
+      "const": "leanatlas.feedback_ledger_line"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "session_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "S0",
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "type": "string"
+    },
+    "sla_hours": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "source_file": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "open",
+        "triaged",
+        "closed",
+        "resolved",
+        "done"
+      ],
+      "type": "string"
+    },
+    "target_bucket": {
+      "type": "string"
+    },
+    "triage_class": {
+      "enum": [
+        "contract_drift",
+        "how_to_gap",
+        "bug_missing_test",
+        "one_off_preference"
+      ],
+      "type": "string"
+    },
+    "user_intent_summary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "feedback_id",
+    "captured_at_utc",
+    "first_seen_at_utc",
+    "status",
+    "session_id",
+    "agent_build_id",
+    "triage_class",
+    "severity",
+    "sla_hours",
+    "source_file",
+    "target_bucket",
+    "observed_behavior",
+    "required_actions",
+    "closure_criteria",
+    "links"
+  ],
+  "title": "Feedback Ledger Line",
+  "type": "object"
+}

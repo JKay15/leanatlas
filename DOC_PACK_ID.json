@@ -1,0 +1,21 @@
+{
+  "base_zip": "leanatlas_codex_scaffold_v0_50_0.zip",
+  "built_at_utc": "2026-02-24T11:47:08Z",
+  "content_hash": "7101a20bbf13a3506d10650d1f115915bff44d53ce52122a02e69c825effd760",
+  "content_hash_sha256": "7101a20bbf13a3506d10650d1f115915bff44d53ce52122a02e69c825effd760",
+  "created_at": "2026-02-24T11:47:08Z",
+  "doc_pack_id": "leanatlas_codex_scaffold_v0.50.1",
+  "doc_pack_version": "v0.50.1",
+  "notes": [
+    "v0.50.1: Fix DOC_PACK_ID version fields to match packaged content (metadata-only).",
+    "v0.48.0: run_scenario writes ScenarioSource.yaml + BaselineToolSurface.json + per-step ToolSurface.json (runner-produced evidence).",
+    "v0.48.0: grade_scenario computes deterministic scenario-level tool reuse (ToolSurface diffs + local import-closure reachability).",
+    "v0.48.0: grade_pack/grade_scenario patch_scope_not_violated check fixed to use patch_scope.verdict.",
+    "v0.47.0: Phase6 run_pack now carries tool_delta/skill_delta/tags into Plan.json & CONTEXT.json (grader-visible, prompt-hidden).",
+    "v0.47.0: run_pack materialize writes BaselineToolSurface.json; grade_pack enforces tool_delta via file-surface diff.",
+    "v0.47.0: Fix outdated core scenario schema (add execution + overlay mode).",
+    "v0.47.0: Fix skill file frontmatter + heading normalization for regen determinism.",
+    "v0.47.0: Replace broken Lindley recursion reference with accessible arXiv/Euclid sources; enrich Little's law refs."
+  ],
+  "version": "v0.50.1"
+}

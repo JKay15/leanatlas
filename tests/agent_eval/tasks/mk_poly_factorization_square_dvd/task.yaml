@@ -1,0 +1,42 @@
+schema: leanatlas.agent_eval_task
+schema_version: 0.1.0
+task_id: mk_poly_factorization_square_dvd
+problem_slug: mk_poly_factorization_square_dvd
+kind: PROOF_LOOP
+description: |
+  Mentor keyword pack: polynomial “solvable” / explicit factorization — reuse case.
+
+  This is the “B-side” task: after promoting the factorization lemma to the toolbox,
+  prove a simple divisibility corollary.
+keywords:
+  - polynomial_solvable
+  - algebra_polynomial
+references:
+  - "REF:MATHCENTRE_DIFF_SQUARES_2009"
+  - "REF:MATHLIB_POLYNOMIAL_BASIC"
+prompt: |
+  You are Codex running LeanAtlas in OPERATOR mode.
+
+  Goal: show `(X - C a) ∣ (X^2 - C(a^2))` by reusing the toolbox lemma.
+
+  Requirements:
+  - Use `LeanAtlas.Toolbox.Polynomial.Factorization.X_sq_sub_C_sq`.
+  - Keep edits inside this problem directory.
+variants:
+  - variant_id: v0_reuse_promoted_tool
+    gptpro_hint: |
+      Use the toolbox lemma:
+
+        `h : (X : Polynomial ℝ)^2 - C (a^2) = (X - C a) * (X + C a)`
+
+      then rewrite the target with `h` and close with `dvd_mul_of_dvd_left` or `⟨_, rfl⟩`.
+    expected:
+      final_status: SUCCESS
+    tool_delta:
+      max_new_modules: 0
+    skill_delta:
+      expected_new_kb_tags:
+        - algebra/polynomial_factorization_reuse
+        - reuse/toolbox_prefer_existing
+    tags:
+      - SUCCESS

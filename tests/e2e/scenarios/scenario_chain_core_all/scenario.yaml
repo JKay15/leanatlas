@@ -1,0 +1,23 @@
+id: scenario_chain_core_all
+tier: nightly
+execution:
+  enabled: true
+  workspace: shared
+steps:
+- kind: run_case
+  case_id: core_budget_exhausted
+- kind: run_case
+  case_id: core_name_notation
+- kind: run_case
+  case_id: core_statement_false
+- kind: run_case
+  case_id: core_tactic_failure
+- kind: run_case
+  case_id: core_toolbox_consumer
+- kind: run_case
+  case_id: core_tooling_failure
+- kind: run_case
+  case_id: core_type_mismatch
+- kind: lake_build
+  target: Problems
+  expect_rc: 0

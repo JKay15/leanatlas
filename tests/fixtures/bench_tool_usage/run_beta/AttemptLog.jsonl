@@ -1,0 +1,1 @@
+{"exec_spans":[{"cmd":["python","tools/coordination/skills_regen.py","--check"]}]}

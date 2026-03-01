@@ -1,0 +1,54 @@
+{
+  "attempt_index": 0,
+  "judge": {
+    "K": 4,
+    "budget_exceeded": [],
+    "decision": "CONTINUE",
+    "detail": "",
+    "reason_code": "OK",
+    "stagnant_count": 0,
+    "triage_level": null
+  },
+  "patch_scope": {
+    "ignored_paths": [],
+    "primary_reason_code": "OK",
+    "verdict": "ALLOW",
+    "violations": []
+  },
+  "problem_slug": "demo_problem",
+  "run_id": "neg_attempt_missing_budget",
+  "schema": "leanatlas.attempt_log_line",
+  "schema_version": "0.5.0",
+  "signals": {
+    "diag_changed": true,
+    "diag_fingerprint": "abcd1234abcd1234",
+    "imports_changed": false,
+    "new_retrieval_hit": false,
+    "stagnant": false
+  },
+  "stages": {
+    "build": {
+      "diagnostic_ids": [
+        "d0"
+      ],
+      "status": "FAIL",
+      "trace_step_indices": [
+        0
+      ]
+    },
+    "retrieval": {
+      "status": "OK"
+    },
+    "verify": {
+      "status": "SKIPPED"
+    }
+  },
+  "suspected_category": {
+    "code": "TYPE_MISMATCH",
+    "family": "TYPE",
+    "standard": true
+  },
+  "touched_files": [
+    "Problems/demo_problem/Proof.lean"
+  ]
+}

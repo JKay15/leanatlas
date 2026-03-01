@@ -1,0 +1,45 @@
+schema: leanatlas.agent_eval_task
+schema_version: 0.1.0
+task_id: mk_poly_solvability_by_radicals_reuse
+problem_slug: mk_poly_solvability_by_radicals_reuse
+kind: PROOF_LOOP
+description: |
+  Mentor keyword pack: “polynomial solvable by radicals” — reuse case.
+
+  This is the “B-side” task: after promoting a wrapper around
+  `IsSolvableByRad.isSolvable` to the toolbox, prove the forward implication by
+  invoking that wrapper.
+keywords:
+  - polynomial_solvable
+  - solvable_by_radicals
+references:
+  - "REF:MATHLIB_ABEL_RUFFINI"
+  - "REF:DUMMIT_SOLVABILITY_NOTES_2020"
+  - "REF:RAMOND_ABEL_RUFFINI_2020"
+prompt: |
+  You are Codex running LeanAtlas in OPERATOR mode.
+
+  Goal: reuse the toolbox wrapper for the forward implication.
+
+  Requirements:
+  - Keep edits inside this problem directory.
+  - Use `LeanAtlas.Toolbox.FieldTheory.SolvableByRadicals.isSolvable_gal_of_isSolvableByRad`.
+variants:
+  - variant_id: v0_reuse_promoted_tool
+    gptpro_hint: |
+      One-liner proof is fine:
+
+        intro h
+        exact LeanAtlas.Toolbox.FieldTheory.SolvableByRadicals.isSolvable_gal_of_isSolvableByRad (F:=F) (α:=α) h
+
+      (Or `simpa`.)
+    expected:
+      final_status: SUCCESS
+    tool_delta:
+      max_new_modules: 0
+    skill_delta:
+      expected_new_kb_tags:
+        - field_theory/solvable_by_radicals_reuse
+        - reuse/toolbox_prefer_existing
+    tags:
+      - SUCCESS

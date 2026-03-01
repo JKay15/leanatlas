@@ -1,0 +1,9 @@
+{
+  "meta": {
+    "generated_at": "2026-02-22T00:00:00Z"
+  },
+  "policy": {
+    "min_domain_reuse_sessions": 2
+  },
+  "version": "0.1"
+}

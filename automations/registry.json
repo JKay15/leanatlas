@@ -1,0 +1,601 @@
+{
+  "version": "1",
+  "automations": [
+    {
+      "id": "nightly_reporting_integrity",
+      "status": "active",
+      "mode": "MAINTAINER",
+      "purpose": "Nightly: verify reporting schemas + canonical determinism never drift.",
+      "trigger": {
+        "type": "schedule",
+        "cadence": "nightly"
+      },
+      "deterministic": {
+        "steps": [
+          {
+            "name": "schema_validate",
+            "cmd": [
+              "python",
+              "tests/schema/validate_schemas.py"
+            ]
+          },
+          {
+            "name": "canonical_json",
+            "cmd": [
+              "python",
+              "tests/determinism/check_canonical_json.py"
+            ]
+          }
+        ],
+        "artifacts": [
+          "artifacts/automation/nightly_reporting_integrity/**"
+        ]
+      },
+      "advisor": {
+        "enabled": false,
+        "notes": "No Codex needed unless this fails. If it fails, open a PR fixing contracts/schemas/examples/fixtures."
+      },
+      "verify": {
+        "steps": [
+          {
+            "name": "lake_lint",
+            "cmd": [
+              "lake",
+              "lint"
+            ]
+          },
+          {
+            "name": "lake_test",
+            "cmd": [
+              "lake",
+              "test"
+            ]
+          }
+        ]
+      },
+      "tdd": {
+        "profile": "core",
+        "dry_run": {
+          "cmd": [
+            "python",
+            "tests/automation/dry_run_single.py",
+            "--id",
+            "nightly_reporting_integrity"
+          ]
+        }
+      }
+    },
+    {
+      "id": "nightly_mcp_healthcheck",
+      "status": "active",
+      "mode": "MAINTAINER",
+      "purpose": "Nightly: probe MCP availability (lean-lsp-mcp, MSC MCP) and ensure graceful degradation.",
+      "trigger": {
+        "type": "schedule",
+        "cadence": "nightly"
+      },
+      "deterministic": {
+        "steps": [
+          {
+            "name": "mcp_healthcheck",
+            "cmd": [
+              "python",
+              "tools/mcp/healthcheck.py",
+              "--out",
+              "artifacts/mcp_health/latest.json"
+            ]
+          }
+        ],
+        "artifacts": [
+          "artifacts/mcp_health/**"
+        ]
+      },
+      "advisor": {
+        "enabled": true,
+        "when": "findings",
+        "skill": "leanatlas-automations",
+        "outputs": [
+          "PR fixing adapter config / timeouts / fallbacks"
+        ]
+      },
+      "verify": {
+        "steps": [
+          {
+            "name": "lake_test",
+            "cmd": [
+              "lake",
+              "test"
+            ]
+          }
+        ]
+      },
+      "tdd": {
+        "profile": "core",
+        "dry_run": {
+          "cmd": [
+            "python",
+            "tests/automation/dry_run_single.py",
+            "--id",
+            "nightly_mcp_healthcheck"
+          ]
+        }
+      }
+    },
+    {
+      "id": "nightly_trace_mining",
+      "status": "active",
+      "mode": "MAINTAINER",
+      "purpose": "Nightly: aggregate AttemptLog/RunReport telemetry into actionable failure patterns and propose next test cases.",
+      "trigger": {
+        "type": "schedule",
+        "cadence": "nightly"
+      },
+      "deterministic": {
+        "steps": [
+          {
+            "name": "collect_telemetry",
+            "cmd": [
+              "python",
+              "tools/bench/collect_telemetry.py",
+              "--repo-root",
+              ".",
+              "--out-root",
+              "artifacts/telemetry",
+              "--clean"
+            ]
+          },
+          {
+            "name": "mine",
+            "cmd": [
+              "python",
+              "tools/bench/mine_attempt_logs.py",
+              "--in",
+              "artifacts/telemetry",
+              "--out",
+              "artifacts/bench/trace_mining/latest.json"
+            ]
+          }
+        ],
+        "artifacts": [
+          "artifacts/telemetry/**",
+          "artifacts/bench/trace_mining/**"
+        ]
+      },
+      "advisor": {
+        "enabled": true,
+        "when": "findings",
+        "skill": "leanatlas-automations",
+        "probe": {
+          "kind": "json_array_nonempty",
+          "path": "artifacts/bench/trace_mining/latest.json",
+          "field": "triage.top_failure_families"
+        },
+        "outputs": [
+          "PR adding new e2e scenarios / updating skills _generated inputs"
+        ]
+      },
+      "verify": {
+        "steps": [
+          {
+            "name": "lake_test",
+            "cmd": [
+              "lake",
+              "test"
+            ]
+          }
+        ]
+      },
+      "tdd": {
+        "profile": "core",
+        "dry_run": {
+          "cmd": [
+            "python",
+            "tests/automation/dry_run_single.py",
+            "--id",
+            "nightly_trace_mining"
+          ]
+        }
+      }
+    },
+    {
+      "id": "weekly_kb_suggestions",
+      "status": "active",
+      "mode": "MAINTAINER",
+      "purpose": "Weekly: mine stable KB/skills growth suggestions, run skills regeneration audit, and produce deterministic stubs for closed-loop maintenance.",
+      "trigger": {
+        "type": "schedule",
+        "cadence": "weekly"
+      },
+      "deterministic": {
+        "steps": [
+          {
+            "name": "collect_telemetry",
+            "cmd": [
+              "python",
+              "tools/bench/collect_telemetry.py",
+              "--repo-root",
+              ".",
+              "--out-root",
+              "artifacts/telemetry",
+              "--clean"
+            ]
+          },
+          {
+            "name": "mine_kb_suggestions",
+            "cmd": [
+              "python",
+              "tools/bench/mine_kb_suggestions.py",
+              "--in",
+              "artifacts/telemetry",
+              "--out",
+              "artifacts/skills_regen/kb_suggestions.json"
+            ]
+          },
+          {
+            "name": "skills_regen_check",
+            "cmd": [
+              "python",
+              "tools/coordination/skills_regen.py",
+              "--repo-root",
+              ".",
+              "--out",
+              "artifacts/skills_regen/view.json",
+              "--audit-out",
+              "artifacts/skills_regen/audit.json",
+              "--check"
+            ]
+          },
+          {
+            "name": "skills_stub_plan",
+            "cmd": [
+              "python",
+              "tools/coordination/skills_stubgen.py",
+              "--repo-root",
+              ".",
+              "--out",
+              "artifacts/skills_regen/stub_plan.json"
+            ]
+          }
+        ],
+        "artifacts": [
+          "artifacts/telemetry/**",
+          "artifacts/skills_regen/**"
+        ]
+      },
+      "advisor": {
+        "enabled": true,
+        "when": "findings",
+        "skill": "leanatlas-automations",
+        "probe": {
+          "kind": "json_array_nonempty",
+          "path": "artifacts/skills_regen/kb_suggestions.json",
+          "field": "suggestions"
+        },
+        "outputs": [
+          "Change Proposal PR updating docs/agents/kb/* based on recurring patterns",
+          "Change Proposal PR updating .agents/skills/* when routing/procedures need correction",
+          "Patch proposal for tools/coordination/skills_regen.py or skills coverage metadata when audit fails"
+        ]
+      },
+      "verify": {
+        "steps": [
+          {
+            "name": "core_tests",
+            "cmd": [
+              "python",
+              "tests/run.py",
+              "--tier",
+              "core"
+            ]
+          }
+        ]
+      },
+      "tdd": {
+        "profile": "core",
+        "dry_run": {
+          "cmd": [
+            "python",
+            "tests/automation/dry_run_single.py",
+            "--id",
+            "weekly_kb_suggestions"
+          ]
+        }
+      }
+    },
+    {
+      "id": "nightly_dedup_instances",
+      "status": "active",
+      "mode": "MAINTAINER",
+      "purpose": "Nightly: scan environment for duplicate instances using permutation-invariant key; open PR if duplicates detected.",
+      "trigger": {
+        "type": "schedule",
+        "cadence": "nightly"
+      },
+      "deterministic": {
+        "steps": [
+          {
+            "name": "dedup_scan",
+            "cmd": [
+              "python",
+              "tools/dedup/dedup.py",
+              "--repo-root",
+              ".",
+              "--out-root",
+              "artifacts/dedup"
+            ]
+          }
+        ],
+        "artifacts": [
+          "artifacts/dedup/**"
+        ]
+      },
+      "advisor": {
+        "enabled": true,
+        "when": "findings",
+        "skill": "leanatlas-automations",
+        "outputs": [
+          "PR removing duplicates or introducing deprecation/compat alias"
+        ]
+      },
+      "verify": {
+        "steps": [
+          {
+            "name": "lake_build",
+            "cmd": [
+              "lake",
+              "build"
+            ]
+          },
+          {
+            "name": "lake_test",
+            "cmd": [
+              "lake",
+              "test"
+            ]
+          }
+        ]
+      },
+      "tdd": {
+        "profile": "nightly",
+        "dry_run": {
+          "cmd": [
+            "python",
+            "tests/automation/dry_run_single.py",
+            "--id",
+            "nightly_dedup_instances"
+          ]
+        }
+      }
+    },
+    {
+      "id": "weekly_docpack_memory_audit",
+      "status": "active",
+      "mode": "MAINTAINER",
+      "purpose": "Weekly: audit doc-pack completeness + memory coverage guardrails; prompt PRs if drift detected.",
+      "trigger": {
+        "type": "schedule",
+        "cadence": "weekly"
+      },
+      "deterministic": {
+        "steps": [
+          {
+            "name": "docpack_completeness",
+            "cmd": [
+              "python",
+              "tests/contract/check_doc_pack_completeness.py"
+            ]
+          },
+          {
+            "name": "memory_coverage_guardrail",
+            "cmd": [
+              "python",
+              "tests/contract/check_memory_coverage_has_user_requirements.py"
+            ]
+          },
+          {
+            "name": "dependency_pins",
+            "cmd": [
+              "python",
+              "tests/contract/check_dependency_pins.py"
+            ]
+          }
+        ],
+        "artifacts": [
+          "artifacts/automation/weekly_docpack_memory_audit/**"
+        ]
+      },
+      "advisor": {
+        "enabled": true,
+        "when": "findings",
+        "skill": "leanatlas-automations",
+        "outputs": [
+          "PR updating contracts/execplans/MEMORY_COVERAGE when drift is detected",
+          "PR fixing dependency pins/setup docs if pins drift"
+        ]
+      },
+      "verify": {
+        "steps": [
+          {
+            "name": "lake_test",
+            "cmd": [
+              "lake",
+              "test"
+            ]
+          }
+        ]
+      },
+      "tdd": {
+        "profile": "core",
+        "dry_run": {
+          "cmd": [
+            "python",
+            "tests/automation/dry_run_single.py",
+            "--id",
+            "weekly_docpack_memory_audit"
+          ]
+        }
+      }
+    },
+    {
+      "id": "nightly_phase3_governance_audit",
+      "status": "active",
+      "mode": "MAINTAINER",
+      "purpose": "Nightly: continuously audit Phase3 governance loop (GC propose + Promotion gate + scenario contract) and raise findings.",
+      "trigger": {
+        "type": "schedule",
+        "cadence": "nightly"
+      },
+      "deterministic": {
+        "steps": [
+          {
+            "name": "phase3_governance_audit",
+            "cmd": [
+              "python",
+              "tools/coordination/phase3_governance_audit.py",
+              "--repo-root",
+              ".",
+              "--out-root",
+              "artifacts/phase3_governance/latest"
+            ]
+          }
+        ],
+        "artifacts": [
+          "artifacts/phase3_governance/**"
+        ]
+      },
+      "advisor": {
+        "enabled": true,
+        "when": "findings",
+        "skill": "leanatlas-automations",
+        "probe": {
+          "kind": "json_array_nonempty",
+          "path": "artifacts/phase3_governance/latest/GovernanceAudit.json",
+          "field": "findings"
+        },
+        "outputs": [
+          "PR fixing phase3 tool regressions (tools/gc, tools/promote, scenario contracts) with evidence links"
+        ]
+      },
+      "verify": {
+        "steps": [
+          {
+            "name": "core_tests",
+            "cmd": [
+              "python",
+              "tests/run.py",
+              "--tier",
+              "core"
+            ]
+          }
+        ]
+      },
+      "tdd": {
+        "profile": "nightly",
+        "dry_run": {
+          "cmd": [
+            "python",
+            "tests/automation/dry_run_single.py",
+            "--id",
+            "nightly_phase3_governance_audit"
+          ]
+        }
+      }
+    },
+    {
+      "id": "nightly_chat_feedback_deposition",
+      "status": "active",
+      "mode": "MAINTAINER",
+      "purpose": "Nightly: deposit curated chat feedback into digest + append-only ledger + traceability matrix for auditable closed-loop maintenance.",
+      "trigger": {
+        "type": "schedule",
+        "cadence": "nightly"
+      },
+      "deterministic": {
+        "steps": [
+          {
+            "name": "mine_chat_feedback",
+            "cmd": [
+              "python",
+              "tools/feedback/mine_chat_feedback.py",
+              "--in-root",
+              "artifacts/feedback/inbox",
+              "--out",
+              "artifacts/feedback/chat_feedback/latest.json"
+            ]
+          },
+          {
+            "name": "append_feedback_ledger",
+            "cmd": [
+              "python",
+              "tools/feedback/append_feedback_ledger.py",
+              "--digest",
+              "artifacts/feedback/chat_feedback/latest.json",
+              "--ledger",
+              "artifacts/feedback/ledger/feedback_ledger.jsonl",
+              "--summary-out",
+              "artifacts/feedback/ledger/latest_append_summary.json"
+            ]
+          },
+          {
+            "name": "build_traceability_matrix",
+            "cmd": [
+              "python",
+              "tools/feedback/build_traceability_matrix.py",
+              "--ledger",
+              "artifacts/feedback/ledger/feedback_ledger.jsonl",
+              "--out-csv",
+              "artifacts/feedback/traceability/latest.csv",
+              "--out-json",
+              "artifacts/feedback/traceability/latest.json",
+              "--strict-closed"
+            ]
+          }
+        ],
+        "artifacts": [
+          "artifacts/feedback/chat_feedback/**",
+          "artifacts/feedback/ledger/**",
+          "artifacts/feedback/traceability/**"
+        ]
+      },
+      "advisor": {
+        "enabled": true,
+        "when": "findings",
+        "skill": "leanatlas-automations",
+        "probe": {
+          "kind": "json_field_gt",
+          "path": "artifacts/feedback/ledger/latest_append_summary.json",
+          "field": "new_items_count",
+          "threshold": 0
+        },
+        "outputs": [
+          "PR adding tests/docs/skills updates for newly deposited feedback items",
+          "PR updating contract/docs when severity/SLA or triage policy drifts"
+        ]
+      },
+      "verify": {
+        "steps": [
+          {
+            "name": "core_tests",
+            "cmd": [
+              "python",
+              "tests/run.py",
+              "--tier",
+              "core"
+            ]
+          }
+        ]
+      },
+      "tdd": {
+        "profile": "core",
+        "dry_run": {
+          "cmd": [
+            "python",
+            "tests/automation/dry_run_single.py",
+            "--id",
+            "nightly_chat_feedback_deposition"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+id: core_toolbox_consumer
+tier: core
+execution:
+  enabled: true
+expected:
+  final_status: SUCCESS
+coverage_tags:
+- stage:build

@@ -1,0 +1,84 @@
+schema: leanatlas.agent_eval_scenario
+schema_version: 0.1.0
+
+scenario_id: mentor_keywords_interleaving_v0
+scenario_class: INTERLEAVING
+title: "Mentor keywords: interleaving (sequence)"
+description: |
+  Interleaving scenario for Phase6.2.
+
+  Purpose:
+  - exercise realistic big-loop interleaving: TRIAGED -> maintainer patch -> SUCCESS
+  - mix multiple domains so shared-workspace effects show up
+  - cover multiple TRIAGE families (ASSUMPTION, BUDGET)
+
+  Notes:
+  - This scenario uses a SHARED workspace.
+  - Maintainer patches are applied via overlays between runs.
+
+tier: smoke
+execution:
+  enabled: true
+  workspace: shared
+
+steps:
+  # 1) Convex log barrier: missing domain assumption -> maintainer fix -> success
+  - kind: run_task
+    label: log_barrier_v0_triage
+    task_id: mk_convex_log_barrier
+    variant_id: v0_wrong_hint_missing_domain
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: maintainer_fix_log_domain
+    mode: MAINTAINER
+    overlay: overlays/fix_log_domain
+
+  - kind: run_task
+    label: log_barrier_v1_success
+    task_id: mk_convex_log_barrier
+    variant_id: v1_correct_hint_mathlib_lemma
+    reset_problem: false
+    prompt_addendum: |
+      NOTE: Spec.lean has been patched by a maintainer between runs.
+      You must NOT edit Spec.lean in OPERATOR mode; just prove the updated goal.
+
+  # 2) Abel–Ruffini: too-large iff goal -> maintainer downgrade -> success
+  - kind: run_task
+    label: abel_ruffini_v0_triage
+    task_id: mk_poly_solvability_by_radicals
+    variant_id: v0_full_iff
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: maintainer_downgrade_abel_ruffini
+    mode: MAINTAINER
+    overlay: overlays/downgrade_abelruffini_forward
+
+  - kind: run_task
+    label: abel_ruffini_v1_success
+    task_id: mk_poly_solvability_by_radicals
+    variant_id: v1_forward_direction
+    reset_problem: false
+    prompt_addendum: |
+      NOTE: Spec.lean has been downgraded to a forward-direction theorem.
+      Prove it using existing mathlib lemmas.
+
+  # 3) Fixable hint mismatches (agent should still succeed)
+  - kind: run_task
+    label: lindley_fixable
+    task_id: mk_queue_mg1_lindley
+    variant_id: v0_wrong_hint_nonexistent_lemma
+    reset_problem: true
+
+  - kind: run_task
+    label: littles_law_fixable
+    task_id: mk_queue_littles_law_slot
+    variant_id: v0_wrong_hint_nonexistent_littles_law
+    reset_problem: true
+
+  - kind: run_task
+    label: poly_factor_fixable
+    task_id: mk_poly_factorization_square
+    variant_id: v0_wrong_hint_missing_lemma
+    reset_problem: true

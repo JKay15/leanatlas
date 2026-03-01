@@ -1,0 +1,57 @@
+schema: leanatlas.agent_eval_task
+schema_version: 0.1.0
+task_id: mk_queue_mg1_lindley
+problem_slug: mk_queue_mg1_lindley
+kind: PROOF_LOOP
+description: 'Mentor keyword pack: queueing theory (M/G/1 via Lindley recursion)'
+keywords:
+- queueing_lindley_recursion
+- queueing_mg1
+domain_hint:
+  msc_primary: 60K25
+references:
+  - "REF:VLASIOU_LINDLEY_THESIS_2006"
+  - "REF:LEAHU_GG1_2013"
+prompt: |
+  You are Codex running LeanAtlas in OPERATOR mode.
+  Goal: formalize a minimal Lindley recursion lemma for a deterministic (no probability) M/G/1 style recursion.
+
+  Requirements:
+  - Keep it purely deterministic: do not use expectations/probability.
+  - Prefer small, local lemmas (may go to Cache.lean) instead of large frameworks.
+  - Follow the proof-loop workflow and produce evidence artifacts.
+variants:
+- variant_id: v0_wrong_hint_nonexistent_lemma
+  gptpro_hint: |
+    (intentionally wrong) Use lemma `Lindley.recursion_nonneg` from mathlib.
+    If you can't find it, do not get stuck; fall back to proving nonnegativity by induction.
+  expected:
+    final_status: SUCCESS
+  notes: 'This is a FIXABLE hint mismatch: a good agent should recover and still prove
+    the lemma.'
+  tags:
+  - FIXABLE
+- variant_id: v1_correct_hint_induction
+  gptpro_hint: |
+    (correct) Use this stable induction shape:
+
+      `intro n`
+      `induction n with`
+      `| zero =>`
+      `    simp [W]`
+      `| succ n ih =>`
+      `    simpa [W] using`
+      `      (le_max_left (0 : ℝ) (W S A n + S n - A n))`
+
+    Avoid extra `simpa`/`exact` after the goal is already closed.
+  expected:
+    final_status: SUCCESS
+  tool_delta:
+    max_new_modules: 1
+  skill_delta:
+    expected_new_kb_tags:
+    - queueing/lindley_recursion_basic
+    - triage/fixable_hint_mismatch
+  notes: Expect SUCCESS with a clean induction proof.
+  tags:
+  - SUCCESS

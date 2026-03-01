@@ -1,0 +1,12 @@
+code,text,description
+03,Mathematical logic and foundations,
+03-01,Instructional exposition (textbooks, tutorial papers, etc.),
+03E,Computability and recursion theory,
+03E20,Recursive functions and relations, subrecursive hierarchies,
+03F,Proof theory and constructive mathematics,
+03F40,Provability logics and modal logics,
+14,Algebraic geometry,
+14Qxx,Computational aspects in algebraic geometry,
+68,Computer science,
+68V,Artificial intelligence,
+68V30,Logic programming,

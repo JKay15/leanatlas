@@ -1,0 +1,57 @@
+{
+  "$id": "https://leanatlas.local/schemas/PromotionPlan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "candidates": {
+      "items": {
+        "additionalProperties": true,
+        "properties": {
+          "decls": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "decls"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "meta": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "policy": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "meta",
+    "candidates",
+    "policy"
+  ],
+  "title": "PromotionPlan",
+  "type": "object"
+}

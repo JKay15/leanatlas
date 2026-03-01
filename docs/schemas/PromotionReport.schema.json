@@ -1,0 +1,91 @@
+{
+  "$id": "https://leanatlas.local/schemas/PromotionReport.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "decision": {
+      "additionalProperties": true,
+      "properties": {
+        "notes": {
+          "type": "string"
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "reason_code": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "passed",
+        "reason_code"
+      ],
+      "type": "object"
+    },
+    "gates": {
+      "items": {
+        "additionalProperties": true,
+        "properties": {
+          "evidence": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "gate": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "gate",
+          "passed",
+          "evidence"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "meta": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "promotion_targets": {
+      "items": {
+        "additionalProperties": true,
+        "properties": {
+          "module": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "summary": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "promotion_targets",
+    "gates",
+    "decision",
+    "summary"
+  ],
+  "title": "PromotionReport",
+  "type": "object"
+}

@@ -1,0 +1,60 @@
+{
+  "$id": "https://leanatlas.local/schemas/PinsUsed.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "generated_at": {
+      "type": "string"
+    },
+    "generated_by": {
+      "type": "string"
+    },
+    "pins_entries": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "pins_path": {
+      "type": "string"
+    },
+    "pins_schema": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "pins_schema_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "pins_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "const": "MISSING"
+        }
+      ],
+      "description": "SHA-256 digest of tools/deps/pins.json (hex).",
+      "type": "string"
+    },
+    "schema": {
+      "const": "leanatlas.pins_used"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "generated_by",
+    "pins_path",
+    "pins_sha256"
+  ],
+  "type": "object"
+}

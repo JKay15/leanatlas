@@ -1,0 +1,88 @@
+{
+  "schema": "leanatlas.run_report",
+  "schema_version": "0.3.0",
+  "run_id": "kb_runC",
+  "problem_slug": "p1",
+  "status": "TRIAGED",
+  "mode": "OPERATOR",
+  "context": {
+    "git_sha": "deadbeef2",
+    "lean_toolchain": "leanprover/lean4:v4.x.x",
+    "mathlib_rev": "mathlib-pin-placeholder",
+    "tools": {
+      "lean_lsp_mcp_version": "pin-me"
+    }
+  },
+  "summary": {
+    "title": "KB mining fixture C",
+    "one_line": "IMPORT/MISSING_IMPORT"
+  },
+  "entrypoints": {
+    "files": {
+      "spec": "Problems/p1/Spec.lean",
+      "proof": "Problems/p1/Proof.lean",
+      "cache": "Problems/p1/Cache.lean",
+      "scratch": "Problems/p1/Scratch.lean"
+    }
+  },
+  "targets": [
+    {
+      "id": "t_main",
+      "role": "MAIN",
+      "decl": "P1.main",
+      "file": "Problems/p1/Proof.lean"
+    }
+  ],
+  "stages": {
+    "retrieval": { "status": "OK" },
+    "build": {
+      "status": "FAIL",
+      "refs": {
+        "diagnostic_ids": ["d0"],
+        "target_ids": ["t_main"]
+      }
+    },
+    "verify": { "status": "SKIPPED" }
+  },
+  "diagnostics": [
+    {
+      "id": "d0",
+      "file": "Problems/p1/Proof.lean",
+      "severity": "error",
+      "message": "unknown constant 'Foo.bar' (at /tmp/build/Problems/p1/Proof.lean:100:1)",
+      "range": {
+        "start_line": 100,
+        "start_col": 1,
+        "end_line": 100,
+        "end_col": 8
+      }
+    }
+  ],
+  "hotspots": [
+    {
+      "id": "h0",
+      "title": "Missing import",
+      "stage": "build",
+      "target_id": "t_main",
+      "diagnostic_ids": ["d0"],
+      "trace_step_indices": [0]
+    }
+  ],
+  "retrieval_trace_path": "RetrievalTrace.json",
+  "triage": {
+    "level": "FIXABLE",
+    "category": {
+      "family": "IMPORT",
+      "code": "MISSING_IMPORT",
+      "standard": false
+    },
+    "evidence": {
+      "diagnostic_ids": ["d0"],
+      "target_id": "t_main"
+    },
+    "next_actions": [
+      {"kind": "ADD_IMPORT", "description": "Add the missing import/module for Foo.bar."}
+    ]
+  },
+  "extensions": {}
+}

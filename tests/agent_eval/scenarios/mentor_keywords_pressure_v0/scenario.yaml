@@ -1,0 +1,67 @@
+schema: leanatlas.agent_eval_scenario
+schema_version: 0.1.0
+
+scenario_id: mentor_keywords_pressure_v0
+scenario_class: PRESSURE
+title: "Mentor keywords: pressure"
+description: |
+  Pressure scenario for Phase6.2.
+
+  Purpose:
+  - generate many runs + many logs in a SHARED workspace
+  - interleave cleanup
+  - ensure runtime does not blow up due to accumulating artifacts
+
+  Tier policy:
+  - This is NIGHTLY only.
+
+tier: nightly
+execution:
+  enabled: true
+  workspace: shared
+
+steps:
+  - kind: run_task
+    label: littles_law_many
+    task_id: mk_queue_littles_law_slot
+    variant_id: v1_correct_hint_double_count
+    reset_problem: true
+    repeat: 5
+
+  - kind: run_task
+    label: lindley_many
+    task_id: mk_queue_mg1_lindley
+    variant_id: v1_correct_hint_induction
+    reset_problem: true
+    repeat: 5
+
+  - kind: clean
+    label: clean1
+
+  - kind: run_task
+    label: poly_factor_many
+    task_id: mk_poly_factorization_square
+    variant_id: v1_correct_hint_expand
+    reset_problem: true
+    repeat: 10
+
+  - kind: clean
+    label: clean2
+
+  # Include at least one TRIAGE -> maintainer patch -> success segment under pressure.
+  - kind: run_task
+    label: log_barrier_triage
+    task_id: mk_convex_log_barrier
+    variant_id: v0_wrong_hint_missing_domain
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: maintainer_fix_log
+    mode: MAINTAINER
+    overlay: overlays/fix_log_domain
+
+  - kind: run_task
+    label: log_barrier_success
+    task_id: mk_convex_log_barrier
+    variant_id: v1_correct_hint_mathlib_lemma
+    reset_problem: false

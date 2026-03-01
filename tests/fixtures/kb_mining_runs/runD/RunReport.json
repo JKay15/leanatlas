@@ -1,0 +1,88 @@
+{
+  "schema": "leanatlas.run_report",
+  "schema_version": "0.3.0",
+  "run_id": "kb_runD",
+  "problem_slug": "p3",
+  "status": "TRIAGED",
+  "mode": "OPERATOR",
+  "context": {
+    "git_sha": "deadbeef3",
+    "lean_toolchain": "leanprover/lean4:v4.x.x",
+    "mathlib_rev": "mathlib-pin-placeholder",
+    "tools": {
+      "lean_lsp_mcp_version": "pin-me"
+    }
+  },
+  "summary": {
+    "title": "KB mining fixture D",
+    "one_line": "NAME/NAME_NOT_FOUND"
+  },
+  "entrypoints": {
+    "files": {
+      "spec": "Problems/p3/Spec.lean",
+      "proof": "Problems/p3/Proof.lean",
+      "cache": "Problems/p3/Cache.lean",
+      "scratch": "Problems/p3/Scratch.lean"
+    }
+  },
+  "targets": [
+    {
+      "id": "t_main",
+      "role": "MAIN",
+      "decl": "P3.main",
+      "file": "Problems/p3/Proof.lean"
+    }
+  ],
+  "stages": {
+    "retrieval": { "status": "OK" },
+    "build": {
+      "status": "FAIL",
+      "refs": {
+        "diagnostic_ids": ["d0"],
+        "target_ids": ["t_main"]
+      }
+    },
+    "verify": { "status": "SKIPPED" }
+  },
+  "diagnostics": [
+    {
+      "id": "d0",
+      "file": "Problems/p3/Proof.lean",
+      "severity": "error",
+      "message": "unknown identifier 'Qux' (at /tmp/build/Problems/p3/Proof.lean:7:1)",
+      "range": {
+        "start_line": 7,
+        "start_col": 1,
+        "end_line": 7,
+        "end_col": 5
+      }
+    }
+  ],
+  "hotspots": [
+    {
+      "id": "h0",
+      "title": "Name not found",
+      "stage": "build",
+      "target_id": "t_main",
+      "diagnostic_ids": ["d0"],
+      "trace_step_indices": [0]
+    }
+  ],
+  "retrieval_trace_path": "RetrievalTrace.json",
+  "triage": {
+    "level": "FIXABLE",
+    "category": {
+      "family": "NAME",
+      "code": "NAME_NOT_FOUND",
+      "standard": true
+    },
+    "evidence": {
+      "diagnostic_ids": ["d0"],
+      "target_id": "t_main"
+    },
+    "next_actions": [
+      {"kind": "RETRIEVE", "description": "Search for existing lemma/definition; adjust namespace/imports."}
+    ]
+  },
+  "extensions": {}
+}

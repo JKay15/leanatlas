@@ -1,0 +1,18 @@
+{
+  "counters": {
+    "attempts": 0,
+    "success": 0,
+    "triaged": 0
+  },
+  "domain": {
+    "confidence": 0.0,
+    "domain_id": "UNKNOWN",
+    "msc": [],
+    "source": "manual"
+  },
+  "ever_succeeded": false,
+  "last_run": null,
+  "problem_slug": "__TEMPLATE__",
+  "status": "NEW",
+  "version": "0.1"
+}

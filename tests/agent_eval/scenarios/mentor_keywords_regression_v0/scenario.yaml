@@ -1,0 +1,56 @@
+schema: leanatlas.agent_eval_scenario
+schema_version: 0.1.0
+
+scenario_id: mentor_keywords_regression_v0
+scenario_class: REGRESSION
+title: "Mentor keywords: regression"
+description: |
+  Regression scenario for Phase6.2.
+
+  Purpose:
+  - ensure repeated runs do not depend on hidden state
+  - validate cleanup/clobber cycles in a SHARED workspace
+  - catch stale Reports/, lingering artifacts, and path-caching issues
+
+tier: nightly
+execution:
+  enabled: true
+  workspace: shared
+
+steps:
+  # Run the same task twice from a clean fixture state (repeat)
+  - kind: run_task
+    label: queue_mg1_twice
+    task_id: mk_queue_mg1_lindley
+    variant_id: v1_correct_hint_induction
+    reset_problem: true
+    repeat: 2
+
+  # Runner-defined cleanup
+  - kind: clean
+    label: clean_between
+
+  # Run without resetting the problem directory (simulates rerun after partial progress)
+  - kind: run_task
+    label: queue_mg1_keep
+    task_id: mk_queue_mg1_lindley
+    variant_id: v1_correct_hint_induction
+    reset_problem: false
+
+  # Another task to ensure cross-problem state does not interfere
+  - kind: run_task
+    label: littles_law
+    task_id: mk_queue_littles_law_slot
+    variant_id: v1_correct_hint_double_count
+    reset_problem: true
+
+  # Full clobber (script) to ensure no stale build products influence the next task
+  - kind: run_cmd
+    label: clobber
+    cmd: ["bash", "scripts/clobber.sh"]
+
+  - kind: run_task
+    label: poly_factor
+    task_id: mk_poly_factorization_square
+    variant_id: v1_correct_hint_expand
+    reset_problem: true

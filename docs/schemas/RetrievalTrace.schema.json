@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "budget": {
+      "additionalProperties": false,
+      "properties": {
+        "max_external_queries": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_steps": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "used_external_queries": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "used_steps": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_external_queries",
+        "max_steps",
+        "used_external_queries",
+        "used_steps"
+      ],
+      "type": "object"
+    },
+    "domain": {
+      "additionalProperties": false,
+      "properties": {
+        "expanded_codes": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "weight": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "code",
+              "weight",
+              "reason"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "input_codes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "input_codes",
+        "expanded_codes"
+      ],
+      "type": "object"
+    },
+    "problem_slug": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "run_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "leanatlas.retrieval_trace"
+    },
+    "schema_version": {
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "type": "string"
+    },
+    "steps": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "pattern": "^[A-Z][A-Z0-9_]*$",
+                "type": "string"
+              },
+              "family": {
+                "enum": [
+                  "SUGGEST",
+                  "SEARCH",
+                  "IMPORT",
+                  "ATTEMPT",
+                  "VALIDATION",
+                  "TOOLING",
+                  "UNKNOWN"
+                ],
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "ref": {
+                "type": "string"
+              },
+              "standard": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "family",
+              "code"
+            ],
+            "type": "object"
+          },
+          "candidates": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "chosen": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "error": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "imports_added": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "layer": {
+            "enum": [
+              "ENVIRONMENT",
+              "TOOLBOX_SAME_DOMAIN",
+              "SEEDS_SAME_DOMAIN",
+              "MATHLIB_SAME_DOMAIN",
+              "DOMAIN_EXPAND",
+              "EXTERNAL_SEARCH"
+            ],
+            "type": "string"
+          },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "result": {
+            "enum": [
+              "HIT",
+              "MISS",
+              "ERROR"
+            ],
+            "type": "string"
+          },
+          "step_index": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "step_index",
+          "layer",
+          "action",
+          "result"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "timing_ms": {
+      "additionalProperties": true,
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "run_id",
+    "problem_slug",
+    "domain",
+    "budget",
+    "steps"
+  ],
+  "title": "LeanAtlas RetrievalTrace",
+  "type": "object"
+}

@@ -1,0 +1,12 @@
+id: core_definition_mismatch
+tier: core
+expected:
+  final_status: TRIAGED
+  triage_level: ESCALATE
+  category:
+    family: DEFINITION
+    code: DEFINITION_MISMATCH
+  judge_reason_code: FAMILY_REQUIRES_ESCALATION
+coverage_tags:
+- family:DEFINITION
+- stage:build

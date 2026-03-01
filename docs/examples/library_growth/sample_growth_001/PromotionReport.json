@@ -1,0 +1,47 @@
+{
+  "decision": {
+    "passed": true,
+    "reason_code": "OK"
+  },
+  "gates": [
+    {
+      "evidence": {
+        "checked": true
+      },
+      "gate": "env_existence_check",
+      "passed": true
+    },
+    {
+      "evidence": {
+        "checked": true
+      },
+      "gate": "type_check",
+      "passed": true
+    },
+    {
+      "evidence": {
+        "dedup_report": "DedupReport.json"
+      },
+      "gate": "dedup_gate_present",
+      "passed": true
+    },
+    {
+      "evidence": {
+        "doc": "docs/agents/execplans/20260222_demo.md"
+      },
+      "gate": "rollback_plan_present",
+      "passed": true
+    }
+  ],
+  "promotion_targets": [
+    {
+      "module": "LeanAtlas.Incubator.Seeds.Foo",
+      "name": "LeanAtlas.Incubator.Seeds.Foo.bar",
+      "source": "Seeds"
+    }
+  ],
+  "summary": {
+    "promoted": 1
+  },
+  "version": "0.1"
+}

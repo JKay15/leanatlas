@@ -1,0 +1,15 @@
+id: core_tooling_failure
+tier: core
+execution:
+  enabled: true
+  simulate_tooling_failure: true
+expected:
+  final_status: TRIAGED
+  triage_level: ESCALATE
+  category:
+    family: TOOLING
+    code: MCP_TIMEOUT
+  judge_reason_code: TOOLING_FAILURE
+coverage_tags:
+- family:TOOLING
+- stage:retrieval

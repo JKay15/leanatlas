@@ -1,0 +1,20 @@
+{
+  "candidates": [
+    {
+      "candidate": {
+        "kind": "theorem",
+        "module": "LeanAtlas.Toolbox.Foo",
+        "name": "LeanAtlas.Toolbox.Foo.bar"
+      },
+      "decision": "UNIQUE",
+      "evidence": {
+        "type_hash_match": false
+      },
+      "related": []
+    }
+  ],
+  "summary": {
+    "unique": 1
+  },
+  "version": "0.1"
+}

@@ -1,0 +1,3 @@
+terms:
+  - term: Lindley recursion
+    meaning: "Waiting-time recurrence W_{n+1} = max(0, W_n + S_n - A_n) in single-server queues."

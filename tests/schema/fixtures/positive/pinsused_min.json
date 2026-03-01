@@ -1,0 +1,7 @@
+{
+  "generated_by": "runner",
+  "pins_path": "tools/deps/pins.json",
+  "pins_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "schema": "leanatlas.pins_used",
+  "schema_version": "0.1.0"
+}

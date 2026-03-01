@@ -1,0 +1,118 @@
+version: '0.3'
+phase: phase5
+commands:
+- id: automation.registry_validate
+  entrypoint: uv run --locked python tests/automation/validate_registry.py
+  description: Validate automations/registry.json structure and repo-local references (spec-level).
+  inputs: []
+  outputs:
+  - exit code + stdout/stderr
+  schemas:
+  - docs/schemas/AutomationRegistry.schema.json
+  deps: []
+  smoke:
+  - uv run --locked python tests/automation/validate_registry.py
+
+- id: automation.dry_run_active_core
+  entrypoint: uv run --locked python tests/automation/run_dry_runs.py
+  description: Execute dry-runs for all ACTIVE automations with tdd.profile == core (deterministic pre-steps only).
+  inputs: []
+  outputs:
+  - artifacts/** (as produced by deterministic steps)
+  schemas: []
+  deps: []
+  smoke:
+  - uv run --locked python tests/automation/run_dry_runs.py
+
+- id: automation.run_scheduled
+  entrypoint: uv run --locked python tools/coordination/automation_nightly.py --cadence nightly
+  description: Run scheduled deterministic automations and archive declared artifacts into artifacts/automation_runs/.
+  inputs:
+  - --repo-root <path>
+  - --cadence {nightly|weekly|all}
+  - --id <automation_id> (optional)
+  outputs:
+  - artifacts/automation_runs/**
+  schemas: []
+  deps: []
+  smoke:
+  - uv run --locked python tools/coordination/automation_nightly.py --repo-root . --cadence nightly --keep-last 1 --keep-days 1
+
+- id: bench.collect_telemetry
+  entrypoint: uv run --locked python tools/bench/collect_telemetry.py
+  description: Collect telemetry artifacts from run roots into artifacts/telemetry/** with deterministic source mapping.
+  inputs:
+  - --repo-root <path>
+  - --out-root <path> (optional, default artifacts/telemetry)
+  - --source <path> (optional, repeatable)
+  - --clean (recommended)
+  outputs:
+  - artifacts/telemetry/**
+  - artifacts/telemetry/index.json
+  schemas: []
+  deps: []
+  smoke:
+  - uv run --locked python tools/bench/collect_telemetry.py --repo-root . --out-root artifacts/telemetry --clean
+
+- id: bench.mine_attempt_logs
+  entrypoint: uv run --locked python tools/bench/mine_attempt_logs.py
+  description: Aggregate AttemptLog/RunReport/RetrievalTrace/Promotion/GC into a deterministic JSON summary (no LLM).
+  inputs:
+  - --in <root>
+  - --out <path>
+  - --strict (optional)
+  outputs:
+  - <out>
+  schemas: []
+  deps: []
+  smoke:
+  - uv run --locked python tools/bench/mine_attempt_logs.py --in docs/examples --out artifacts/bench/mine_attempt_logs/smoke.json
+
+- id: bench.compare_reports
+  entrypoint: uv run --locked python tools/bench/compare_bench_reports.py
+  description: Compare two bench JSON reports and emit a deterministic delta (numbers + *_counts only).
+  inputs:
+  - --old <path> (optional)
+  - --new <path>
+  - --out <path>
+  - --summary-md <path> (optional)
+  outputs:
+  - <out>
+  - <summary-md> (optional)
+  schemas: []
+  deps: []
+  smoke:
+  - uv run --locked python tools/bench/compare_bench_reports.py --new docs/examples/reports/sample_run_001/RunReport.json --out artifacts/bench/compare/smoke.json
+
+- id: skills.regen
+  entrypoint: uv run --locked python tools/coordination/skills_regen.py
+  description: Deterministic regen + audit view from phase3/4/5 capability manifests and repo skill inventory.
+  inputs:
+  - --repo-root <path>
+  - --out <path> (optional)
+  - --audit-out <path> (optional)
+  - --check (optional)
+  outputs:
+  - artifacts/skills_regen/view.json
+  - artifacts/skills_regen/audit.json
+  schemas: []
+  deps:
+  - PyYAML
+  smoke:
+  - uv run --locked python tools/coordination/skills_regen.py --repo-root . --check
+
+- id: skills.stubgen
+  entrypoint: uv run --locked python tools/coordination/skills_stubgen.py
+  description: Generate (or apply) minimal skill stubs/coverage so every capability command has a manual.
+  inputs:
+  - --repo-root <path>
+  - --out <path> (optional)
+  - --apply (optional)
+  outputs:
+  - plan JSON (stdout or <out>)
+  - .agents/skills/** (only if --apply)
+  schemas: []
+  deps:
+  - PyYAML
+  smoke:
+  - uv run --locked python tools/coordination/skills_stubgen.py --repo-root . --out artifacts/skills_regen/stub_plan.json

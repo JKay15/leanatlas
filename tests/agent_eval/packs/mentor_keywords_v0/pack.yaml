@@ -1,0 +1,17 @@
+schema: leanatlas.agent_eval_pack
+schema_version: 0.1.0
+pack_id: mentor_keywords_v0
+description: "Phase6 taskpack: cover mentor keywords (convex optimization / interior-point / tangent plane, queueing theory, polynomial solvability)."
+required_keywords:
+  - interior_point
+  - tangent_plane
+  - polynomial_solvable
+  - queueing_lindley_recursion
+  - queueing_mg1
+  - littles_law
+tasks:
+  - mk_convex_log_barrier
+  - mk_queue_mg1_lindley
+  - mk_queue_littles_law_slot
+  - mk_poly_factorization_square
+  - mk_poly_solvability_by_radicals

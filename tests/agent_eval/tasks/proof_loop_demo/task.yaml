@@ -1,0 +1,28 @@
+schema: leanatlas.agent_eval_task
+schema_version: 0.1.0
+task_id: proof_loop_demo
+problem_slug: proof_loop_demo
+kind: PROOF_LOOP
+description: Schema-only demo task (does not run in CI).
+prompt: |
+  You are Codex running LeanAtlas. Demonstrate the proof-loop workflow.
+  This is a placeholder for Phase6; the runner will replace it with real problems.
+variants:
+- variant_id: v0_wrong_hint
+  gptpro_hint: |
+    (intentionally wrong) Use a lemma that does not exist.
+  expected:
+    final_status: TRIAGED
+    triage_family: NAME
+    triage_code: NAME_NOT_FOUND
+  notes: Expect a clean TRIAGED with evidence.
+  tags:
+  - TRIAGED
+- variant_id: v1_correct_hint
+  gptpro_hint: |
+    (correct) Use the correct lemma from mathlib / toolbox.
+  expected:
+    final_status: SUCCESS
+  notes: Expect SUCCESS with no sorry.
+  tags:
+  - SUCCESS

@@ -1,0 +1,21 @@
+[project]
+name = "leanatlas-devtools"
+version = "0.0.0"
+requires-python = ">=3.10"
+
+# LeanAtlas is primarily a Lean project. This pyproject.toml exists only for
+# repo-local Python tooling (schema/contract/e2e runners, automation helpers).
+
+[dependency-groups]
+# PEP 735 dependency groups. uv treats `dev` specially and syncs it by default.
+dev = [
+  "jsonschema==4.26.0",
+  "PyYAML==6.0.3",
+  # Log-template mining for deterministic Skills/KB growth triggers.
+  # Pinned to avoid drift; see tools/deps/pins.json.
+  "drain3==0.9.11",
+]
+
+[tool.uv]
+# Be explicit to avoid surprises if defaults change.
+default-groups = ["dev"]

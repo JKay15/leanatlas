@@ -1,0 +1,14 @@
+id: core_statement_false
+tier: core
+execution:
+  enabled: true
+expected:
+  final_status: TRIAGED
+  triage_level: ESCALATE
+  category:
+    family: STATEMENT
+    code: STATEMENT_FALSE
+  judge_reason_code: FAMILY_REQUIRES_ESCALATION
+coverage_tags:
+- family:STATEMENT
+- stage:build

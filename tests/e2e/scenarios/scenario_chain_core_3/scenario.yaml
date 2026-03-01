@@ -1,0 +1,15 @@
+id: scenario_chain_core_3
+tier: core
+execution:
+  enabled: true
+  workspace: shared
+steps:
+- kind: run_case
+  case_id: core_name_notation
+- kind: run_case
+  case_id: core_type_mismatch
+- kind: run_case
+  case_id: core_tactic_failure
+- kind: lake_build
+  target: Problems
+  expect_rc: 0

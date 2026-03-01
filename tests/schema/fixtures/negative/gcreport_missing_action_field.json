@@ -1,0 +1,14 @@
+{
+  "actions": [
+    {
+      "evidence": {},
+      "seed": "X"
+    }
+  ],
+  "policy": {},
+  "safety": {
+    "two_phase_delete_enforced": true
+  },
+  "summary": {},
+  "version": "0.1"
+}

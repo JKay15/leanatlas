@@ -1,0 +1,18 @@
+id: scenario_cleanup_idempotence
+tier: nightly
+execution:
+  enabled: true
+  workspace: shared
+steps:
+- kind: run_case
+  case_id: smoke_missing_import
+- kind: run_case
+  case_id: core_name_notation
+- kind: clean
+- kind: run_case
+  case_id: smoke_missing_import
+- kind: run_case
+  case_id: core_name_notation
+- kind: lake_build
+  target: Problems
+  expect_rc: 0

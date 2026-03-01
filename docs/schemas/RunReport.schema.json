@@ -1,0 +1,692 @@
+{
+  "$defs": {
+    "repo_path": {
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*\\.\\.)(?:[A-Za-z0-9._-]+/)*[A-Za-z0-9._-]+$",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "SUCCESS"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "triage"
+          ]
+        },
+        "properties": {
+          "verification": {
+            "properties": {
+              "no_sorry": {
+                "const": true
+              }
+            }
+          }
+        },
+        "required": [
+          "verification"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "TRIAGED"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "verification"
+          ]
+        },
+        "properties": {
+          "diagnostics": {
+            "contains": {
+              "properties": {
+                "severity": {
+                  "const": "error"
+                }
+              },
+              "required": [
+                "severity"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "hotspots": {
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "triage",
+          "hotspots"
+        ]
+      }
+    }
+  ],
+  "properties": {
+    "artifacts": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "context": {
+      "additionalProperties": false,
+      "properties": {
+        "git_sha": {
+          "minLength": 7,
+          "type": "string"
+        },
+        "lean_toolchain": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "mathlib_rev": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "tools": {
+          "additionalProperties": true,
+          "properties": {
+            "environment_stamp": {
+              "additionalProperties": false,
+              "properties": {
+                "lean_toolchain": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "mathlib_rev": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "pinned_tools": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "pins_sha256": {
+                  "pattern": "^[a-f0-9]{64}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "lean_toolchain",
+                "mathlib_rev",
+                "pins_sha256",
+                "pinned_tools"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "environment_stamp"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "git_sha",
+        "lean_toolchain",
+        "mathlib_rev",
+        "tools"
+      ],
+      "type": "object"
+    },
+    "diagnostics": {
+      "items": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "severity": {
+                  "const": "error"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "range"
+              ]
+            }
+          }
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "file": {
+            "$ref": "#/$defs/repo_path"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "range": {
+            "additionalProperties": false,
+            "properties": {
+              "end_col": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "end_line": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "start_col": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "start_line": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "start_line",
+              "start_col",
+              "end_line",
+              "end_col"
+            ],
+            "type": "object"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "file",
+          "severity",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "entrypoints": {
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "additionalProperties": false,
+          "properties": {
+            "cache": {
+              "$ref": "#/$defs/repo_path"
+            },
+            "proof": {
+              "$ref": "#/$defs/repo_path"
+            },
+            "scratch": {
+              "$ref": "#/$defs/repo_path"
+            },
+            "spec": {
+              "$ref": "#/$defs/repo_path"
+            }
+          },
+          "required": [
+            "spec",
+            "proof",
+            "cache",
+            "scratch"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "files"
+      ],
+      "type": "object"
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "hotspots": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "diagnostic_ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "stage": {
+            "enum": [
+              "retrieval",
+              "build",
+              "verify"
+            ],
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "trace_step_indices": {
+            "items": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "diagnostic_ids",
+          "stage"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "mode": {
+      "enum": [
+        "OPERATOR",
+        "MAINTAINER"
+      ],
+      "type": "string"
+    },
+    "problem_slug": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "retrieval_trace_path": {
+      "const": "RetrievalTrace.json"
+    },
+    "run_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "leanatlas.run_report"
+    },
+    "schema_version": {
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "type": "string"
+    },
+    "stages": {
+      "additionalProperties": false,
+      "properties": {
+        "build": {
+          "additionalProperties": false,
+          "properties": {
+            "notes": {
+              "type": "string"
+            },
+            "refs": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "status": {
+              "enum": [
+                "OK",
+                "FAIL",
+                "SKIPPED"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        },
+        "retrieval": {
+          "additionalProperties": false,
+          "properties": {
+            "notes": {
+              "type": "string"
+            },
+            "refs": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "status": {
+              "enum": [
+                "OK",
+                "FAIL",
+                "SKIPPED"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        },
+        "verify": {
+          "additionalProperties": false,
+          "properties": {
+            "notes": {
+              "type": "string"
+            },
+            "refs": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "status": {
+              "enum": [
+                "OK",
+                "FAIL",
+                "SKIPPED"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "retrieval",
+        "build",
+        "verify"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "SUCCESS",
+        "TRIAGED"
+      ],
+      "type": "string"
+    },
+    "summary": {
+      "additionalProperties": false,
+      "properties": {
+        "details": {
+          "type": "string"
+        },
+        "one_line": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "one_line"
+      ],
+      "type": "object"
+    },
+    "targets": {
+      "contains": {
+        "properties": {
+          "role": {
+            "const": "MAIN"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "type": "object"
+      },
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "decl": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "file": {
+            "$ref": "#/$defs/repo_path"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "MAIN",
+              "LEMMA",
+              "CHECK"
+            ],
+            "type": "string"
+          },
+          "span": {
+            "additionalProperties": false,
+            "properties": {
+              "end_col": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "end_line": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "start_col": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "start_line": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "start_line",
+              "start_col",
+              "end_line",
+              "end_col"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "decl",
+          "file"
+        ],
+        "type": "object"
+      },
+      "maxContains": 1,
+      "minContains": 1,
+      "minItems": 1,
+      "type": "array"
+    },
+    "triage": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "pattern": "^[A-Z][A-Z0-9_]*$",
+              "type": "string"
+            },
+            "family": {
+              "enum": [
+                "IMPORT",
+                "NAME",
+                "TYPE",
+                "TACTIC",
+                "ASSUMPTION",
+                "DEFINITION",
+                "STATEMENT",
+                "BUDGET",
+                "TOOLING",
+                "UNKNOWN"
+              ],
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "ref": {
+              "type": "string"
+            },
+            "standard": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "family",
+            "code"
+          ],
+          "type": "object"
+        },
+        "evidence": {
+          "additionalProperties": true,
+          "properties": {
+            "diagnostic_ids": {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "found_candidate_lemmas": {
+              "items": {
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "goal_snapshot": {
+              "type": "string"
+            },
+            "missing_requirements": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "target_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "diagnostic_ids"
+          ],
+          "type": "object"
+        },
+        "level": {
+          "enum": [
+            "ESCALATE",
+            "FIXABLE"
+          ],
+          "type": "string"
+        },
+        "next_actions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "PATCH_SPEC",
+                  "PATCH_DEFINITIONS",
+                  "ADD_IMPORT_BUNDLE",
+                  "REQUEST_GPTPRO_REPLAN",
+                  "REQUEST_HUMAN_DECISION"
+                ],
+                "type": "string"
+              },
+              "patch": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "description"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "level",
+        "category",
+        "evidence",
+        "next_actions"
+      ],
+      "type": "object"
+    },
+    "verification": {
+      "additionalProperties": false,
+      "properties": {
+        "axioms": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "no_sorry": {
+          "type": "boolean"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "no_sorry",
+        "axioms",
+        "warnings"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "run_id",
+    "problem_slug",
+    "status",
+    "mode",
+    "context",
+    "summary",
+    "entrypoints",
+    "targets",
+    "stages",
+    "diagnostics",
+    "retrieval_trace_path"
+  ],
+  "title": "LeanAtlas RunReport",
+  "type": "object"
+}

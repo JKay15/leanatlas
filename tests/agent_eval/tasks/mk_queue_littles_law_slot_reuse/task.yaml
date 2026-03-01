@@ -1,0 +1,44 @@
+schema: leanatlas.agent_eval_task
+schema_version: 0.1.0
+task_id: mk_queue_littles_law_slot_reuse
+problem_slug: mk_queue_littles_law_slot_reuse
+kind: PROOF_LOOP
+description: |
+  Mentor keyword pack: queueing theory — Little’s law (discrete slot model) reuse case.
+
+  This is the “B-side” task: the double-counting lemma has been promoted to the toolbox,
+  and we now prove the identity by directly invoking that toolbox theorem.
+keywords:
+  - queueing_theory
+  - little_slot
+  - little_law
+references:
+  - "REF:LITTLE_OR_1961"
+  - "REF:LITTLE_50TH_2011"
+  - "REF:WHITT_ZHANG_PLL_2018"
+prompt: |
+  You are Codex running LeanAtlas in OPERATOR mode.
+
+  Goal: reuse the promoted toolbox theorem for the discrete slot-model double-counting identity.
+
+  Requirements:
+  - Keep edits inside this problem directory.
+  - Prefer a tiny proof: `intro inSys; simpa using ...`.
+variants:
+  - variant_id: v0_reuse_promoted_tool
+    gptpro_hint: |
+      The toolbox theorem is:
+
+        `LeanAtlas.Toolbox.Queueing.LittleSlot.sum_L_eq_sum_W (N:=_) (T:=_) inSys`
+
+      Your goal matches it almost exactly. Use `simpa`.
+    expected:
+      final_status: SUCCESS
+    tool_delta:
+      max_new_modules: 0
+    skill_delta:
+      expected_new_kb_tags:
+        - queueing/little_slot_reuse
+        - reuse/toolbox_prefer_existing
+    tags:
+      - SUCCESS

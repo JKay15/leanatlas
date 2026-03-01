@@ -1,0 +1,32 @@
+schema: leanatlas.agent_eval_scenario
+schema_version: 0.2.0
+
+scenario_id: core_dummy_smoke_v0
+scenario_class: INTERLEAVING
+tier: core
+
+execution:
+  enabled: false
+  workspace: shared
+
+description: >
+  Minimal executable scenario to TDD the scenario runner + grader.
+  Uses mk_convex_log_barrier (v0 TRIAGED -> maintainer patch -> v1 SUCCESS).
+
+steps:
+  - kind: run_task
+    label: log_v0
+    task_id: mk_convex_log_barrier
+    variant_id: v0_wrong_hint_missing_domain
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: fix_domain
+    mode: MAINTAINER
+    overlay: overlays/fix_log_domain
+
+  - kind: run_task
+    label: log_v1
+    task_id: mk_convex_log_barrier
+    variant_id: v1_correct_hint_mathlib_lemma
+    reset_problem: false

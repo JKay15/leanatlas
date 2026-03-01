@@ -1,0 +1,7 @@
+interface:
+  display_name: LeanAtlas PromotionGate
+  short_description: Promote Seeds→Toolbox safely with auditable gates and structural evidence.
+  default_prompt: |
+    Use the PromotionGate contract and Phase3 capability manifest.
+    Generate PromotionPlan/PromotionReport with a complete gate list and auditable evidence.
+    Do not use heuristic fallbacks for structural signals.

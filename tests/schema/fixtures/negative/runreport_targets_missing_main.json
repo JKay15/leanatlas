@@ -1,0 +1,52 @@
+{
+  "context": {
+    "git_sha": "deadbeef0",
+    "lean_toolchain": "lean",
+    "mathlib_rev": "pin"
+  },
+  "diagnostics": [],
+  "entrypoints": {
+    "files": {
+      "cache": "Cache.lean",
+      "proof": "Proof.lean",
+      "scratch": "Scratch.lean",
+      "spec": "Spec.lean"
+    }
+  },
+  "extensions": {},
+  "mode": "OPERATOR",
+  "problem_slug": "p",
+  "retrieval_trace_path": "RetrievalTrace.json",
+  "run_id": "pos_success_min",
+  "schema": "leanatlas.run_report",
+  "schema_version": "0.3.0",
+  "stages": {
+    "build": {
+      "status": "OK"
+    },
+    "retrieval": {
+      "status": "OK"
+    },
+    "verify": {
+      "status": "OK"
+    }
+  },
+  "status": "SUCCESS",
+  "summary": {
+    "one_line": "ok",
+    "title": "t"
+  },
+  "targets": [
+    {
+      "decl": "L1",
+      "file": "Problems/p/Proof.lean",
+      "id": "t1",
+      "role": "LEMMA"
+    }
+  ],
+  "verification": {
+    "axioms": [],
+    "no_sorry": true,
+    "warnings": []
+  }
+}

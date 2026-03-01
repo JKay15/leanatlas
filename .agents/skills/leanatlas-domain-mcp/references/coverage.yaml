@@ -1,0 +1,5 @@
+version: "0.1"
+covers_commands:
+  - domain.mcp.server
+  - msc.ingest.csv
+  - retrieval.domain_prune

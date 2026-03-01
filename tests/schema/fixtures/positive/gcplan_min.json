@@ -1,0 +1,21 @@
+{
+  "actions": [
+    {
+      "action": "quarantine",
+      "evidence": {
+        "domain_id": "MSC_13",
+        "domain_progress_count_since_last_use": 12
+      },
+      "seed": "LeanAtlas/Incubator/Seeds/Algebra/Foo.lean"
+    }
+  ],
+  "meta": {
+    "generated_at": "2026-02-22T00:00:00Z",
+    "mode": "MAINTAINER"
+  },
+  "policy": {
+    "default_threshold": 10,
+    "two_phase_delete_enforced": true
+  },
+  "version": "0.1"
+}

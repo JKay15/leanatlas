@@ -1,0 +1,77 @@
+id: scenario_phase3_gc_apply_smoke
+tier: smoke
+execution:
+  enabled: true
+  workspace: shared
+steps:
+- kind: apply_overlay
+  mode: MAINTAINER
+  overlay: overlays/gc_minimal
+
+- kind: run_cmd
+  cwd: repo
+  cmd:
+    - python
+    - tools/gc/gc.py
+    - apply
+    - --repo-root
+    - ${WORKDIR}
+    - --plan
+    - ${WORKDIR}/tools/gc/fixtures/plan_quarantine_seedA.json
+    - --out-root
+    - ${ARTIFACTS}/gc_apply
+    - --mode
+    - MAINTAINER
+  expect_rc: 0
+  expect_outputs:
+    - path: ${ARTIFACTS}/gc_apply/GCReport.json
+      schema: docs/schemas/GCReport.schema.json
+
+- kind: run_cmd
+  cwd: repo
+  cmd:
+    - python
+    - tools/gc/gc.py
+    - propose
+    - --repo-root
+    - ${WORKDIR}
+    - --out-root
+    - ${ARTIFACTS}/gc_propose
+  expect_rc: 0
+  expect_outputs:
+    - path: ${ARTIFACTS}/gc_propose/GCPlan.json
+      schema: docs/schemas/GCPlan.schema.json
+    - path: ${ARTIFACTS}/gc_propose/GCReport.json
+      schema: docs/schemas/GCReport.schema.json
+
+- kind: run_cmd
+  cwd: repo
+  cmd:
+    - python
+    - tools/dedup/dedup.py
+    - --repo-root
+    - ${WORKDIR}
+    - --out-root
+    - ${ARTIFACTS}/dedup
+  expect_rc: 0
+  expect_outputs:
+    - path: ${ARTIFACTS}/dedup/DedupReport.json
+      schema: docs/schemas/DedupReport.schema.json
+
+- kind: run_cmd
+  cwd: repo
+  cmd:
+    - python
+    - tools/promote/promote.py
+    - --repo-root
+    - ${WORKDIR}
+    - --plan
+    - ${WORKDIR}/tools/promote/fixtures/plan_minimal.json
+    - --out-root
+    - ${ARTIFACTS}/promotion
+    - --mode
+    - MAINTAINER
+  expect_rc: 0
+  expect_outputs:
+    - path: ${ARTIFACTS}/promotion/PromotionReport.json
+      schema: docs/schemas/PromotionReport.schema.json

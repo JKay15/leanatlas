@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifacts": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "deterministic_checks": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "passed",
+          "evidence"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "eval_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "notes": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "passed": {
+      "type": "boolean"
+    },
+    "rubric": {
+      "additionalProperties": false,
+      "properties": {
+        "grader_id": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "scores": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "grader_id",
+        "scores"
+      ],
+      "type": "object"
+    },
+    "schema": {
+      "const": "leanatlas.agent_eval_report"
+    },
+    "schema_version": {
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "type": "string"
+    },
+    "signals": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "type": "object"
+    },
+    "stamp": {
+      "type": "string"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "variant_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "eval_id",
+    "task_id",
+    "variant_id",
+    "passed",
+    "deterministic_checks",
+    "signals",
+    "artifacts",
+    "notes"
+  ],
+  "type": "object"
+}

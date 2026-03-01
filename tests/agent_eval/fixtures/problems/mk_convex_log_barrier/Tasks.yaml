@@ -1,0 +1,5 @@
+msc_primary: "90C25"  # Convex programming
+keywords:
+  - interior point
+  - log barrier
+  - tangent plane

@@ -1,0 +1,17 @@
+id: scenario_toolbox_regression
+tier: nightly
+execution:
+  enabled: true
+  workspace: shared
+steps:
+- kind: run_case
+  case_id: core_toolbox_consumer
+- kind: apply_overlay
+  mode: MAINTAINER
+  overlay: overlays/break_toolbox
+- kind: run_case
+  case_id: core_toolbox_consumer
+  expect:
+    final_status: TRIAGED
+    judge_reason_code: ERROR_OUTSIDE_SCOPE
+    triage_level: ESCALATE

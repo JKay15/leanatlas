@@ -1,0 +1,18 @@
+{
+  "execution": {
+    "enabled": false,
+    "workspace": "shared"
+  },
+  "scenario_class": "NOT_A_CLASS",
+  "scenario_id": "mini_scn",
+  "schema": "leanatlas.agent_eval_scenario",
+  "schema_version": "0.1.0",
+  "steps": [
+    {
+      "kind": "run_task",
+      "task_id": "t1",
+      "variant_id": "v1"
+    }
+  ],
+  "tier": "manual"
+}

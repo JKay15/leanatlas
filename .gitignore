@@ -1,0 +1,46 @@
+# Lean / Lake
+.lake/
+lake-packages/
+*.olean
+*.ilean
+*.c
+*.o
+
+# Editor/OS noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local archives (input bundles, exports)
+*.zip
+
+# Python caches (tests tooling)
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.uv-cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# IDE/editor local project state
+.idea/
+.vscode/
+
+# LeanAtlas generated artifacts (MUST NOT bloat repo)
+artifacts/
+.cache/
+.cache/leanatlas/
+
+# Problem run outputs are NOT versioned by default
+Problems/**/Reports/**
+
+# Local maintainer-only overrides (do not commit)
+AGENTS.override.md
+AGENTS.override.*.md
+!docs/agents/templates/AGENTS.override.md
+!docs/agents/templates/AGENTS.override.minimal.md

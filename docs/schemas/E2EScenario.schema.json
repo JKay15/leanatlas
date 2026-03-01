@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "execution": {
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "workspace": {
+          "enum": [
+            "shared"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "type": "object"
+    },
+    "id": {
+      "pattern": "^[a-z0-9_\\-]+$",
+      "type": "string"
+    },
+    "steps": {
+      "items": {
+        "additionalProperties": true,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "run_case"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "case_id"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "apply_overlay"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "mode",
+                "overlay"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "lake_build"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "target"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "run_cmd"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "cmd"
+              ]
+            }
+          }
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string"
+          },
+          "cmd": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "expect": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "expect_outputs": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "expect_rc": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "run_case",
+              "apply_overlay",
+              "lake_build",
+              "clean",
+              "run_cmd"
+            ],
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "OPERATOR",
+              "MAINTAINER"
+            ],
+            "type": "string"
+          },
+          "overlay": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "tier": {
+      "enum": [
+        "smoke",
+        "core",
+        "nightly"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "tier",
+    "execution",
+    "steps"
+  ],
+  "title": "LeanAtlas E2E Scenario",
+  "type": "object"
+}

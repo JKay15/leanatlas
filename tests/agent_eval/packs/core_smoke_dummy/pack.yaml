@@ -1,0 +1,13 @@
+schema: leanatlas.agent_eval_pack
+schema_version: 0.1.0
+
+pack_id: core_smoke_dummy
+description: >
+  Core smoke pack for the AgentEval pipeline.
+  Intended to be run with tools/agent_eval/dummy_agent.py in CI.
+
+tasks:
+  - task_id: mk_convex_log_barrier
+    variants:
+      - v0_wrong_hint_missing_domain
+      - v1_correct_hint_mathlib_lemma

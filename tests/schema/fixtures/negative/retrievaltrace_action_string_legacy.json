@@ -1,0 +1,37 @@
+{
+  "budget": {
+    "max_external_queries": 0,
+    "max_steps": 5,
+    "used_external_queries": 0,
+    "used_steps": 2
+  },
+  "domain": {
+    "expanded_codes": [
+      {
+        "code": "msc2020:03E20",
+        "reason": "manual",
+        "weight": 1.0
+      }
+    ],
+    "input_codes": [
+      "msc2020:03E20"
+    ]
+  },
+  "problem_slug": "demo_problem",
+  "run_id": "sample_run_001",
+  "schema": "leanatlas.retrieval_trace",
+  "schema_version": "0.3.0",
+  "steps": [
+    {
+      "action": "TRY_CODE_ACTIONS",
+      "candidates": [],
+      "chosen": null,
+      "error": null,
+      "imports_added": [],
+      "layer": "ENVIRONMENT",
+      "query": null,
+      "result": "MISS",
+      "step_index": 0
+    }
+  ]
+}

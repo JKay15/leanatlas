@@ -1,0 +1,4 @@
+# By default, do not commit local symlink roots (cross-platform and user-specific).
+*
+!.gitignore
+!README.md

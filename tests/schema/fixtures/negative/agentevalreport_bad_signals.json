@@ -1,0 +1,15 @@
+{
+  "artifacts": [],
+  "deterministic_checks": [],
+  "eval_id": "agent_eval_smoke",
+  "notes": [],
+  "passed": true,
+  "schema": "leanatlas.agent_eval_report",
+  "schema_version": "0.1.0",
+  "signals": {
+    "success_rate": "not-a-number"
+  },
+  "stamp": "2026-02-24T00:00:00Z",
+  "task_id": "proof_loop_demo",
+  "variant_id": "v0_wrong_hint"
+}

@@ -1,0 +1,11 @@
+id: core_type_mismatch
+tier: core
+execution:
+  enabled: true
+expected:
+  final_status: SUCCESS
+coverage_tags:
+- family:TYPE
+- stage:build
+patch_sequence:
+- patches/001

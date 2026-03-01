@@ -1,0 +1,17 @@
+{
+  "kind": "PROOF_LOOP",
+  "prompt": "dummy",
+  "schema": "leanatlas.agent_eval_task",
+  "schema_version": "0.1.0",
+  "task_id": "bad_task",
+  "variants": [
+    {
+      "expected": {
+        "final_status": "TRIAGED",
+        "triage_code": "MISSING_FAMILY"
+      },
+      "gptpro_hint": "",
+      "variant_id": "v0"
+    }
+  ]
+}

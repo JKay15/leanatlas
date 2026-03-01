@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "eval_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "internal_errors": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "passed": {
+      "type": "boolean"
+    },
+    "scenario_id": {
+      "pattern": "^[a-z0-9_\\-]+$",
+      "type": "string"
+    },
+    "schema": {
+      "const": "leanatlas.agent_eval_scenario_report"
+    },
+    "schema_version": {
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "type": "string"
+    },
+    "stamp": {
+      "type": "string"
+    },
+    "step_results": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "report_path": {
+            "type": "string"
+          },
+          "step_uid": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_uid",
+          "kind",
+          "passed"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "tool_reuse": {
+      "additionalProperties": true,
+      "description": "Deterministic scenario-level tool-surface diffs and reuse scoring.",
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "eval_id",
+    "stamp",
+    "scenario_id",
+    "passed",
+    "step_results"
+  ],
+  "title": "LeanAtlas AgentEval Scenario Report",
+  "type": "object"
+}

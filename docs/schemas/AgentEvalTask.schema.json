@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "domain_hint": {
+      "additionalProperties": true,
+      "description": "Optional domain hints (for retrieval / routing).",
+      "properties": {
+        "msc_primary": {
+          "type": "string"
+        },
+        "msc_secondary": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "keywords": {
+      "description": "Optional tags for task coverage (e.g., mentor keywords).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "kind": {
+      "enum": [
+        "PROOF_LOOP",
+        "PROMOTION",
+        "GC",
+        "DOMAIN",
+        "AUTOMATION"
+      ],
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "OPERATOR",
+        "MAINTAINER"
+      ],
+      "type": "string"
+    },
+    "oracle": {
+      "additionalProperties": false,
+      "properties": {
+        "notes": {
+          "type": "string"
+        },
+        "oracle_pack_id": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "problem_slug": {
+      "type": "string"
+    },
+    "prompt": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "references": {
+      "description": "Optional human references/URLs for the math or workflow.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "const": "leanatlas.agent_eval_task"
+    },
+    "schema_version": {
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "type": "string"
+    },
+    "task_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "variants": {
+      "items": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "expected": {
+                  "properties": {
+                    "final_status": {
+                      "const": "TRIAGED"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "expected": {
+                  "required": [
+                    "triage_family"
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "expected": {
+            "additionalProperties": false,
+            "properties": {
+              "final_status": {
+                "enum": [
+                  "SUCCESS",
+                  "TRIAGED"
+                ],
+                "type": "string"
+              },
+              "triage_code": {
+                "pattern": "^[A-Z][A-Z0-9_]*$",
+                "type": "string"
+              },
+              "triage_family": {
+                "enum": [
+                  "IMPORT",
+                  "NAME",
+                  "TYPE",
+                  "TACTIC",
+                  "ASSUMPTION",
+                  "DEFINITION",
+                  "STATEMENT",
+                  "BUDGET",
+                  "TOOLING",
+                  "UNKNOWN"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "final_status"
+            ],
+            "type": "object"
+          },
+          "fixture_overlay_dir": {
+            "description": "Optional repo-relative directory copied onto Problems/<slug> before the run (maintainer-provided fixture delta).",
+            "type": "string"
+          },
+          "gptpro_hint": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "skill_delta": {
+            "additionalProperties": false,
+            "properties": {
+              "expected_new_kb_tags": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "expected_new_skills": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "tags": {
+            "description": "Optional variant classification tags (e.g. FIXABLE vs TRIAGED).",
+            "items": {
+              "enum": [
+                "SUCCESS",
+                "FIXABLE",
+                "FAILURE",
+                "TRIAGED"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "tool_delta": {
+            "additionalProperties": false,
+            "properties": {
+              "expected_new_decls": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "expected_new_modules": {
+                "items": {
+                  "pattern": "^[A-Za-z0-9_.-]+$",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "max_new_modules": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          },
+          "variant_id": {
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "variant_id",
+          "expected"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "task_id",
+    "kind",
+    "prompt",
+    "variants"
+  ],
+  "type": "object"
+}

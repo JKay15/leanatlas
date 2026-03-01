@@ -1,0 +1,9 @@
+{
+  "schema": "leanatlas.retrieval_trace",
+  "schema_version": "0.3.0",
+  "run_id": "kb_runA",
+  "problem_slug": "p1",
+  "domain": {"input_codes": ["msc2020:68M20"], "expanded_codes": []},
+  "budget": {"max_steps": 5, "used_steps": 0, "max_external_queries": 0, "used_external_queries": 0},
+  "steps": []
+}

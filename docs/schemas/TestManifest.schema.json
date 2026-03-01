@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "tests": {
+      "items": {
+        "additionalProperties": true,
+        "properties": {
+          "area": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "goal": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[a-z0-9_]+$",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "python_script"
+            ],
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "phase": {
+            "items": {
+              "enum": [
+                "phase1",
+                "phase2",
+                "phase3",
+                "phase4",
+                "phase5",
+                "phase6",
+                "crosscutting"
+              ],
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "profile": {
+            "enum": [
+              "core",
+              "nightly",
+              "soak"
+            ],
+            "type": "string"
+          },
+          "runtime_budget_sec": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "script": {
+            "pattern": "^tests/[^\\s]+\\.py$",
+            "type": "string"
+          },
+          "tier": {
+            "enum": [
+              "core",
+              "nightly",
+              "soak"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "script",
+          "profile",
+          "phase",
+          "area",
+          "goal",
+          "runtime_budget_sec"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "version": {
+      "const": "2",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "tests"
+  ],
+  "title": "TestManifest",
+  "type": "object"
+}

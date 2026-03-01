@@ -1,0 +1,22 @@
+{
+  "actions": [
+    {
+      "action": "ARCHIVE",
+      "evidence": {
+        "domain_sessions": 0
+      },
+      "seed": "LeanAtlas.Incubator.Seeds.Foo.bar"
+    }
+  ],
+  "policy": {
+    "domain": "MSC:11-XX",
+    "threshold_sessions": 3
+  },
+  "safety": {
+    "two_phase_delete_enforced": true
+  },
+  "summary": {
+    "archived": 1
+  },
+  "version": "0.1"
+}

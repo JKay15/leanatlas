@@ -1,0 +1,46 @@
+schema: leanatlas.agent_eval_task
+schema_version: 0.1.0
+task_id: mk_queue_mg1_lindley_reuse_nonneg
+problem_slug: mk_queue_mg1_lindley_reuse_nonneg
+kind: PROOF_LOOP
+description: |
+  Mentor keyword pack: queueing (M/G/1, Lindley recursion) — reuse case.
+
+  This is the “B-side” task: once the Lindley recursion is promoted to the toolbox,
+  we prove a tiny invariant by calling the toolbox theorem.
+keywords:
+  - queueing_theory
+  - MG1
+  - lindley_recursion
+references:
+  - "REF:VLASIOU_LINDLEY_THESIS_2006"
+  - "REF:LEAHU_GG1_2013"
+prompt: |
+  You are Codex running LeanAtlas in OPERATOR mode.
+
+  Goal: reuse the toolbox definition/theorem for the Lindley recursion.
+
+  Requirements:
+  - Do NOT re-define the recursion in this problem.
+  - Use `LeanAtlas.Toolbox.Queueing.Lindley.W_nonneg`.
+  - Keep edits inside this problem directory.
+  - Follow the proof-loop workflow and produce evidence artifacts.
+variants:
+  - variant_id: v0_reuse_promoted_tool
+    gptpro_hint: |
+      One-liner style proof is fine:
+
+        intro S A n
+        exact LeanAtlas.Toolbox.Queueing.Lindley.W_nonneg S A n
+
+      (Or `simpa`.)
+    expected:
+      final_status: SUCCESS
+    tool_delta:
+      max_new_modules: 0
+    skill_delta:
+      expected_new_kb_tags:
+        - queueing/lindley_reuse
+        - reuse/toolbox_prefer_existing
+    tags:
+      - SUCCESS

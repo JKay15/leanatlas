@@ -1,0 +1,3 @@
+terms:
+  - term: log barrier
+    meaning: "A barrier function (often -log) that enforces positivity constraints in interior-point methods."

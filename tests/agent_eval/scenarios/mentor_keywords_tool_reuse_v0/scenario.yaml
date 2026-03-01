@@ -1,0 +1,114 @@
+schema: leanatlas.agent_eval_scenario
+schema_version: 0.1.0
+scenario_id: mentor_keywords_tool_reuse_v0
+title: Mentor keywords — deterministic tool reuse chain
+scenario_class: REGRESSION
+tier: smoke
+execution:
+  enabled: true
+  default_mode: plan
+  allowed_modes: [plan, materialize, run]
+  suggested_agent_cmd: python tools/agent_eval/dummy_agent.py
+
+description: |
+  A regression-style scenario that forces *tool reuse* across a sequence of classic mini-theorems.
+
+  Structure (repeat for each keyword group):
+    1) PROOF_LOOP on a “classic theorem A” (builds confidence / produces artifacts)
+    2) apply_overlay (MAINTAINER) that introduces a new toolbox module (simulated promotion)
+    3) PROOF_LOOP on a “theorem B” whose clean solution should *reuse* that promoted module
+
+  Deterministic scoring focuses on:
+    - Whether any run_task step introduces new toolbox modules (must be 0)
+    - Whether promoted modules are later reachable from the import closure of subsequent tasks
+
+steps:
+  # --- interior point / tangent plane (log barrier) ---
+  - kind: run_task
+    label: Prove log tangent inequality (A)
+    task_id: mk_convex_log_barrier
+    variant_id: v1_correct_hint_mathlib_lemma
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: PROMOTE tool — Convex.LogBarrier
+    mode: MAINTAINER
+    overlay: overlays/promote_log_barrier
+
+  - kind: run_task
+    label: Reuse promoted log-barrier tool (B)
+    task_id: mk_convex_log_barrier_gap
+    variant_id: v0_reuse_promoted_tool
+    reset_problem: true
+
+  # --- queueing / M/G/1 (Lindley recursion) ---
+  - kind: run_task
+    label: Prove Lindley recursion nonnegativity (A)
+    task_id: mk_queue_mg1_lindley
+    variant_id: v1_correct_hint_induction
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: PROMOTE tool — Queueing.Lindley
+    mode: MAINTAINER
+    overlay: overlays/promote_lindley
+
+  - kind: run_task
+    label: Reuse promoted Lindley tool (B)
+    task_id: mk_queue_mg1_lindley_reuse_nonneg
+    variant_id: v0_reuse_promoted_tool
+    reset_problem: true
+
+  # --- queueing / Little's law (slot double counting) ---
+  - kind: run_task
+    label: Prove slot-model double counting (A)
+    task_id: mk_queue_littles_law_slot
+    variant_id: v1_correct_hint_double_count
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: PROMOTE tool — Queueing.LittleSlot
+    mode: MAINTAINER
+    overlay: overlays/promote_little_slot
+
+  - kind: run_task
+    label: Reuse promoted LittleSlot tool (B)
+    task_id: mk_queue_littles_law_slot_reuse
+    variant_id: v0_reuse_promoted_tool
+    reset_problem: true
+
+  # --- polynomial factorization → divisibility ---
+  - kind: run_task
+    label: Prove difference-of-squares factorization (A)
+    task_id: mk_poly_factorization_square
+    variant_id: v1_correct_hint_expand
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: PROMOTE tool — Polynomial.Factorization
+    mode: MAINTAINER
+    overlay: overlays/promote_poly_factor
+
+  - kind: run_task
+    label: Reuse promoted factorization tool (B)
+    task_id: mk_poly_factorization_square_dvd
+    variant_id: v0_reuse_promoted_tool
+    reset_problem: true
+
+  # --- solvable by radicals (forward direction) ---
+  - kind: run_task
+    label: Prove forward implication via mathlib (A)
+    task_id: mk_poly_solvability_by_radicals
+    variant_id: v1_forward_direction
+    reset_problem: true
+
+  - kind: apply_overlay
+    label: PROMOTE tool — FieldTheory.SolvableByRadicals
+    mode: MAINTAINER
+    overlay: overlays/promote_solvable_by_rad
+
+  - kind: run_task
+    label: Reuse promoted solvable-by-radicals tool (B)
+    task_id: mk_poly_solvability_by_radicals_reuse
+    variant_id: v0_reuse_promoted_tool
+    reset_problem: true

@@ -1,0 +1,15 @@
+{
+  "version": "0.2",
+  "meta": {
+    "phase": "fixture",
+    "note": "Minimal PromotionPlan used by smoke scenarios and contract-shape stubs."
+  },
+  "policy": {
+    "min_reuse_problems": 3,
+    "scope_prefixes": [
+      "LeanAtlas"
+    ],
+    "allow_exceptions": true
+  },
+  "candidates": []
+}

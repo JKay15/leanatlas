@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "counters": {
+      "additionalProperties": true,
+      "properties": {
+        "attempts": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "success": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "triaged": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "domain": {
+      "additionalProperties": true,
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "domain_id": {
+          "description": "Primary domain bucket (MSC-derived or LOCAL). Use 'UNKNOWN' if not classified.",
+          "type": "string"
+        },
+        "msc": {
+          "description": "Optional MSC2020 codes (e.g., '11Axx').",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "source": {
+          "description": "How the domain was assigned (lean_domain_mcp/manual/heuristic).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "domain_id"
+      ],
+      "type": "object"
+    },
+    "ever_succeeded": {
+      "description": "True if this problem has reached SUCCESS at least once (used for domain progress clock).",
+      "type": "boolean"
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "last_run": {
+      "additionalProperties": true,
+      "properties": {
+        "attempt_log_path": {
+          "type": "string"
+        },
+        "retrieval_trace_path": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "run_report_path": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "SUCCESS",
+            "TRIAGED"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "status",
+        "run_report_path"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "problem_slug": {
+      "type": "string"
+    },
+    "status": {
+      "description": "Lifecycle state of the problem directory.",
+      "enum": [
+        "NEW",
+        "ACTIVE",
+        "SUCCESS",
+        "TRIAGED",
+        "PAUSED",
+        "ABANDONED"
+      ],
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "problem_slug",
+    "domain",
+    "status",
+    "ever_succeeded"
+  ],
+  "type": "object"
+}
