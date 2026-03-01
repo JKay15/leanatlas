@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
-import json, sys
+"""Contract: template problem library must not be tracked in Repo A."""
+
+from __future__ import annotations
+
+import subprocess
+import sys
 from pathlib import Path
-from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[2]
-SCHEMA = ROOT / "docs" / "schemas" / "ProblemState.schema.json"
-TEMPLATE_STATE = ROOT / "Problems" / "_template" / "State.json"
+
 
 def main() -> int:
-  if not TEMPLATE_STATE.exists():
-    print("Missing Problems/_template/State.json", file=sys.stderr)
+  cmd = ["git", "ls-files", "--", "Problems/_template"]
+  p = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True)
+  if p.returncode != 0:
+    print("[problem-template-state][FAIL] cannot query git ls-files", file=sys.stderr)
+    if p.stderr.strip():
+      print(p.stderr.strip(), file=sys.stderr)
     return 2
-  schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
-  data = json.loads(TEMPLATE_STATE.read_text(encoding="utf-8"))
-  v = Draft202012Validator(schema)
-  errors = sorted(v.iter_errors(data), key=lambda e: e.path)
-  if errors:
-    for e in errors:
-      print(f"Schema error: {list(e.path)}: {e.message}", file=sys.stderr)
+
+  tracked = [line.strip() for line in p.stdout.splitlines() if line.strip()]
+  if tracked:
+    print("[problem-template-state][FAIL] Problems/_template must not be tracked in main repo.", file=sys.stderr)
+    for path in tracked:
+      print(f" - {path}", file=sys.stderr)
     return 2
+
+  print("[problem-template-state] OK")
   return 0
 
 if __name__ == "__main__":

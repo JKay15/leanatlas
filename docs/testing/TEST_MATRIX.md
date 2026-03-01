@@ -60,7 +60,7 @@ Tiers are inclusive: higher tiers include lower ones.
 | `patch_scope_policy` | `phase2` | `workflow,patchscope` | 10 | Enforce PatchScope policy (OPERATOR cannot touch forbidden paths). | `./.venv/bin/python tests/contract/check_patch_scope_policy.py` |
 | `phase3_scenarios_present` | `phase3` | `e2e,phase3,tools` | 10 | Ensure at least one smoke-tier executable E2E scenario exercises Phase3 tool entrypoints via run_cmd. | `./.venv/bin/python tests/contract/check_phase3_e2e_scenarios.py` |
 | `problem_state_reconcile` | `crosscutting` | `problems,state_machine,contracts` | 5 | Reconcile State.json from a RunReport deterministically (schema-valid + canonical). | `./.venv/bin/python tests/contract/check_problem_state_reconcile.py` |
-| `problem_template_state` | `crosscutting` | `problems,contracts` | 3 | Ensure Problems/_template/State.json exists and is schema-valid. | `./.venv/bin/python tests/contract/check_problem_template_state.py` |
+| `problem_template_state` | `crosscutting` | `problems,contracts` | 3 | Ensure Problems/_template/** is not tracked in the main repo. | `./.venv/bin/python tests/contract/check_problem_template_state.py` |
 | `reports_layout` | `phase1` | `reports,layout` | 10 | Validate example report directory layout is complete and consistent. | `./.venv/bin/python tests/contract/check_reports_layout.py` |
 | `retrievaltrace_invariants` | `phase1,phase2` | `retrieval,trace` | 10 | Enforce RetrievalTrace invariants (contiguous steps, budget counters, references). | `./.venv/bin/python tests/contract/check_retrievaltrace_invariants.py` |
 | `runreport_md` | `phase1` | `reports,markdown` | 10 | Ensure RunReport.md has minimum headings/sections for fast human audit. | `./.venv/bin/python tests/contract/check_runreport_md.py` |

@@ -118,6 +118,6 @@ Responsibilities:
 ## 5) TDD requirements
 
 Core profile must cover:
-- `Problems/_template/State.json` exists and is schema-valid
+- `Problems/_template/**` is not tracked in Repo A (template library is out-of-repo)
 - fixtures include positive + negative cases
 - `tools/problem_state/reconcile.py` output is schema-valid and canonical JSON

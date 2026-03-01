@@ -1250,7 +1250,7 @@
         "problems",
         "contracts"
       ],
-      "goal": "Ensure Problems/_template/State.json exists and is schema-valid.",
+      "goal": "Ensure Problems/_template/** is not tracked in the main repo.",
       "id": "problem_template_state",
       "kind": "python_script",
       "phase": [

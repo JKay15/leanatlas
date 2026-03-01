@@ -38,6 +38,7 @@ artifacts/
 
 # Problem run outputs are NOT versioned by default
 Problems/**/Reports/**
+Problems/_template/
 
 # Local maintainer-only overrides (do not commit)
 AGENTS.override.md
