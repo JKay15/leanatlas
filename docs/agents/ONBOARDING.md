@@ -118,10 +118,17 @@ Codex must explicitly tell the user:
    - `automations/registry.json`
    - `docs/agents/templates/AUTOMATION_INSTALL_CHECKLIST.md`
 2) Generate one install block per active automation and present them in checklist order.
+   - Each block must use local-execution wrapper command with absolute repo path:
+     - `python <REPO_ROOT>/tools/coordination/run_automation_local.py --id <automation_id> --advisor-mode <mode> --verify`
+   - Do not use `uv run --locked ... run_automation.py` in automation prompts.
 3) Ask for per-item confirmation after each automation is created in Codex App UI.
 4) Manually trigger each once and verify artifacts under `artifacts/**`.
 5) Mark readiness only after verification succeeds:
    - `./.venv/bin/python tools/onboarding/verify_automation_install.py --mark-done`
+
+`verify_automation_install.py` enforces:
+- artifacts exist for every active automation
+- installed automation prompt/cwds use source-workspace local wrapper policy (worktree-safe)
 
 Hard behavior rule:
 - If the automation gate is not complete, do not proceed with normal proof/maintainer tasks.

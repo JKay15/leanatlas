@@ -6,11 +6,13 @@ This document defines how LeanAtlas uses automations without losing auditability
 
 - Codex App automation:
   - Owns scheduling, background execution, and inbox delivery.
-  - Runs in background worktrees to avoid contaminating your main checkout.
+  - May run in background worktrees for Git repos.
+  - LeanAtlas policy: prompt commands must still execute against the source workspace path (local repo), not the worktree cwd.
 
 - Repo automation harness:
   - `automations/registry.json` is the executable specification.
   - `tools/coordination/run_automation.py` replays deterministic steps locally and records evidence.
+  - `tools/coordination/run_automation_local.py` is the Codex App-safe wrapper that forces source-workspace execution.
   - The harness validates behavior; it does not replace Codex App scheduling.
 
 ## 2) Execution model
@@ -67,14 +69,20 @@ Closed-loop coverage map:
 - Skills deposition full loop: `weekly_kb_suggestions`
 - Chat feedback deposition: `nightly_chat_feedback_deposition`
 
-## 4) Local runner (`run_automation.py`)
+## 4) Local runners (`run_automation.py` + `run_automation_local.py`)
 
 Common usage:
 
 ```bash
-python tools/coordination/run_automation.py --id weekly_kb_suggestions
-python tools/coordination/run_automation.py --id weekly_kb_suggestions --verify
-python tools/coordination/run_automation.py --id weekly_kb_suggestions --advisor-mode auto --verify
+./.venv/bin/python tools/coordination/run_automation.py --id weekly_kb_suggestions
+./.venv/bin/python tools/coordination/run_automation.py --id weekly_kb_suggestions --verify
+./.venv/bin/python tools/coordination/run_automation.py --id weekly_kb_suggestions --advisor-mode auto --verify
+```
+
+Codex App prompt usage (must force local repo execution even if thread cwd is a worktree):
+
+```bash
+python /ABS/REPO/tools/coordination/run_automation_local.py --id weekly_kb_suggestions --advisor-mode auto --verify
 ```
 
 Advisor modes:
@@ -89,14 +97,31 @@ Even with `--advisor-mode auto|force`, scheduling still belongs to Codex App aut
 
 Core automation gates:
 
-- `python tests/automation/validate_registry.py`
-- `python tests/automation/run_dry_runs.py`
-- `python tests/contract/check_telemetry_collection_policy.py`
+- `./.venv/bin/python tests/automation/validate_registry.py`
+- `./.venv/bin/python tests/automation/run_dry_runs.py`
+- `./.venv/bin/python tests/contract/check_telemetry_collection_policy.py`
+- `./.venv/bin/python tests/automation/check_run_automation_local.py`
+- `./.venv/bin/python tests/automation/check_stuck_run_recovery.py`
 
 Recommended full core suite:
 
 ```bash
-python tests/run.py --profile core
+./.venv/bin/python tests/run.py --profile core
+```
+
+## 5.1) Stuck-run recovery (Codex App timeout guard)
+
+If Codex App leaves automations in `IN_PROGRESS` due title-timeout/session issues, run:
+
+```bash
+./.venv/bin/python tools/coordination/recover_stuck_automation_runs.py --dry-run
+./.venv/bin/python tools/coordination/recover_stuck_automation_runs.py --apply --skip-rerun
+```
+
+Optional auto-rerun after repair:
+
+```bash
+./.venv/bin/python tools/coordination/recover_stuck_automation_runs.py --apply
 ```
 
 ## 6) External dependencies

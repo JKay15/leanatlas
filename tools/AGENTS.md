@@ -5,6 +5,8 @@
 - budgets / judge logic
 - indexing / retrieval (future)
 - reporting generation
+- automation execution wrappers (`tools/coordination/run_automation.py`, `run_automation_local.py`)
+- automation stuck-run recovery (`tools/coordination/recover_stuck_automation_runs.py`)
 
 ## Non-negotiables
 - No network access.

@@ -25,6 +25,9 @@ Rules:
 - Read automations/registry.json and docs/agents/AUTOMATIONS.md first.
 - Generate one install block per active automation id (name, schedule, cwd, prompt body).
 - Present blocks in the exact checklist order.
+- Prompt body must invoke local wrapper with absolute repo path:
+  `python <REPO_ROOT>/tools/coordination/run_automation_local.py --id <automation_id> --advisor-mode <mode> --verify`
+- Do not use `uv run --locked python tools/coordination/run_automation.py ...` in automation prompts.
 - After each automation is created in Codex App UI, ask for a short "done" confirmation.
 - After all are created, ask me to manually trigger each once and verify artifact paths.
 - Do not ask me to author prompt text manually; generate full blocks directly.
@@ -62,3 +65,7 @@ After all paths are confirmed, mark onboarding automation readiness:
 ```bash
 ./.venv/bin/python tools/onboarding/verify_automation_install.py --mark-done
 ```
+
+This verification command also checks installed automation config policy:
+- `cwds` must include the source repo path
+- prompt must use `tools/coordination/run_automation_local.py` absolute path
