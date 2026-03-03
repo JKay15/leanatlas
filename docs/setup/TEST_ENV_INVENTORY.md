@@ -14,7 +14,7 @@
 | `pre-commit` | Repo-local git hooks and commit/branch policy enforcement. | `scripts/install_repo_git_hooks.sh` |
 | `python` | Primary runtime for all registered tests and tooling. | `scripts/doctor.sh` |
 | `rg` | Fast fallback search backend (recommended). | `scripts/bootstrap.sh`, `scripts/doctor.sh` |
-| `uv` | Locked Python environment sync/check path. | `scripts/bootstrap.sh`, `tests/run.py`, `tests/setup/deps_smoke.py` |
+| `uv` | Locked Python environment sync/check path. | `scripts/bootstrap.sh`, `tests/run.py`, `tests/setup/deps_smoke.py`, `tools/coordination/run_automation_local.py` |
 | `uvx` | Pinned external tool execution (MCP checks). | `scripts/bootstrap.sh`, `scripts/doctor.sh`, `tests/setup/deps_smoke.py` |
 
 ## Third-Party Python Modules Referenced

@@ -101,11 +101,27 @@ Core automation gates:
 - `./.venv/bin/python tests/automation/run_dry_runs.py`
 - `./.venv/bin/python tests/contract/check_telemetry_collection_policy.py`
 - `./.venv/bin/python tests/automation/check_run_automation_local.py`
+- `./.venv/bin/python tests/automation/check_stuck_run_recovery.py`
 
 Recommended full core suite:
 
 ```bash
 ./.venv/bin/python tests/run.py --profile core
+```
+
+## 5.1) Stuck-run recovery (Codex App timeout guard)
+
+If Codex App leaves automations in `IN_PROGRESS` due title-timeout/session issues, run:
+
+```bash
+./.venv/bin/python tools/coordination/recover_stuck_automation_runs.py --dry-run
+./.venv/bin/python tools/coordination/recover_stuck_automation_runs.py --apply --skip-rerun
+```
+
+Optional auto-rerun after repair:
+
+```bash
+./.venv/bin/python tools/coordination/recover_stuck_automation_runs.py --apply
 ```
 
 ## 6) External dependencies

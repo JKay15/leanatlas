@@ -157,6 +157,28 @@
     {
       "area": [
         "agent_eval",
+        "runner",
+        "contracts"
+      ],
+      "goal": "Guardrail: materialize smoke test must use isolated temporary out_root and avoid shared-path cleanup races.",
+      "id": "agent_eval_runner_materialize_out_root_isolation",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/agent_eval/check_runner_materialize_out_root_isolation.py",
+      "tags": [
+        "agent_eval",
+        "runner",
+        "contract",
+        "concurrency"
+      ]
+    },
+    {
+      "area": [
+        "agent_eval",
         "runner"
       ],
       "expands": {
@@ -468,6 +490,21 @@
       "profile": "core",
       "runtime_budget_sec": 5,
       "script": "tests/automation/check_run_automation_local.py"
+    },
+    {
+      "area": [
+        "automation",
+        "recovery"
+      ],
+      "goal": "Ensure stale IN_PROGRESS automation runs can be deterministically detected and repaired.",
+      "id": "automation_stuck_recovery",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/automation/check_stuck_run_recovery.py"
     },
     {
       "area": [

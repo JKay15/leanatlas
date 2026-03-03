@@ -1,7 +1,7 @@
 ---
 title: Automation local-execution guard for Codex App worktree runs
 owner: leanatlas-maintainer
-status: active
+status: done
 created: 2026-03-03
 ---
 
@@ -16,6 +16,7 @@ Codex App automations are currently executed in background worktrees for Git rep
 ## Scope
 In scope:
 - `tools/coordination/*` local execution entrypoint.
+- `tools/coordination/*` stuck-run recovery helper for app-side timeout stalls.
 - onboarding verification/installation checks under `tools/onboarding/*`.
 - onboarding/install docs + checklist guidance.
 - automation tests validating local wrapper behavior.
@@ -29,6 +30,8 @@ Out of scope:
 - `tools/coordination/run_automation_local.py` (new): source-workspace wrapper.
 - `tools/onboarding/verify_automation_install.py`: verify local-execution prompt policy.
 - `tests/automation/check_run_automation_local.py` (new): deterministic check for wrapper behavior.
+- `tools/coordination/recover_stuck_automation_runs.py` (new): repair stale `IN_PROGRESS` automation runs.
+- `tests/automation/check_stuck_run_recovery.py` (new): deterministic recovery contract check.
 - `tests/manifest.json`: register the new test.
 - `docs/agents/{ONBOARDING.md,CODEX_APP_PROMPTS.md,AUTOMATIONS.md}` and `docs/agents/templates/AUTOMATION_INSTALL_CHECKLIST.md`: update install instructions to local wrapper policy.
 - `docs/agents/execplans/README.md`: index this plan.
@@ -53,6 +56,14 @@ Out of scope:
   - `./.venv/bin/python tests/run.py --profile core`
 - Acceptance: core profile passes.
 
+4) Add stuck-run recovery guard + contract test
+- Deliverables: recovery script + deterministic test + docs entry.
+- Commands:
+  - `./.venv/bin/python tests/automation/check_stuck_run_recovery.py`
+  - `./.venv/bin/python tools/coordination/recover_stuck_automation_runs.py --dry-run`
+  - `./.venv/bin/python tests/run.py --profile core`
+- Acceptance: stale `IN_PROGRESS` rows are detected/repairable; core profile passes.
+
 ## Testing plan (TDD)
 - Add a dedicated deterministic script test for local wrapper:
   - verifies generated command uses source repo root + repo-local python policy.
@@ -73,4 +84,13 @@ Out of scope:
   - `./.venv/bin/python tests/run.py --profile core`
 
 ## Outcomes & retrospective
-- Pending implementation.
+- Implemented local wrapper + onboarding/prompt policy enforcement.
+- Added uv fallback in wrapper when `.venv` is unavailable.
+- Added deterministic stuck-run recovery tool:
+  - `tools/coordination/recover_stuck_automation_runs.py`
+- Added deterministic contract test:
+  - `tests/automation/check_stuck_run_recovery.py`
+- Verification:
+  - `./.venv/bin/python tests/automation/check_run_automation_local.py`
+  - `./.venv/bin/python tests/automation/check_stuck_run_recovery.py`
+  - `./.venv/bin/python tests/run.py --profile core`

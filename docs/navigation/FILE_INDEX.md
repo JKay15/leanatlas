@@ -83,6 +83,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260228_hard_convergence_pack.md`
 - `docs/agents/execplans/20260228_refactor_manifest_cache_topology.md`
 - `docs/agents/execplans/20260228_strong_guarantee_force_deposit_pack.md`
+- `docs/agents/execplans/20260303_agent_eval_materialize_out_root_isolation.md`
 - `docs/agents/execplans/20260303_automation_local_execution_guard.md`
 - `docs/agents/execplans/README.md`
 - `docs/agents/execplans/phase3_dedup_gate_v0.md`
@@ -224,6 +225,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/agent_eval/check_pack_keyword_coverage.py`
 - `tests/agent_eval/check_pack_runner_and_grader_with_dummy_agent.py`
 - `tests/agent_eval/check_runner_materialize_mode.py`
+- `tests/agent_eval/check_runner_materialize_out_root_isolation.py`
 - `tests/agent_eval/check_runner_plan_mode.py`
 - `tests/agent_eval/check_scenario_class_coverage.py`
 - `tests/agent_eval/check_scenario_runner_and_grader_with_dummy_agent.py`
@@ -352,6 +354,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/agent_eval/validate_scenarios.py`
 - `tests/agent_eval/validate_tasks.py`
 - `tests/automation/check_run_automation_local.py`
+- `tests/automation/check_stuck_run_recovery.py`
 - `tests/automation/dry_run_single.py`
 - `tests/automation/run_dry_runs.py`
 - `tests/automation/validate_registry.py`
@@ -575,6 +578,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tools/coordination/automation_nightly.py`
 - `tools/coordination/compute_docpack_hash.py`
 - `tools/coordination/phase3_governance_audit.py`
+- `tools/coordination/recover_stuck_automation_runs.py`
 - `tools/coordination/run_automation.py`
 - `tools/coordination/run_automation_local.py`
 - `tools/coordination/skills_regen.py`
