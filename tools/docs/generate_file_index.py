@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Iterable, List
 
@@ -102,12 +103,13 @@ def main() -> int:
         return 0
 
     text = render_file_index(files)
+    canonical = text.rstrip("\n") + "\n"
     if args.write:
         OUT.parent.mkdir(parents=True, exist_ok=True)
-        OUT.write_text(text + "\n", encoding="utf-8")
+        OUT.write_text(canonical, encoding="utf-8")
         print(f"[file-index] wrote {OUT.relative_to(ROOT)} ({len(files)} files)")
     else:
-        print(text)
+        sys.stdout.write(canonical)
     return 0
 
 

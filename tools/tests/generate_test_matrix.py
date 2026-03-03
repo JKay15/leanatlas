@@ -107,13 +107,14 @@ def main() -> int:
     tests.sort(key=lambda t: (TIER_ORDER.get(_profile_of(t), 9), str(t.get("id"))))
 
     out = render(tests)
+    canonical = out.rstrip("\n") + "\n"
 
     if args.write:
         OUT.parent.mkdir(parents=True, exist_ok=True)
-        OUT.write_text(out, encoding="utf-8")
+        OUT.write_text(canonical, encoding="utf-8")
         print(f"[test-matrix] wrote {OUT.relative_to(ROOT)}")
     else:
-        sys.stdout.write(out)
+        sys.stdout.write(canonical)
     return 0
 
 
