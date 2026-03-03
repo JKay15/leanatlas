@@ -42,7 +42,8 @@ def main() -> int:
     argv = shlex.split(rendered)
 
     runner = str(ROOT / "tools" / "coordination" / "run_automation.py")
-    _require(argv[1] == runner, "wrapper must invoke source-workspace run_automation.py by absolute path")
+    _require(runner in argv, "wrapper must invoke source-workspace run_automation.py by absolute path")
+    runner_idx = argv.index(runner)
     _require("--id" in argv and "nightly_reporting_integrity" in argv, "wrapper must forward automation id")
     _require("--advisor-mode" in argv and "off" in argv, "wrapper must forward advisor mode")
     _require("--verify" in argv, "wrapper must forward --verify")
@@ -50,6 +51,7 @@ def main() -> int:
     venv_python = str(ROOT / ".venv" / "bin" / "python")
     if Path(venv_python).exists():
         _require(argv[0] == venv_python, "wrapper must prefer repo-local .venv python when available")
+        _require(runner_idx == 1, "runner must be the first script after .venv python")
 
     print("[automation.local-wrapper][PASS]")
     return 0

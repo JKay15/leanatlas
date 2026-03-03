@@ -8,6 +8,7 @@ Codex App worktree threads, then hop into repo-local `.venv` for real execution.
 from __future__ import annotations
 
 import argparse
+import shutil
 import shlex
 import sys
 from pathlib import Path
@@ -22,21 +23,25 @@ if str(ROOT) not in sys.path:
 from tools.workflow.run_cmd import run_cmd
 
 
-def _repo_python(repo_root: Path) -> str:
+def _python_prefix(repo_root: Path) -> List[str]:
     venv_python = repo_root / ".venv" / "bin" / "python"
     if venv_python.exists():
-        return str(venv_python)
-    return sys.executable
+        return [str(venv_python)]
+    uv = shutil.which("uv")
+    if uv:
+        return [uv, "run", "--locked", "python"]
+    return [sys.executable]
 
 
 def _build_cmd(args: argparse.Namespace) -> List[str]:
-    cmd: List[str] = [_repo_python(ROOT), str(RUNNER), "--id", args.automation_id, "--advisor-mode", args.advisor_mode]
+    prefix = _python_prefix(ROOT)
+    cmd: List[str] = [*prefix, str(RUNNER), "--id", args.automation_id, "--advisor-mode", args.advisor_mode]
     if args.verify:
         cmd.append("--verify")
     if args.allow_planned:
         cmd.append("--allow-planned")
     if args.list:
-        cmd = [_repo_python(ROOT), str(RUNNER), "--list"]
+        cmd = [*prefix, str(RUNNER), "--list"]
     if args.dry_runner:
         cmd.append("--dry-run")
     return cmd
