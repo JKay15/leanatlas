@@ -32,6 +32,13 @@ from tools.workflow.run_cmd import run_cmd
 ARTIFACTS = ROOT / "artifacts" / "automation_nightly"
 
 
+def _repo_python() -> str:
+    venv_python = ROOT / ".venv" / "bin" / "python"
+    if venv_python.exists():
+        return str(venv_python)
+    return sys.executable
+
+
 @dataclass
 class Step:
     name: str
@@ -43,6 +50,12 @@ DEFAULT_STEPS: List[Step] = [
     Step("deps_smoke", ["python", "tests/setup/deps_smoke.py"], timeout_s=300),
     Step("core_tests", ["python", "tests/run.py", "--profile", "core"], timeout_s=600),
 ]
+
+
+def _normalize_cmd(cmd: List[str]) -> List[str]:
+    if not cmd or cmd[0] not in {"python", "python3"}:
+        return cmd
+    return [_repo_python(), *cmd[1:]]
 
 
 def main() -> int:
@@ -65,8 +78,9 @@ def main() -> int:
 
     for i, step in enumerate(DEFAULT_STEPS):
         label = f"{i:02d}_{step.name}"
+        argv = _normalize_cmd(list(step.argv))
         res = run_cmd(
-            cmd=step.argv,
+            cmd=argv,
             cwd=ROOT,
             log_dir=logs_dir,
             label=label,
@@ -80,7 +94,7 @@ def main() -> int:
         manifest["steps"].append(
             {
                 "name": step.name,
-                "argv": step.argv,
+                "argv": argv,
                 "timeout_s": step.timeout_s,
                 "ok": ok,
                 "exit_code": rc,
