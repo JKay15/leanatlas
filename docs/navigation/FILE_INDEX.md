@@ -83,6 +83,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260228_hard_convergence_pack.md`
 - `docs/agents/execplans/20260228_refactor_manifest_cache_topology.md`
 - `docs/agents/execplans/20260228_strong_guarantee_force_deposit_pack.md`
+- `docs/agents/execplans/20260303_automation_local_execution_guard.md`
 - `docs/agents/execplans/README.md`
 - `docs/agents/execplans/phase3_dedup_gate_v0.md`
 - `docs/agents/execplans/phase3_gc_gate_v0.md`
@@ -350,6 +351,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/agent_eval/tasks/proof_loop_demo/task.yaml`
 - `tests/agent_eval/validate_scenarios.py`
 - `tests/agent_eval/validate_tasks.py`
+- `tests/automation/check_run_automation_local.py`
 - `tests/automation/dry_run_single.py`
 - `tests/automation/run_dry_runs.py`
 - `tests/automation/validate_registry.py`
@@ -574,6 +576,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tools/coordination/compute_docpack_hash.py`
 - `tools/coordination/phase3_governance_audit.py`
 - `tools/coordination/run_automation.py`
+- `tools/coordination/run_automation_local.py`
 - `tools/coordination/skills_regen.py`
 - `tools/coordination/skills_stubgen.py`
 - `tools/dedup/README.md`

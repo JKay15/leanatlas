@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -80,7 +82,7 @@ def _pattern_has_match(repo_root: Path, pattern: str) -> bool:
     return len(matches) > 0
 
 
-def _verify(repo_root: Path, active: List[Dict[str, object]]) -> Tuple[List[str], List[str]]:
+def _verify_artifacts(repo_root: Path, active: List[Dict[str, object]]) -> Tuple[List[str], List[str]]:
     missing: List[str] = []
     ok: List[str] = []
     for a in active:
@@ -93,6 +95,92 @@ def _verify(repo_root: Path, active: List[Dict[str, object]]) -> Tuple[List[str]
             ok.append(aid)
             continue
         missing.append(f"{aid}: no artifacts found for declared globs {pats}")
+    return ok, missing
+
+
+def _candidate_automation_ids(aid: str) -> List[str]:
+    out: List[str] = []
+    for x in (aid, aid.replace("_", "-"), aid.replace("-", "_")):
+        if x not in out:
+            out.append(x)
+    return out
+
+
+def _find_automation_toml(codex_home: Path, aid: str) -> Path | None:
+    auto_root = codex_home / "automations"
+    for cid in _candidate_automation_ids(aid):
+        p = auto_root / cid / "automation.toml"
+        if p.exists():
+            return p
+    if not auto_root.exists():
+        return None
+    needle = f"--id {aid}"
+    for p in auto_root.glob("*/automation.toml"):
+        try:
+            text = p.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        if needle in text:
+            return p
+    return None
+
+
+def _load_toml(path: Path) -> Dict[str, object]:
+    text = path.read_text(encoding="utf-8")
+    out: Dict[str, object] = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        m = re.match(r"^([A-Za-z0-9_]+)\s*=\s*(.+)$", line)
+        if not m:
+            continue
+        key = m.group(1)
+        val = m.group(2).strip()
+        if val.startswith('"') and val.endswith('"'):
+            out[key] = val[1:-1]
+            continue
+        if val.startswith("[") and val.endswith("]"):
+            out[key] = re.findall(r'"([^"]*)"', val)
+            continue
+    return out
+
+
+def _verify_installation_config(
+    *,
+    repo_root: Path,
+    codex_home: Path,
+    active: List[Dict[str, object]],
+) -> Tuple[List[str], List[str]]:
+    wrapper = (repo_root / "tools" / "coordination" / "run_automation_local.py").as_posix()
+    missing: List[str] = []
+    ok: List[str] = []
+    for a in active:
+        aid = str(a["id"])
+        toml_path = _find_automation_toml(codex_home, aid)
+        if toml_path is None:
+            missing.append(f"{aid}: missing automation.toml under {codex_home}/automations/*")
+            continue
+        cfg = _load_toml(toml_path)
+        prompt = str(cfg.get("prompt") or "")
+        cwds = cfg.get("cwds")
+        if not isinstance(cwds, list):
+            missing.append(f"{aid}: invalid cwds in {toml_path}")
+            continue
+        cwd_values = [str(x) for x in cwds]
+        if repo_root.as_posix() not in cwd_values:
+            missing.append(f"{aid}: cwds must include source workspace {repo_root.as_posix()} ({toml_path})")
+            continue
+        if wrapper not in prompt:
+            missing.append(f"{aid}: prompt must invoke local wrapper {wrapper} ({toml_path})")
+            continue
+        if f"--id {aid}" not in prompt:
+            missing.append(f"{aid}: prompt must include '--id {aid}' ({toml_path})")
+            continue
+        if "uv run --locked python tools/coordination/run_automation.py" in prompt:
+            missing.append(f"{aid}: prompt still uses worktree-fragile uv run pattern ({toml_path})")
+            continue
+        ok.append(aid)
     return ok, missing
 
 
@@ -132,10 +220,25 @@ def _mark_done(repo_root: Path) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo-root", default=None, help="Override repository root")
+    ap.add_argument(
+        "--codex-home",
+        default=None,
+        help="Override CODEX_HOME for installed automation config checks (default: $CODEX_HOME or ~/.codex)",
+    )
+    ap.add_argument(
+        "--skip-config-check",
+        action="store_true",
+        help="Skip installed automation TOML checks (artifacts-only mode)",
+    )
     ap.add_argument("--mark-done", action="store_true", help="Write onboarding automations step on success")
     args = ap.parse_args()
 
     repo_root = Path(args.repo_root).resolve() if args.repo_root else Path(__file__).resolve().parents[2]
+    codex_home = (
+        Path(args.codex_home).resolve()
+        if args.codex_home
+        else Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))).resolve()
+    )
     registry = repo_root / "automations" / "registry.json"
     if not registry.exists():
         return _die(f"missing {registry.relative_to(repo_root)}")
@@ -145,14 +248,30 @@ def main() -> int:
     if not active:
         return _die("no active automations found in registry")
 
-    ok, missing = _verify(repo_root, active)
-    if missing:
+    cfg_ok: List[str] = []
+    cfg_missing: List[str] = []
+    if not args.skip_config_check:
+        cfg_ok, cfg_missing = _verify_installation_config(repo_root=repo_root, codex_home=codex_home, active=active)
+        if cfg_missing:
+            print("[onboarding.automation] Invalid automation installation config:")
+            for line in cfg_missing:
+                print(f" - {line}")
+            return _die("active automation config verification failed")
+
+    art_ok, art_missing = _verify_artifacts(repo_root, active)
+    if art_missing:
         print("[onboarding.automation] Missing automation evidence:")
-        for line in missing:
+        for line in art_missing:
             print(f" - {line}")
         return _die("active automation verification failed")
 
-    print(f"[onboarding.automation][PASS] verified {len(ok)} active automations")
+    if args.skip_config_check:
+        print(f"[onboarding.automation][PASS] verified artifacts for {len(art_ok)} active automations")
+    else:
+        print(
+            "[onboarding.automation][PASS] verified "
+            f"{len(cfg_ok)} local-wrapper configs + {len(art_ok)} artifact sets"
+        )
     if args.mark_done:
         return _mark_done(repo_root)
     return 0

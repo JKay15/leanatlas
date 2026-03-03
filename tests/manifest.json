@@ -456,6 +456,21 @@
     },
     {
       "area": [
+        "automation",
+        "execution"
+      ],
+      "goal": "Ensure local automation wrapper forces source-workspace execution and forwards runner flags.",
+      "id": "automation_local_wrapper",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/automation/check_run_automation_local.py"
+    },
+    {
+      "area": [
         "setup",
         "git",
         "policy"

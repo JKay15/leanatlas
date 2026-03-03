@@ -16,6 +16,7 @@ It includes:
 - E2E case/scenario *spec validation* (YAML/JSON structure validation)
 - Doc-pack completeness (critical docs not forgotten)
 - Automations spec validation + dry-runs (for `status=active` core automations)
+- Automation local-execution wrapper contract (`tests/automation/check_run_automation_local.py`)
 
 See the authoritative list in `tests/manifest.json`.
 

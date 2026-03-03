@@ -174,6 +174,9 @@ Inputs:
 Outputs:
 - One install block per active automation id, in checklist order.
 - Each block must include name, schedule, cwd(s), and prompt body.
+- Prompt body must run the local wrapper by absolute repo path:
+  `python <REPO_ROOT>/tools/coordination/run_automation_local.py --id <automation_id> --advisor-mode <mode> --verify`
+- Do not use `uv run --locked python tools/coordination/run_automation.py ...` in automation prompts.
 - Ask for a short "done" confirmation after each item.
 - After all are created, ask for one manual trigger per automation.
 - Verify artifacts using:
