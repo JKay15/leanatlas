@@ -47,6 +47,21 @@ REGISTRY = ROOT / "automations" / "registry.json"
 ARTIFACTS = ROOT / "artifacts" / "automation" / "runs"
 
 
+def _repo_python() -> str:
+    """Resolve a repository-local Python executable for deterministic automation runs."""
+    venv_python = ROOT / ".venv" / "bin" / "python"
+    if venv_python.exists():
+        return str(venv_python)
+    return sys.executable
+
+
+def _normalize_cmd(cmd: List[str]) -> List[str]:
+    """Preserve registry commands, but force plain python invocations to repo python."""
+    if not cmd or cmd[0] not in {"python", "python3"}:
+        return cmd
+    return [_repo_python(), *cmd[1:]]
+
+
 @dataclass
 class Automation:
     id: str
@@ -107,9 +122,10 @@ def _run_steps(
         cmd = step.get("cmd")
         if not isinstance(cmd, list) or not all(isinstance(x, str) for x in cmd):
             raise ValueError(f"invalid cmd for step {name}: {cmd}")
+        cmd_to_run = _normalize_cmd(list(cmd))
         label = f"{prefix}{i:02d}_{name}"
         res = run_cmd(
-            cmd=cmd,
+            cmd=cmd_to_run,
             cwd=cwd,
             log_dir=logs_dir,
             label=label,
@@ -121,7 +137,7 @@ def _run_steps(
         results.append(
             {
                 "name": name,
-                "cmd": cmd,
+                "cmd": cmd_to_run,
                 "ok": ok,
                 "exit_code": rc,
                 "evidence": res.span,
@@ -407,6 +423,12 @@ def main() -> int:
 
     manifest["status"] = "OK" if ok else "FAIL"
     (run_dir / "run_manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    latest = ROOT / "artifacts" / "automation" / a.id / "latest_run_manifest.json"
+    latest.parent.mkdir(parents=True, exist_ok=True)
+    latest.write_text(
         json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
