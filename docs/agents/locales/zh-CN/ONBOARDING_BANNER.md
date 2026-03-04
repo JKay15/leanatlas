@@ -28,8 +28,8 @@ Use this locale asset when the first user prompt is Chinese/CJK.
 | LeanAtlas 首次引导已就绪。                                                    |
 |                                                                              |
 | 开始前请选择一个选项：                                                        |
-| • A) Python-only setup（.venv + core contracts）                             |
-| • B) Full maintainer initialization（INIT_FOR_CODEX.md）                     |
+| • A) Full maintainer initialization（INIT_FOR_CODEX.md）【推荐】               |
+| • B) Python-only setup（.venv + core contracts）                             |
 | • C) Skip setup and continue                                                 |
 |                                                                              |
 | 运营门禁：完成 active automations 的安装与验证后，才进入正常任务流程。         |

@@ -34,8 +34,8 @@ Recommended for modern terminals.
 | LeanAtlas first-run onboarding is ready.                                     |
 |                                                                              |
 | Choose one option before setup runs:                                         |
-| • A) Python-only setup (.venv + core contracts)                              |
-| • B) Full maintainer initialization (INIT_FOR_CODEX.md)                      |
+| • A) Full maintainer initialization (INIT_FOR_CODEX.md) [Recommended]        |
+| • B) Python-only setup (.venv + core contracts)                              |
 | • C) Skip setup and continue                                                  |
 |                                                                              |
 | Operational gate: install/verify active automations before normal tasks.     |
@@ -51,7 +51,7 @@ Use this if your terminal does not render box drawing or block characters consis
 | LEANATLAS :: Powered by LeanAtlas                                            |
 +------------------------------------------------------------------------------+
 | [i] Welcome to LeanAtlas                                                     |
-| Choose: A) Python-only  B) Full init  C) Skip                                |
+| Choose: A) Full init (Recommended)  B) Python-only  C) Skip                  |
 | Operational gate: install/verify active automations before normal tasks.     |
 +------------------------------------------------------------------------------+
 ```

@@ -19,14 +19,14 @@ If the state exists but `operational_ready != true` (or `steps.automations != "o
 | LEANATLAS :: Powered by LeanAtlas                                            |
 +------------------------------------------------------------------------------+
 | [i] Welcome to LeanAtlas                                                     |
-| Choose: A) Python-only  B) Full init  C) Skip                                |
+| Choose: A) Full init (Recommended)  B) Python-only  C) Skip                  |
 | Operational gate: install/verify active automations before normal tasks.     |
 +------------------------------------------------------------------------------+
 ```
 
 2) Ask the user to choose one option before running setup commands:
-- `A)` Python-only setup (`uv sync --locked` + core checks)
-- `B)` Full maintainer initialization (`INIT_FOR_CODEX.md`)
+- `A)` Full maintainer initialization (`INIT_FOR_CODEX.md`) [recommended]
+- `B)` Python-only setup (`uv sync --locked` + core checks)
 - `C)` Skip setup
 
 3) Preflight before setup commands (mandatory):

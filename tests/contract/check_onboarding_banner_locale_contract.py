@@ -34,16 +34,43 @@ def main() -> int:
     _require("## Hero banner (v2)" in branding, "BRANDING.md missing v2 hero banner section")
     _require("## Onboarding info panel (v2)" in branding, "BRANDING.md missing v2 info panel section")
     _require("Powered by LeanAtlas" in branding, "BRANDING.md missing powered-by line in visual spec")
+    _require(
+        "A) Full maintainer initialization (INIT_FOR_CODEX.md) [Recommended]" in branding,
+        "BRANDING.md must define option A as full maintainer initialization (recommended)",
+    )
+    _require(
+        "B) Python-only setup (.venv + core contracts)" in branding,
+        "BRANDING.md must define option B as python-only setup",
+    )
 
     _require(str(ZH_BANNER.relative_to(ROOT)) in skill, "onboard skill missing zh-CN banner path")
     _require("locale-aware" in skill.lower(), "onboard skill missing locale-aware banner routing rule")
 
     _require(str(ZH_BANNER.relative_to(ROOT)) in onboarding, "ONBOARDING.md missing zh-CN banner asset reference")
     _require("locale-aware" in onboarding.lower(), "ONBOARDING.md missing locale-aware onboarding rule")
+    _require(
+        "**A)** “Full maintainer init”" in onboarding and "**[Recommended]**" in onboarding,
+        "ONBOARDING.md must mark option A as full maintainer init (recommended)",
+    )
+    _require("**B)** “Python-only”" in onboarding, "ONBOARDING.md must define option B as python-only")
+    _require(
+        "**A) Full maintainer initialization (recommended)**" in skill,
+        "onboard skill must mark option A as full maintainer initialization (recommended)",
+    )
+    _require("### A) Full maintainer init" in skill, "onboard skill missing execution section for option A")
+    _require("### B) Python-only" in skill, "onboard skill missing execution section for option B")
 
     zh = _read(ZH_BANNER)
     _require("# LeanAtlas onboarding banner (zh-CN)" in zh, "zh-CN banner file missing title")
     _require("Powered by LeanAtlas" in zh, "zh-CN banner missing hero footer line")
+    _require(
+        "\u2022 A) Full maintainer initialization\uff08INIT_FOR_CODEX.md\uff09\u3010\u63a8\u8350\u3011" in zh,
+        "zh-CN banner must define option A as recommended full maintainer initialization",
+    )
+    _require(
+        "\u2022 B) Python-only setup\uff08.venv + core contracts\uff09" in zh,
+        "zh-CN banner must define option B as python-only setup",
+    )
     _require(
         "\u6b22\u8fce\u4f7f\u7528 LeanAtlas" in zh,
         "zh-CN banner missing Chinese welcome heading",

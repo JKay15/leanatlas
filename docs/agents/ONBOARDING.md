@@ -89,8 +89,8 @@ On first prompt (any content, including a simple `hi`), Codex should:
      - Chinese/CJK user prompt => use `docs/agents/locales/zh-CN/ONBOARDING_BANNER.md`
      - otherwise => use `docs/agents/BRANDING.md`
    - show a 3-option consent menu:
-     - **A)** “Python-only” (uv + .venv + core contracts)
-     - **B)** “Full maintainer init” (execute `INIT_FOR_CODEX.md`)
+     - **A)** “Full maintainer init” (execute `INIT_FOR_CODEX.md`) **[Recommended]**
+     - **B)** “Python-only” (uv + .venv + core contracts)
      - **C)** “Skip” (continue without setup)
 3) Before executing A/B, run a local preflight (no installs):
    - check `./.venv/bin/python` exists
