@@ -875,6 +875,22 @@
     },
     {
       "area": [
+        "docs",
+        "contracts",
+        "guardrails"
+      ],
+      "goal": "Enforce generated-doc guardrails (pre-commit + CI + AGENTS hard-rule) for FILE_INDEX and TEST_MATRIX.",
+      "id": "generated_docs_guardrails",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_generated_docs_guardrails.py"
+    },
+    {
+      "area": [
         "setup",
         "deps",
         "policy"

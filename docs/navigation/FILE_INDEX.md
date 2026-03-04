@@ -37,6 +37,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `.agents/skills/leanatlas-promote/references/coverage.yaml`
 - `.agents/skills/leanatlas-run-workflow-tests/SKILL.md`
 - `.agents/skills/leanatlas-skills-growth/SKILL.md`
+- `.github/workflows/generated-doc-guardrails.yml`
 - `.gitignore`
 - `.gitmodules`
 - `.pre-commit-config.yaml`
@@ -86,6 +87,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260303_agent_eval_materialize_out_root_isolation.md`
 - `docs/agents/execplans/20260303_automation_local_execution_guard.md`
 - `docs/agents/execplans/20260303_generator_newline_canonicalization.md`
+- `docs/agents/execplans/20260304_generated_docs_guardrails.md`
 - `docs/agents/execplans/README.md`
 - `docs/agents/execplans/phase3_dedup_gate_v0.md`
 - `docs/agents/execplans/phase3_gc_gate_v0.md`
@@ -382,6 +384,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_force_deposit_policy.py`
 - `tests/contract/check_gc_propose_reachability_mvp.py`
 - `tests/contract/check_gc_state_seed_ids.py`
+- `tests/contract/check_generated_docs_guardrails.py`
 - `tests/contract/check_git_policy_contracts.py`
 - `tests/contract/check_hard_requirements_contract.py`
 - `tests/contract/check_judge_determinism.py`

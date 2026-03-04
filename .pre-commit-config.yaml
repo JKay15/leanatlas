@@ -12,6 +12,38 @@ repos:
 
   - repo: local
     hooks:
+      - id: regenerate-file-index
+        name: regenerate FILE_INDEX.md
+        entry: python tools/docs/generate_file_index.py --write
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: regenerate-test-matrix
+        name: regenerate TEST_MATRIX.md
+        entry: python tools/tests/generate_test_matrix.py --write
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: check-file-index-up-to-date
+        name: check FILE_INDEX.md up to date
+        entry: python tests/contract/check_file_index_reachability.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: check-test-matrix-up-to-date
+        name: check TEST_MATRIX.md up to date
+        entry: python tests/contract/check_test_matrix_up_to_date.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
       - id: commit-msg-conventional
         name: commit-msg conventional policy (LeanAtlas)
         entry: python tools/onboarding/check_commit_message.py

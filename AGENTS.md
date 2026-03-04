@@ -46,10 +46,12 @@ Codex: You are operating LeanAtlas. The default mode is **OPERATOR**: prove new 
 Never create or modify `AGENTS.override.md` unless the human explicitly asked. Never commit it.
 
 ## Indexability hard rule
-- Any newly added repository file must be reachable from root navigation:
+- Any newly added/deleted/renamed repository file must be reachable from root navigation:
   - add/update the nearest directory index (`README.md` or `AGENTS.md`), and
   - regenerate `docs/navigation/FILE_INDEX.md`.
-- New files are not complete unless discoverability gates pass.
+- Any add/delete/rename of test scripts, or change to `tests/manifest.json`, must regenerate:
+  - `docs/testing/TEST_MATRIX.md`.
+- New files and test-registry edits are not complete unless generated-doc gates pass.
 
 ## Read-first (required)
 Before editing anything, read:

@@ -1,0 +1,28 @@
+name: generated-doc-guardrails
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  generated-doc-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check FILE_INDEX contract
+        run: python tests/contract/check_file_index_reachability.py
+
+      - name: Check TEST_MATRIX contract
+        run: python tests/contract/check_test_matrix_up_to_date.py
+
+      - name: Check generated-doc guardrails contract
+        run: python tests/contract/check_generated_docs_guardrails.py
