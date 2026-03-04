@@ -11,12 +11,17 @@ On the first user prompt in a fresh clone (missing `.cache/leanatlas/onboarding/
 Codex must run a short onboarding flow before any normal reply (including when the user only says `hi`):
 If the state exists but `operational_ready != true` (or `steps.automations != "ok"`), route to the automation install gate before normal task work.
 
-1) Print the LeanAtlas banner:
+1) Print the LeanAtlas locale-aware onboarding visual:
+   - Chinese/CJK prompt: use `docs/agents/locales/zh-CN/ONBOARDING_BANNER.md`
+   - otherwise: use `docs/agents/BRANDING.md`
 ```text
-       □   △   ○
-┌──────────────────────┐
-│  L E A N  A T L A S  │
-└──────────────────────┘
++------------------------------------------------------------------------------+
+| LEANATLAS :: Powered by LeanAtlas                                            |
++------------------------------------------------------------------------------+
+| [i] Welcome to LeanAtlas                                                     |
+| Choose: A) Python-only  B) Full init  C) Skip                                |
+| Operational gate: install/verify active automations before normal tasks.     |
++------------------------------------------------------------------------------+
 ```
 
 2) Ask the user to choose one option before running setup commands:

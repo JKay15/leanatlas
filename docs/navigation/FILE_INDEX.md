@@ -88,6 +88,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260303_automation_local_execution_guard.md`
 - `docs/agents/execplans/20260303_generator_newline_canonicalization.md`
 - `docs/agents/execplans/20260304_generated_docs_guardrails.md`
+- `docs/agents/execplans/20260304_onboarding_banner_locale_upgrade.md`
 - `docs/agents/execplans/README.md`
 - `docs/agents/execplans/phase3_dedup_gate_v0.md`
 - `docs/agents/execplans/phase3_gc_gate_v0.md`
@@ -97,6 +98,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/kb/domain_prune_mistakes.md`
 - `docs/agents/kb/lean_import_failures.md`
 - `docs/agents/kb/triaged_patterns.md`
+- `docs/agents/locales/zh-CN/ONBOARDING_BANNER.md`
 - `docs/agents/phase6/MENTOR_KEYWORDS_CLASSIC_THEOREMS_SOURCES.md`
 - `docs/agents/phase6/MENTOR_KEYWORDS_TASKPACK.md`
 - `docs/agents/phase6/PHASE6_USAGE.md`
@@ -392,6 +394,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_memory_coverage_has_user_requirements.py`
 - `tests/contract/check_onboarding_agents_compaction.py`
 - `tests/contract/check_onboarding_automation_gate.py`
+- `tests/contract/check_onboarding_banner_locale_contract.py`
 - `tests/contract/check_patch_scope_policy.py`
 - `tests/contract/check_phase3_e2e_scenarios.py`
 - `tests/contract/check_problem_state_reconcile.py`

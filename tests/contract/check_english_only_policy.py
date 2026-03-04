@@ -40,6 +40,10 @@ EXCLUDED_FILES = {
     "leanatlas_clean_en_only_v0_50_13.zip",
 }
 
+ALLOWED_CJK_FILES = {
+    "docs/agents/locales/zh-CN/ONBOARDING_BANNER.md",
+}
+
 CJK_RE = re.compile(r"[\u3000-\u303F\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]")
 
 
@@ -58,6 +62,9 @@ def iter_files(root: Path) -> Iterable[Path]:
 
 def find_non_english(path: Path) -> List[Tuple[int, str]]:
     out: List[Tuple[int, str]] = []
+    rel = path.relative_to(ROOT).as_posix()
+    if rel in ALLOWED_CJK_FILES:
+        return out
     try:
         text = path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
