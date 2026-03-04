@@ -45,14 +45,14 @@ Run the LeanAtlas first-run onboarding flow.
 
 Rules:
 - Follow AGENTS.md + docs/agents/ONBOARDING.md.
-- Print the LeanAtlas ASCII banner.
+- Print the LeanAtlas locale-aware onboarding visual (hero banner + info panel).
 - Ask me to choose A/B/C before running installs or writing setup state.
 - Run a local preflight first (`.venv` + deps import + `lake --version`).
 - If preflight passes, report "environment already satisfied" and skip redundant install/update commands.
 
 After I choose:
-- If A: run only missing setup steps, then core contracts.
-- If B: execute INIT_FOR_CODEX.md with preflight-aware skip behavior.
+- If A: execute INIT_FOR_CODEX.md with preflight-aware skip behavior (recommended).
+- If B: run only missing setup steps, then core contracts.
 - If C: do nothing and continue.
 
 Write onboarding state to .cache/leanatlas/onboarding/state.json.

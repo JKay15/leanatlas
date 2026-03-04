@@ -1,14 +1,8 @@
-# LeanAtlas branding (string-printable onboarding visuals)
+# LeanAtlas onboarding banner (zh-CN)
 
-LeanAtlas is designed to feel **product-like** when opened in the Codex App.
+Use this locale asset when the first user prompt is Chinese/CJK.
 
-This file defines the **string-printable** onboarding visuals used by first-run routing.
-
-Design goal: a high-clarity terminal onboarding card with a branded hero area and an instruction panel.
-
-## Hero banner (v2)
-
-Recommended for modern terminals.
+## Hero (zh-CN)
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -25,48 +19,29 @@ Recommended for modern terminals.
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Onboarding info panel (v2)
+## Info panel (zh-CN)
 
 ```text
 +------------------------------------------------------------------------------+
-| [i] Welcome to LeanAtlas                                                     |
+| [i] 欢迎使用 LeanAtlas                                                        |
 +------------------------------------------------------------------------------+
-| LeanAtlas first-run onboarding is ready.                                     |
+| LeanAtlas 首次引导已就绪。                                                    |
 |                                                                              |
-| Choose one option before setup runs:                                         |
-| • A) Full maintainer initialization (INIT_FOR_CODEX.md) [Recommended]        |
-| • B) Python-only setup (.venv + core contracts)                              |
-| • C) Skip setup and continue                                                  |
+| 开始前请选择一个选项：                                                        |
+| • A) Full maintainer initialization（INIT_FOR_CODEX.md）【推荐】               |
+| • B) Python-only setup（.venv + core contracts）                             |
+| • C) Skip setup and continue                                                 |
 |                                                                              |
-| Operational gate: install/verify active automations before normal tasks.     |
+| 运营门禁：完成 active automations 的安装与验证后，才进入正常任务流程。         |
 +------------------------------------------------------------------------------+
 ```
 
-## Fallback (ASCII-only)
+## Usage notes
 
-Use this if your terminal does not render box drawing or block characters consistently.
+- Keep monospaced alignment unchanged.
+- Keep option labels `A/B/C` and command nouns in English for execution fidelity.
+- If terminal width is narrow, use compact one-line fallback:
 
 ```text
-+------------------------------------------------------------------------------+
-| LEANATLAS :: Powered by LeanAtlas                                            |
-+------------------------------------------------------------------------------+
-| [i] Welcome to LeanAtlas                                                     |
-| Choose: A) Full init (Recommended)  B) Python-only  C) Skip                  |
-| Operational gate: install/verify active automations before normal tasks.     |
-+------------------------------------------------------------------------------+
+LEANATLAS :: 欢迎使用 LeanAtlas :: Powered by LeanAtlas
 ```
-
-## Compact mark
-
-```text
-LEANATLAS :: Powered by LeanAtlas
-```
-
-## Where it is used
-
-- First-run onboarding visual:
-  - `.agents/skills/leanatlas-onboard/SKILL.md`
-- Locale-specific zh-CN onboarding visual:
-  - `docs/agents/locales/zh-CN/ONBOARDING_BANNER.md`
-
-If you want to change onboarding visuals, edit the onboarding skill and keep this file in sync.

@@ -16,7 +16,7 @@ It is not a separate CLI installer.
 
 What we can do reliably (repo-owned):
 
-* Print an ASCII logo / banner.
+* Print a terminal hero banner + info panel.
 * Detect whether onboarding is environment-complete and operational-ready via a local state file.
 * Explain required environment pieces and why they matter.
 * Ask for explicit consent (a clear “YES/NO” interaction in chat).
@@ -69,7 +69,7 @@ The onboarding flow is routed through:
 
 The skill defines:
 
-* the banner text,
+* the onboarding visual text,
 * the consent gates,
 * the exact checklist Codex must execute (`INIT_FOR_CODEX.md`),
 * and the expected “done” artifacts.
@@ -77,6 +77,7 @@ The skill defines:
 Banner source of truth:
 
 * `docs/agents/BRANDING.md`
+* `docs/agents/locales/zh-CN/ONBOARDING_BANNER.md` (zh-CN locale asset)
 
 ## Recommended onboarding behavior (exact)
 
@@ -84,10 +85,12 @@ On first prompt (any content, including a simple `hi`), Codex should:
 
 1) Read `.cache/leanatlas/onboarding/state.json`.
 2) If missing/outdated, or if `operational_ready != true`:
-   - print the banner
+   - print a locale-aware onboarding visual (hero banner + info panel)
+     - Chinese/CJK user prompt => use `docs/agents/locales/zh-CN/ONBOARDING_BANNER.md`
+     - otherwise => use `docs/agents/BRANDING.md`
    - show a 3-option consent menu:
-     - **A)** “Python-only” (uv + .venv + core contracts)
-     - **B)** “Full maintainer init” (execute `INIT_FOR_CODEX.md`)
+     - **A)** “Full maintainer init” (execute `INIT_FOR_CODEX.md`) **[Recommended]**
+     - **B)** “Python-only” (uv + .venv + core contracts)
      - **C)** “Skip” (continue without setup)
 3) Before executing A/B, run a local preflight (no installs):
    - check `./.venv/bin/python` exists

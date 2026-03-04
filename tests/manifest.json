@@ -1387,6 +1387,29 @@
     },
     {
       "area": [
+        "agents",
+        "onboarding",
+        "branding",
+        "contracts"
+      ],
+      "goal": "Enforce onboarding banner v2 visual sections and locale-aware routing with controlled zh-CN asset support.",
+      "id": "onboarding_banner_locale_contract",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_onboarding_banner_locale_contract.py",
+      "tags": [
+        "agents",
+        "onboarding",
+        "branding",
+        "contract"
+      ]
+    },
+    {
+      "area": [
         "workflow",
         "patchscope"
       ],
