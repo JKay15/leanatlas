@@ -13,36 +13,11 @@ Use this index only when detailed file-level discovery is needed; do not preload
 
 ## Indexed Files
 
-- `.agents/skills/.gitignore`
-- `.agents/skills/README.md`
-- `.agents/skills/docs/agents/kb/README.md`
-- `.agents/skills/docs/agents/kb/domain_prune_mistakes.md`
-- `.agents/skills/docs/agents/kb/lean_import_failures.md`
-- `.agents/skills/docs/agents/kb/triaged_patterns.md`
-- `.agents/skills/leanatlas-agent-eval/SKILL.md`
-- `.agents/skills/leanatlas-automations/SKILL.md`
-- `.agents/skills/leanatlas-automations/references/coverage.yaml`
-- `.agents/skills/leanatlas-dedup/SKILL.md`
-- `.agents/skills/leanatlas-dedup/references/coverage.yaml`
-- `.agents/skills/leanatlas-domain-mcp/SKILL.md`
-- `.agents/skills/leanatlas-domain-mcp/references/coverage.yaml`
-- `.agents/skills/leanatlas-gc/SKILL.md`
-- `.agents/skills/leanatlas-gc/references/coverage.yaml`
-- `.agents/skills/leanatlas-maintainer-execplan/SKILL.md`
-- `.agents/skills/leanatlas-onboard/SKILL.md`
-- `.agents/skills/leanatlas-onboard/agents/openai.yaml`
-- `.agents/skills/leanatlas-operator-proof-loop/SKILL.md`
-- `.agents/skills/leanatlas-promote/SKILL.md`
-- `.agents/skills/leanatlas-promote/agents/openai.yaml`
-- `.agents/skills/leanatlas-promote/references/coverage.yaml`
-- `.agents/skills/leanatlas-run-workflow-tests/SKILL.md`
-- `.agents/skills/leanatlas-skills-growth/SKILL.md`
 - `.github/workflows/generated-doc-guardrails.yml`
 - `.gitignore`
 - `.gitmodules`
 - `.pre-commit-config.yaml`
 - `AGENTS.md`
-- `AGENTS.override.md`
 - `DOC_PACK_ID.json`
 - `INIT_FOR_CODEX.md`
 - `LeanAtlas.lean`
@@ -87,6 +62,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260303_agent_eval_materialize_out_root_isolation.md`
 - `docs/agents/execplans/20260303_automation_local_execution_guard.md`
 - `docs/agents/execplans/20260303_generator_newline_canonicalization.md`
+- `docs/agents/execplans/20260304_file_index_tracked_only.md`
 - `docs/agents/execplans/20260304_generated_docs_guardrails.md`
 - `docs/agents/execplans/README.md`
 - `docs/agents/execplans/phase3_dedup_gate_v0.md`
@@ -380,6 +356,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_exec_span_evidence.py`
 - `tests/contract/check_feedback_ledger_append_only.py`
 - `tests/contract/check_feedback_traceability_policy.py`
+- `tests/contract/check_file_index_ignores_untracked.py`
 - `tests/contract/check_file_index_reachability.py`
 - `tests/contract/check_force_deposit_policy.py`
 - `tests/contract/check_gc_propose_reachability_mvp.py`
