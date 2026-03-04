@@ -11,10 +11,16 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tempfile
 from pathlib import Path
 from typing import Iterable, List
 
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tools.workflow.run_cmd import run_cmd
+
 OUT = ROOT / "docs" / "navigation" / "FILE_INDEX.md"
 
 EXCLUDED_TOP_DIRS = {
@@ -51,21 +57,31 @@ def _is_excluded(rel: Path) -> bool:
 
 
 def collect_indexable_files(root: Path = ROOT) -> List[str]:
+    """Collect indexable files from the git index (not local untracked files)."""
+    with tempfile.TemporaryDirectory(prefix="leanatlas_file_index_") as td:
+        res = run_cmd(
+            cmd=["git", "ls-files", "-z"],
+            cwd=root,
+            log_dir=Path(td),
+            label="git_ls_files",
+            capture_text=True,
+        )
+    if int(res.span.get("exit_code", 1)) != 0:
+        err = (res.stderr_text or "").strip()
+        raise SystemExit(f"[file-index] git ls-files failed: {err}")
+
     out: List[str] = []
-    stack: List[Path] = [root]
-    while stack:
-        cur = stack.pop()
-        for p in sorted(cur.iterdir()):
-            rel = p.relative_to(root)
-            if p.is_dir():
-                # Prune excluded trees early (critical for large local caches).
-                if any(part in EXCLUDED_TOP_DIRS for part in rel.parts):
-                    continue
-                stack.append(p)
-                continue
-            if _is_excluded(rel):
-                continue
-            out.append(rel.as_posix())
+    raw = res.stdout_text or ""
+    for entry in raw.split("\x00"):
+        if not entry:
+            continue
+        rel = Path(entry)
+        p = root / rel
+        if not p.exists() or not p.is_file():
+            continue
+        if _is_excluded(rel):
+            continue
+        out.append(rel.as_posix())
     out.sort()
     return out
 

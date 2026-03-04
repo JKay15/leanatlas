@@ -116,3 +116,4 @@ Cleaning (must keep repo lean):
 
 ## Skills
 This repo includes skills under `.agents/skills/`. Prefer invoking them for repeatable workflows (proof loop, triage reporting, running scenarios).
+Skill-specific docs index: `.agents/skills/docs/`.

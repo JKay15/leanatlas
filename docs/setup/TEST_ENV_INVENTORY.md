@@ -9,7 +9,7 @@
 |---|---|---|
 | `bash` | Runner shell for scripted scenario and agent commands. | `scripts/bootstrap.sh`, `scripts/doctor.sh`, `tests/agent_eval/check_scenario_tool_reuse_scoring.py`, `tools/agent_eval/dummy_agent.py`, `tools/agent_eval/run_pack.py`, `tools/agent_eval/run_scenario.py` |
 | `codex` | Real-agent command for Phase6 nightly eval execution. | `scripts/bootstrap.sh`, `scripts/doctor.sh`, `tests/automation/dry_run_single.py` |
-| `git` | Repository metadata checks in tests/contracts. | `scripts/bootstrap.sh`, `scripts/clean.sh`, `tests/contract/check_problem_template_state.py`, `tools/promote/promote.py` |
+| `git` | Repository metadata checks in tests/contracts. | `scripts/bootstrap.sh`, `scripts/clean.sh`, `tests/contract/check_problem_template_state.py`, `tools/docs/generate_file_index.py`, `tools/promote/promote.py` |
 | `lake` | Lean build/lint/test execution and cache warmup. | `scripts/bootstrap.sh`, `tests/e2e/run_cases.py`, `tests/e2e/run_scenarios.py`, `tests/stress/soak.py`, `tools/agent_eval/run_pack.py`, `tools/gc/gc.py` |
 | `pre-commit` | Repo-local git hooks and commit/branch policy enforcement. | `scripts/install_repo_git_hooks.sh` |
 | `python` | Primary runtime for all registered tests and tooling. | `scripts/doctor.sh` |

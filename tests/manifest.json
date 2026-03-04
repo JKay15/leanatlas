@@ -1187,6 +1187,27 @@
         "navigation",
         "contracts"
       ],
+      "goal": "Ensure FILE_INDEX generator output is based on tracked repo files, not local untracked files.",
+      "id": "file_index_ignores_untracked",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_file_index_ignores_untracked.py",
+      "tags": [
+        "agents",
+        "navigation",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "agents",
+        "navigation",
+        "contracts"
+      ],
       "goal": "Ensure root AGENTS links to a full file index and FILE_INDEX.md stays deterministic/up-to-date.",
       "id": "file_index_reachability",
       "kind": "python_script",
