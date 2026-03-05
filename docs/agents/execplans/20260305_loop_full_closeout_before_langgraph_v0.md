@@ -230,5 +230,6 @@ Acceptance:
   - Isolated closeout review PASS (`artifacts/reviews/20260306_stage2_total_closeout_review_round3_prompt.md`, `artifacts/reviews/20260306_stage2_total_closeout_review_round3_response.md`)
 - Residual risks:
   - None blocking Stage 0-3 baseline closeout.
+  - ExecPlan metadata hygiene debt exists in legacy docs without front-matter `status` (see `artifacts/reviews/20260306_execplan_status_inventory.json`); current active closure logic is unaffected (`active=0`, known non-done=0).
 - Deferred:
   - Stage 4 LangChain/LangGraph thin-adapter pilot remains a follow-up after this baseline closeout plan.
