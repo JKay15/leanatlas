@@ -199,6 +199,9 @@ Acceptance:
 ## Outcomes & Retrospective (fill when done)
 - Completed:
   - Stage 1 readiness freeze remains PASS (contract/schema/policy gates).
+  - Stage 2 total closeout audit refreshed (2026-03-06):
+    - active-plan check reconfirmed zero active plans
+    - isolated independent `codex exec` review (`round3`) reached `VERDICT: PASS`
   - Stage 2 Wave-C hardening backlog closed:
     - missing e2e/scenario/stress assets materialized
     - graph merge semantics gate (`RACE`/`QUORUM`) added and passing
@@ -212,6 +215,7 @@ Acceptance:
     - `run_cases`/`run_scenarios`/`exec_soak_smoke`/`soak --profile core` refreshed with machine logs
     - core/nightly deterministic suites re-run under `uv run --locked`
     - matrix regenerated and up-to-date gate passing
+    - one parallel `core/nightly` rerun attempt produced reproducible race failures (`no Plan.json` / telemetry clean collision); resolved by serial rerun policy with PASS evidence
 - Verification summary:
   - `uv run --locked python tests/run.py --profile core` PASS
   - `uv run --locked python tests/run.py --profile nightly` PASS
@@ -221,6 +225,9 @@ Acceptance:
   - `uv run --locked python tests/stress/soak.py --iterations 1 --profile core` PASS
   - `uv run --locked python tests/stress/loop_runtime_stress.py` PASS
   - `uv run --locked python tests/stress/loop_resource_contention_stress.py` PASS
+  - `uv run --locked python tests/run.py --profile core` PASS (`artifacts/reviews/20260306_stage3_rerun_core_serial.log`)
+  - `uv run --locked python tests/run.py --profile nightly` PASS (`artifacts/reviews/20260306_stage3_rerun_nightly_serial.log`)
+  - Isolated closeout review PASS (`artifacts/reviews/20260306_stage2_total_closeout_review_round3_prompt.md`, `artifacts/reviews/20260306_stage2_total_closeout_review_round3_response.md`)
 - Residual risks:
   - None blocking Stage 0-3 baseline closeout.
 - Deferred:
