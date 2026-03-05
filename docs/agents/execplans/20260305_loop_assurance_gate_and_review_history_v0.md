@@ -170,7 +170,7 @@ Contamination control:
   - Added/updated independent `codex exec` audit chain with iterative fixes and closeout refresh:
     - `artifacts/reviews/20260305_loop_assurance_codex_exec_review.md`
     - `artifacts/reviews/20260305_loop_assurance_codex_exec_review_after_fix_v4.md`
-    - `artifacts/reviews/20260306_stage2_active_plans_closeout_review_response.md`
+    - `artifacts/reviews/20260306_stage2_active_plans_closeout_review_round2_response.md`
 - Verification summary:
   - `uv run --locked python tests/contract/check_loop_assurance_gate_policy.py` PASS
   - `uv run --locked python tests/contract/check_loop_review_history_runtime.py` PASS
