@@ -146,8 +146,8 @@ Contamination control:
     - `tests/contract/check_loop_schema_validity.py`
   - Registered contract checks in `tests/manifest.json` and synced `docs/testing/TEST_MATRIX.md`.
   - Independent AI-review closeout refreshed under isolated Stage-2 closeout scope:
-    - `artifacts/reviews/20260306_stage2_active_plans_closeout_review_prompt.md`
-    - `artifacts/reviews/20260306_stage2_active_plans_closeout_review_response.md`
+    - `artifacts/reviews/20260306_stage2_active_plans_closeout_review_round2_prompt.md`
+    - `artifacts/reviews/20260306_stage2_active_plans_closeout_review_round2_response.md`
 - Verification summary:
   - `uv run --locked python tests/contract/check_loop_contract_docs.py` PASS
   - `uv run --locked python tests/contract/check_loop_schema_validity.py` PASS

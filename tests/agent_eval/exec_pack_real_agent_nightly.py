@@ -55,10 +55,11 @@ def _load_real_agent_config() -> tuple[str, str, str] | None:
         raise SystemExit(2)
     try:
         resolve_agent_invocation(
+            repo_root=REPO_ROOT,
+            mode="run",
             agent_cmd=cmd or None,
             agent_provider=provider or None,
             agent_profile=profile or None,
-            profile_base_dir=REPO_ROOT,
         )
     except Exception as ex:
         print(f"[agent-eval-real][FAIL] invalid real-agent config: {ex}")

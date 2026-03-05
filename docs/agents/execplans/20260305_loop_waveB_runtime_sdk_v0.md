@@ -256,8 +256,8 @@ Contamination control:
       - `artifacts/loop_runtime/manual_reviews/20260305T041051Z/review_response.md`
       - `artifacts/loop_runtime/manual_reviews/20260305T041051Z/review_summary.json`
     - refreshed Stage-2 closeout scope audit:
-      - `artifacts/reviews/20260306_stage2_active_plans_closeout_review_prompt.md`
-      - `artifacts/reviews/20260306_stage2_active_plans_closeout_review_response.md`
+      - `artifacts/reviews/20260306_stage2_active_plans_closeout_review_round2_prompt.md`
+      - `artifacts/reviews/20260306_stage2_active_plans_closeout_review_round2_response.md`
   - `uv run --locked python tests/contract/check_test_registry.py` PASS
   - `uv run --locked python tests/contract/check_test_matrix_up_to_date.py` PASS
   - `uv run --locked python tests/run.py --profile core` PASS
