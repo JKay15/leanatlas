@@ -9,6 +9,7 @@ It also defines:
 - Patch scope policy (OPERATOR vs MAINTAINER)
 - Progress signals + stagnation controller (adaptive K)
 - **Decide = Advisor + Judge** (Codex proposes; deterministic Judge decides)
+- Formalization governor integration for dual-gate (`formalization` + `mapping`) workflows
 - Required audit artifacts (`AttemptLog.jsonl`, `RunReport.json`, and updated `State.json`) for reproducibility
 
 ---
@@ -32,6 +33,9 @@ It also defines:
 Design principle:
 - **Codex may be clever; the Judge must be reproducible.**
 - We maximize utility by letting Codex propose actions and explanations, while keeping exits and permissions mechanically enforceable.
+
+For formalization workflows, dual-gate decisions MUST use the deterministic formalization governor:
+- `tools/workflow/formalization_governor.py`
 
 ---
 

@@ -1,0 +1,39 @@
+{
+  "version": "1",
+  "run_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "loop_id": "loop.demo.v1",
+  "graph_mode": "STATIC_USER_MODE",
+  "execution": {
+    "current_state": "AI_REVIEW",
+    "retry_budget": {
+      "max_retry_per_node": 2,
+      "used_retry_count": 1
+    },
+    "transitions": [
+      {
+        "from": "PENDING",
+        "to": "RUNNING",
+        "at_utc": "2026-03-05T00:00:00Z"
+      },
+      {
+        "from": "RUNNING",
+        "to": "AI_REVIEW",
+        "at_utc": "2026-03-05T00:01:00Z"
+      }
+    ]
+  },
+  "audit": {
+    "state": "AUDIT_PENDING"
+  },
+  "evidence": {
+    "input_projection_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "resource_snapshot_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "instruction_resolution_report_path": "artifacts/loop_instruction/r1.json",
+    "attempts_path": "artifacts/loop_runtime/a1.jsonl",
+    "final_decision_path": "artifacts/loop_runtime/final.json",
+    "reproducibility": {
+      "dependency_pin_set_id": "pins.v1",
+      "instruction_chain_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  }
+}

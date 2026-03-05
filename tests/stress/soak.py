@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import os
 import random
+import uuid
 import shutil
 import subprocess
 import sys
@@ -33,6 +34,8 @@ from tests.e2e.run_scenarios import (
     load_yaml,
     execute_case_in_workdir,
     lake_build,
+    hash_fixture_deps,
+    reset_workdir_preserve_lake,
 )
 from tools.workflow.shared_cache import ensure_workspace_lake_packages
 
@@ -47,11 +50,12 @@ def main() -> int:
     ap.add_argument("--keep-workdir", action="store_true", help="Keep workspace for debugging")
     ap.add_argument("--update", action="store_true", help="Run `lake update` once before starting")
     ap.add_argument("--build_all_each_iter", action="store_true", help="Also run `lake build Problems` after each iteration")
+    ap.add_argument("--lake-timeout-s", type=int, default=900, help="Timeout (seconds) for each `lake build` in case/scenario execution")
     args = ap.parse_args()
     selected_profile = args.legacy_tier or args.profile
 
     if not have_cmd("lake"):
-        print("[soak] lake not found in PATH; skipping.")
+        print("[soak] lake not found in PATH; skipping.", flush=True)
         return 0
 
     repo_root = Path(__file__).resolve().parents[2]
@@ -60,6 +64,7 @@ def main() -> int:
 
     # collect executable cases (tier filter is exact, intentionally)
     cases: List[str] = []
+    expected_final_by_case: Dict[str, str] = {}
     for p in sorted(golden_root.iterdir()):
         if not p.is_dir():
             continue
@@ -72,27 +77,52 @@ def main() -> int:
             continue
         if meta.get("tier") != selected_profile:
             continue
-        cases.append(meta["id"])
+        case_id = meta["id"]
+        cases.append(case_id)
+        expected = (meta.get("expected", {}) or {})
+        expected_final_by_case[case_id] = str(expected.get("final_status", "SUCCESS")).upper()
 
     if not cases:
-        print("[soak] no cases selected")
+        print("[soak] no cases selected", flush=True)
         return 0
 
-    # workspace
-    tmp_root = repo_root / ".cache" / "leanatlas" / "soak"
-    tmp_root.mkdir(parents=True, exist_ok=True)
-    run_id = f"soak-{int(time.time())}"
-    workdir = tmp_root / run_id
-    if workdir.exists():
-        shutil.rmtree(workdir)
-    shutil.copytree(fixture_root, workdir)
+    strict_build_all = all(expected_final_by_case.get(case_id, "SUCCESS") == "SUCCESS" for case_id in cases)
+    if args.build_all_each_iter:
+        mode = "strict" if strict_build_all else "observe_only"
+        print(
+            f"[soak] build_all_each_iter mode={mode} "
+            f"(strict requires all selected cases expected SUCCESS)",
+            flush=True,
+        )
+
+    # Reuse run_cases shared workspace so stress/scenario/case runners do not
+    # materialize multiple giant `.lake` workspace trees.
+    shared_root = repo_root / ".cache" / "leanatlas" / "e2e_run_cases"
+    shared_root.mkdir(parents=True, exist_ok=True)
+    shared_workdir = shared_root / "workdir"
+    deps_stamp_path = shared_root / "deps_stamp.sha256"
+    desired_deps_stamp = hash_fixture_deps(fixture_root)
+    existing_deps_stamp = deps_stamp_path.read_text(encoding="utf-8").strip() if deps_stamp_path.exists() else ""
+    cold_init = bool((not shared_workdir.exists()) or (existing_deps_stamp != desired_deps_stamp))
+
+    if cold_init:
+        print("[soak] shared workspace cold-init (deps/toolchain changed or missing)", flush=True)
+        shutil.rmtree(shared_workdir, ignore_errors=True)
+        shutil.copytree(fixture_root, shared_workdir)
+    else:
+        print("[soak] shared workspace warm-reset (reuse existing .lake cache)", flush=True)
+        reset_workdir_preserve_lake(fixture_root=fixture_root, workdir=shared_workdir)
+    deps_stamp_path.write_text(desired_deps_stamp + "\n", encoding="utf-8")
+
+    run_id = f"soak-{int(time.time())}-{uuid.uuid4().hex[:8]}"
+    workdir = shared_workdir
     cache_policy = ensure_workspace_lake_packages(
         repo_root=repo_root,
         workspace_root=workdir,
-        purpose="stress_soak_workspace",
+        purpose="stress_soak_workspace:shared_workdir",
     )
     if not cache_policy.ok:
-        print(f"[soak][FAIL] shared cache policy not satisfied: {cache_policy.note}")
+        print(f"[soak][FAIL] shared cache policy not satisfied: {cache_policy.note}", flush=True)
         return 2
 
     if args.update:
@@ -107,7 +137,7 @@ def main() -> int:
         order = list(cases)
         if args.shuffle:
             rng.shuffle(order)
-        print(f"[soak] iteration {it+1}/{args.iterations}: {order}")
+        print(f"[soak] iteration {it+1}/{args.iterations}: {order}", flush=True)
 
         for case_id in order:
             case_path = golden_root / case_id
@@ -122,26 +152,49 @@ def main() -> int:
                 out_dir=out_dir,
                 expected_override=None,
                 mode="OPERATOR",
+                scenario_label=f"soak:{run_id}:iter{it:03d}",
+                lake_timeout_s=args.lake_timeout_s,
             )
             total_wall += int(res.get("wall_time_ms", 0))
             exp = (meta.get("expected", {}) or {}).get("final_status")
             if exp and res["final_status"] != exp:
                 failures += 1
-                print(f"[soak][FAIL] {case_id}: got {res['final_status']} expected {exp} (judge={res.get('judge_reason_code')})")
+                print(
+                    f"[soak][FAIL] {case_id}: got {res['final_status']} expected {exp} (judge={res.get('judge_reason_code')})",
+                    flush=True,
+                )
 
         if args.build_all_each_iter:
-            rc, out, elapsed_ms = lake_build(workdir, "Problems")
+            rc, out, elapsed_ms = lake_build(
+                workdir,
+                "Problems",
+                scenario_label=f"soak:{run_id}:iter{it:03d}",
+                phase="build_all_each_iter",
+                log_dir=repo_root / "artifacts" / "stress" / "soak" / run_id / "Cmd",
+                label=f"iter_{it:03d}__build_all",
+                timeout_s=args.lake_timeout_s,
+            )
             total_wall += int(elapsed_ms)
             if rc != 0:
-                failures += 1
-                print(f"[soak][FAIL] lake build Problems after iter {it}: rc={rc}")
+                if strict_build_all:
+                    failures += 1
+                    print(f"[soak][FAIL] lake build Problems after iter {it}: rc={rc}", flush=True)
+                else:
+                    print(
+                        "[soak][WARN] lake build Problems returned non-zero in observe_only mode; "
+                        "selected profile includes non-SUCCESS expected cases.",
+                        flush=True,
+                    )
 
-    print(f"[soak] done: iterations={args.iterations} cases={len(cases)} failures={failures} total_wall_ms={total_wall}")
+    print(
+        f"[soak] done: iterations={args.iterations} cases={len(cases)} failures={failures} total_wall_ms={total_wall}",
+        flush=True,
+    )
 
-    if not args.keep_workdir:
-        shutil.rmtree(workdir, ignore_errors=True)
+    if args.keep_workdir:
+        print(f"[soak] kept shared workdir: {workdir}", flush=True)
     else:
-        print(f"[soak] kept workdir: {workdir}")
+        print(f"[soak] shared workdir: {workdir}", flush=True)
 
     return 1 if failures else 0
 

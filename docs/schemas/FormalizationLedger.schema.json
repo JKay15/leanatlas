@@ -1,0 +1,751 @@
+{
+  "$defs": {
+    "atomMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_id": {
+          "type": "string"
+        },
+        "atom_id": {
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "mapping_id": {
+          "type": "string"
+        },
+        "mismatch_kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "notes": {
+          "type": "string"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "review": {
+          "$ref": "#/$defs/review"
+        }
+      },
+      "required": [
+        "anchor_id",
+        "atom_id",
+        "mapping_id",
+        "relation",
+        "review"
+      ],
+      "type": "object"
+    },
+    "audit": {
+      "additionalProperties": false,
+      "properties": {
+        "coverage": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "coverage",
+        "notes"
+      ],
+      "type": "object"
+    },
+    "claim": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_id": {
+          "type": "string"
+        },
+        "claim_kind": {
+          "type": "string"
+        },
+        "dependency_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "display_label": {
+          "type": "string"
+        },
+        "heading_span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "in_paper_proof_status": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string"
+        },
+        "review": {
+          "$ref": "#/$defs/review"
+        },
+        "section_title": {
+          "type": "string"
+        },
+        "statement_span_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "claim_id",
+        "claim_kind",
+        "dependency_ids",
+        "display_label",
+        "in_paper_proof_status",
+        "review",
+        "statement_span_ids"
+      ],
+      "type": "object"
+    },
+    "claimProofLink": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_id": {
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "evidence_span_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "link_id": {
+          "type": "string"
+        },
+        "link_type": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "proof_id": {
+          "type": "string"
+        },
+        "review": {
+          "$ref": "#/$defs/review"
+        }
+      },
+      "required": [
+        "claim_id",
+        "confidence",
+        "evidence_span_ids",
+        "link_id",
+        "link_type",
+        "proof_id",
+        "review"
+      ],
+      "type": "object"
+    },
+    "clauseAtom": {
+      "additionalProperties": false,
+      "properties": {
+        "alignment_hint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "atom_id": {
+          "type": "string"
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "logic_role": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "parent_clause_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "review": {
+          "$ref": "#/$defs/review"
+        },
+        "source": {
+          "type": "string"
+        },
+        "span_id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "atom_id",
+        "claim_id",
+        "logic_role",
+        "review",
+        "span_id",
+        "text"
+      ],
+      "type": "object"
+    },
+    "externalResult": {
+      "additionalProperties": false,
+      "properties": {
+        "dependency_status": {
+          "type": "string"
+        },
+        "external_result_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "review": {
+          "$ref": "#/$defs/review"
+        },
+        "source_kind": {
+          "type": "string"
+        },
+        "usage_span_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "used_by_claim_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "dependency_status",
+        "external_result_id",
+        "name",
+        "review",
+        "source_kind"
+      ],
+      "type": "object"
+    },
+    "formalizationBinding": {
+      "additionalProperties": false,
+      "properties": {
+        "binding_id": {
+          "type": "string"
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "clause_links": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "external_dependency_result_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "external_dependency_status": {
+          "type": "string"
+        },
+        "formalization_status": {
+          "type": "string"
+        },
+        "lean_target": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "review": {
+          "$ref": "#/$defs/review"
+        }
+      },
+      "required": [
+        "binding_id",
+        "claim_id",
+        "external_dependency_result_ids",
+        "external_dependency_status",
+        "formalization_status",
+        "lean_target",
+        "review"
+      ],
+      "type": "object"
+    },
+    "index": {
+      "additionalProperties": false,
+      "properties": {
+        "by_kind": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "by_section": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "tokens": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "by_kind",
+        "by_section",
+        "tokens"
+      ],
+      "type": "object"
+    },
+    "leanAnchor": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_id": {
+          "type": "string"
+        },
+        "anchor_role": {
+          "type": "string"
+        },
+        "claim_id": {
+          "type": "string"
+        },
+        "clause_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lean_ref": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "origin": {
+          "type": "string"
+        },
+        "review": {
+          "$ref": "#/$defs/review"
+        },
+        "span_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "anchor_id",
+        "anchor_role",
+        "lean_ref",
+        "origin",
+        "review"
+      ],
+      "type": "object"
+    },
+    "leanReverseLink": {
+      "additionalProperties": false,
+      "properties": {
+        "lean_ref": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "link_origin": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "reverse_link_id": {
+          "type": "string"
+        },
+        "review": {
+          "$ref": "#/$defs/review"
+        },
+        "target": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "required": [
+        "lean_ref",
+        "reverse_link_id",
+        "review",
+        "target"
+      ],
+      "type": "object"
+    },
+    "ledgerMeta": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_json": {
+          "type": "boolean"
+        },
+        "doc": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "extraction_pipeline": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "id_policy": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "ledger_schema_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "canonical_json",
+        "doc",
+        "extraction_pipeline",
+        "id_policy",
+        "ledger_schema_version"
+      ],
+      "type": "object"
+    },
+    "proof": {
+      "additionalProperties": false,
+      "properties": {
+        "body_span_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "completeness": {
+          "type": "string"
+        },
+        "for_claim_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "proof_heading_span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "proof_id": {
+          "type": "string"
+        },
+        "proof_label": {
+          "type": "string"
+        },
+        "proof_type": {
+          "type": "string"
+        },
+        "review": {
+          "$ref": "#/$defs/review"
+        },
+        "uses_external_result_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "uses_internal_claim_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "body_span_ids",
+        "for_claim_ids",
+        "proof_id",
+        "proof_type",
+        "review",
+        "uses_external_result_ids",
+        "uses_internal_claim_ids"
+      ],
+      "type": "object"
+    },
+    "review": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "last_updated_utc": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "reviewer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "enum": [
+            "AUTO_EXTRACTED",
+            "NEEDS_REVIEW",
+            "HUMAN_CONFIRMED",
+            "HUMAN_EDITED",
+            "HUMAN_REJECTED",
+            "LOCKED"
+          ],
+          "type": "string"
+        },
+        "uncertainty_score": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "confidence",
+        "last_updated_utc",
+        "note",
+        "reviewer",
+        "state",
+        "uncertainty_score"
+      ],
+      "type": "object"
+    },
+    "reviewWorkflow": {
+      "additionalProperties": false,
+      "properties": {
+        "states": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "thresholds": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "transitions": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "workflow_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "states",
+        "thresholds",
+        "transitions",
+        "workflow_version"
+      ],
+      "type": "object"
+    },
+    "sourceSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_end": {
+          "type": "integer"
+        },
+        "anchor_start": {
+          "type": "integer"
+        },
+        "line_end": {
+          "type": "integer"
+        },
+        "line_start": {
+          "type": "integer"
+        },
+        "page": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "role": {
+          "type": "string"
+        },
+        "source_file": {
+          "type": "string"
+        },
+        "span_id": {
+          "type": "string"
+        },
+        "text_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "text_snippet": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "page",
+        "role",
+        "span_id",
+        "text_sha256"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://leanatlas.local/schemas/FormalizationLedger.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "atom_mappings": {
+      "items": {
+        "$ref": "#/$defs/atomMapping"
+      },
+      "type": "array"
+    },
+    "audit": {
+      "$ref": "#/$defs/audit"
+    },
+    "claim_proof_links": {
+      "items": {
+        "$ref": "#/$defs/claimProofLink"
+      },
+      "type": "array"
+    },
+    "claims": {
+      "items": {
+        "$ref": "#/$defs/claim"
+      },
+      "type": "array"
+    },
+    "clause_atoms": {
+      "items": {
+        "$ref": "#/$defs/clauseAtom"
+      },
+      "type": "array"
+    },
+    "external_results": {
+      "items": {
+        "$ref": "#/$defs/externalResult"
+      },
+      "type": "array"
+    },
+    "formalization_bindings": {
+      "items": {
+        "$ref": "#/$defs/formalizationBinding"
+      },
+      "type": "array"
+    },
+    "index": {
+      "$ref": "#/$defs/index"
+    },
+    "lean_anchors": {
+      "items": {
+        "$ref": "#/$defs/leanAnchor"
+      },
+      "type": "array"
+    },
+    "lean_reverse_links": {
+      "items": {
+        "$ref": "#/$defs/leanReverseLink"
+      },
+      "type": "array"
+    },
+    "ledger_meta": {
+      "$ref": "#/$defs/ledgerMeta"
+    },
+    "proofs": {
+      "items": {
+        "$ref": "#/$defs/proof"
+      },
+      "type": "array"
+    },
+    "review_workflow": {
+      "$ref": "#/$defs/reviewWorkflow"
+    },
+    "source_spans": {
+      "items": {
+        "$ref": "#/$defs/sourceSpan"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "ledger_meta",
+    "review_workflow",
+    "source_spans",
+    "claims",
+    "proofs",
+    "external_results",
+    "claim_proof_links",
+    "formalization_bindings",
+    "lean_reverse_links",
+    "clause_atoms",
+    "lean_anchors",
+    "atom_mappings",
+    "index",
+    "audit"
+  ],
+  "title": "FormalizationLedger",
+  "type": "object"
+}

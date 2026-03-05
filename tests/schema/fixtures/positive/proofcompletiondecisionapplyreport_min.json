@@ -1,0 +1,24 @@
+{
+  "applied": [
+    {
+      "entity_id": "claim.1",
+      "entity_type": "CLAIM",
+      "from": "NEW",
+      "index": 1,
+      "outcome": "CHANGED",
+      "parent_id": null,
+      "to": "CODEX_ATTEMPTED"
+    }
+  ],
+  "applied_count": 1,
+  "changed_count": 1,
+  "check_skipped": false,
+  "decisions_path": "artifacts/review/decisions.json",
+  "dry_run": false,
+  "force_transitions": false,
+  "generated_at_utc": "2026-03-05T00:00:00Z",
+  "ledger_path": "artifacts/review/ledger.json",
+  "noop_count": 0,
+  "rejected": [],
+  "rejected_count": 0
+}

@@ -45,6 +45,13 @@ TDD ensures the framework + deterministic core never silently rots. The Advisor 
 If `advisor.enabled = true`:
 - Advisor triggers only when deterministic steps produced **findings** (`advisor.when = findings`).
 - `run_automation.py --advisor-mode auto` must use explicit findings probes (`advisor.probe`) or deterministic-failure signals.
+- Enabled advisors must declare a default local executor in registry:
+  - provider/profile bridge (`advisor.agent_provider` and optional `advisor.agent_profile`) as default path, or
+  - `advisor.exec_cmd` as legacy fallback.
+- Advisor execution may be supplied in two ways:
+  - direct `advisor.exec_cmd` (legacy)
+  - provider/profile bridge (`advisor.agent_provider` / `advisor.agent_profile`, or CLI `--agent-provider/--agent-profile`)
+- CLI flags may override registry defaults, but registry defaults should be sufficient for reproducible local runs.
 - Advisor must obey PatchScope (OPERATOR/MAINTAINER rules).
 - Advisor must write auditable artifacts:
   - patch/PR

@@ -1,0 +1,73 @@
+{
+  "$id": "https://leanatlas.dev/schemas/AgentProfile.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Provider-agnostic agent invocation profile for Phase6 runners.",
+  "properties": {
+    "agent_cmd": {
+      "description": "Optional explicit shell command. If absent, runner falls back to built-in provider default.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "capabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "supports_json_mode": {
+          "type": "boolean"
+        },
+        "supports_streaming": {
+          "type": "boolean"
+        },
+        "supports_tool_calls": {
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "env": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Optional environment map merged into runner env for agent execution.",
+      "type": "object"
+    },
+    "env_map": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Optional env propagation mapping from source env key to target env key.",
+      "type": "object"
+    },
+    "prompt_arg": {
+      "description": "Argument flag used when prompt_transport=arg (for example: --prompt-file).",
+      "type": "string"
+    },
+    "prompt_transport": {
+      "description": "How prompt path is supplied when provider defaults are used.",
+      "enum": [
+        "stdin",
+        "env_path",
+        "arg"
+      ],
+      "type": "string"
+    },
+    "provider_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "schema": {
+      "const": "leanatlas.agent_profile"
+    },
+    "schema_version": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "provider_id"
+  ],
+  "title": "leanatlas.agent_profile",
+  "type": "object"
+}

@@ -10,6 +10,7 @@ Fail conditions:
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -83,6 +84,48 @@ def _check_resume_policy(repo_root: Path) -> list[str]:
     return errs
 
 
+def _check_shared_workspace_reuse_policy(repo_root: Path) -> list[str]:
+    errs: list[str] = []
+
+    scenario_rel = "tests/e2e/run_scenarios.py"
+    scenario_path = repo_root / scenario_rel
+    if not scenario_path.exists():
+        errs.append(f"missing file: {scenario_rel}")
+        scenario_text = ""
+    else:
+        scenario_text = scenario_path.read_text(encoding="utf-8", errors="replace")
+    scenario_required = [
+        "shared_root",
+        "shared_workdir",
+        "reset_workdir_preserve_lake(",
+    ]
+    for snippet in scenario_required:
+        if snippet not in scenario_text:
+            errs.append(f"{scenario_rel}: missing shared-workspace marker `{snippet}`")
+    if re.search(r"workdir\s*=\s*.*scenario_id.*scenario_run_id", scenario_text):
+        errs.append(f"{scenario_rel}: forbidden per-scenario dynamic workdir allocation pattern detected")
+
+    soak_rel = "tests/stress/soak.py"
+    soak_path = repo_root / soak_rel
+    if not soak_path.exists():
+        errs.append(f"missing file: {soak_rel}")
+        soak_text = ""
+    else:
+        soak_text = soak_path.read_text(encoding="utf-8", errors="replace")
+    soak_required = [
+        "shared_root",
+        "shared_workdir",
+        "reset_workdir_preserve_lake(",
+    ]
+    for snippet in soak_required:
+        if snippet not in soak_text:
+            errs.append(f"{soak_rel}: missing shared-workspace marker `{snippet}`")
+    if re.search(r"workdir\s*=\s*.*run_id", soak_text):
+        errs.append(f"{soak_rel}: forbidden per-run dynamic workdir allocation pattern detected")
+
+    return errs
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[2]
     shared_cache = repo_root / "tools" / "workflow" / "shared_cache.py"
@@ -95,6 +138,7 @@ def main() -> int:
         errors.extend(_check_runner_file(repo_root, rel))
 
     errors.extend(_check_resume_policy(repo_root))
+    errors.extend(_check_shared_workspace_reuse_policy(repo_root))
 
     if errors:
         print("[shared-cache-policy][FAIL]")

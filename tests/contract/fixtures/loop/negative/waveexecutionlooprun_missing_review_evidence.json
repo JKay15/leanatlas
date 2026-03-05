@@ -1,0 +1,99 @@
+{
+  "assurance_level": "LIGHT",
+  "agent_invocation": {
+    "agent_provider_id": "codex_cli",
+    "instruction_scope_refs": [
+      "/Users/xiongjiangkai/xjk_papers/leanatlas/AGENTS.md"
+    ],
+    "resolved_invocation": [
+      "codex",
+      "exec",
+      "review"
+    ]
+  },
+  "budgets": {
+    "max_ai_review_rounds": 8,
+    "max_same_fingerprint_rounds": 2,
+    "max_wave_wall_clock_minutes": 120,
+    "used_ai_review_rounds": 1,
+    "used_wall_clock_minutes": 9
+  },
+  "derived_metrics": {
+    "max_consecutive_same_fingerprint": 1,
+    "replay_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "dirty_tree": {
+    "changed_entry_count": 0,
+    "checked": true,
+    "disposition": "CLEAN",
+    "head_commit": "1111111111111111111111111111111111111111",
+    "in_git_repo": true,
+    "is_clean": true,
+    "status_porcelain_sample": [],
+    "tracked_entry_count": 0,
+    "untracked_entry_count": 0
+  },
+  "evidence": {
+    "ai_review_log_path": "artifacts/loop_runtime/by_key/aaa/wave_execution/ai_review.jsonl",
+    "final_decision_path": "artifacts/loop_runtime/by_key/aaa/wave_execution/final_decision.json",
+    "iteration_trace_path": "artifacts/loop_runtime/by_key/aaa/wave_execution/iteration_trace.json"
+  },
+  "review_history_consistency": {
+    "contradiction_count": 0,
+    "contradiction_refs": [],
+    "nitpick_refs": [],
+    "potential_nitpick_count": 0
+  },
+  "execution": {
+    "current_state": "TRIAGED",
+    "transitions": [
+      {
+        "at_utc": "2026-03-05T00:03:00Z",
+        "from": "AI_REVIEW",
+        "reason_code": "REVIEW_BUDGET_EXHAUSTED",
+        "to": "TRIAGED"
+      }
+    ]
+  },
+  "final_decision": {
+    "at_utc": "2026-03-05T00:03:00Z",
+    "reason_code": "REVIEW_BUDGET_EXHAUSTED",
+    "state": "TRIAGED"
+  },
+  "iterations": [
+    {
+      "ai_review": {
+        "confidence": 0.66,
+        "engine": "codex exec review",
+        "finding_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "findings": [
+          {
+            "evidence_refs": [
+              "artifacts/waveA/diff_round1.patch"
+            ],
+            "finding_id": "finding.waveA.round1.001",
+            "repairable": true,
+            "severity": "S2_MAJOR",
+            "summary": "Needs one more pass."
+          }
+        ],
+        "prompt_ref": "artifacts/waveA/review_prompt_round1.md",
+        "verdict": "REPAIRABLE"
+      },
+      "iteration_index": 1,
+      "history_context_refs": [
+        "artifacts/waveA/review_history_until_round0.json"
+      ],
+      "transition": {
+        "at_utc": "2026-03-05T00:03:00Z",
+        "from": "AI_REVIEW",
+        "reason_code": "REVIEW_BUDGET_EXHAUSTED",
+        "to": "TRIAGED"
+      },
+      "wall_clock_used_minutes": 9
+    }
+  ],
+  "run_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "version": "1",
+  "wave_id": "loop.wave_a.execution.v0"
+}

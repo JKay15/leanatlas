@@ -1,0 +1,140 @@
+{
+  "$defs": {
+    "decision": {
+      "additionalProperties": false,
+      "properties": {
+        "entity_id": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "from": {
+          "enum": [
+            "NEW",
+            "CODEX_ATTEMPTED",
+            "GPT52PRO_ESCALATED",
+            "TRIAGED_UNPROVABLE_CANDIDATE",
+            "COMPLETED"
+          ],
+          "type": "string"
+        },
+        "index": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "enum": [
+                "CHANGED",
+                "NOOP",
+                "REJECTED"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to": {
+          "enum": [
+            "NEW",
+            "CODEX_ATTEMPTED",
+            "GPT52PRO_ESCALATED",
+            "TRIAGED_UNPROVABLE_CANDIDATE",
+            "COMPLETED"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "entity_type",
+        "from",
+        "index",
+        "parent_id",
+        "to"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://leanatlas.local/schemas/ProofCompletionDecisionApplyReport.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "applied": {
+      "items": {
+        "$ref": "#/$defs/decision"
+      },
+      "type": "array"
+    },
+    "applied_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "changed_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "check_skipped": {
+      "type": "boolean"
+    },
+    "decisions_path": {
+      "type": "string"
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "force_transitions": {
+      "type": "boolean"
+    },
+    "generated_at_utc": {
+      "type": "string"
+    },
+    "ledger_path": {
+      "type": "string"
+    },
+    "noop_count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "rejected": {
+      "items": {
+        "$ref": "#/$defs/decision"
+      },
+      "type": "array"
+    },
+    "rejected_count": {
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "applied",
+    "applied_count",
+    "changed_count",
+    "check_skipped",
+    "decisions_path",
+    "dry_run",
+    "force_transitions",
+    "generated_at_utc",
+    "ledger_path",
+    "noop_count",
+    "rejected",
+    "rejected_count"
+  ],
+  "title": "ProofCompletionDecisionApplyReport",
+  "type": "object"
+}

@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "acquired_at_utc": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "cas_base_hash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "cas_new_hash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "conflict_policy": {
+      "enum": [
+        "RETRY",
+        "ESCALATE",
+        "FAIL"
+      ],
+      "type": "string"
+    },
+    "expires_at_utc": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "journal_path": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "lease_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "owner": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "released_at_utc": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "resource_class": {
+      "enum": [
+        "IMMUTABLE",
+        "APPEND_ONLY",
+        "MUTABLE_CONTROLLED"
+      ],
+      "type": "string"
+    },
+    "resource_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ACQUIRED",
+        "RELEASED",
+        "EXPIRED",
+        "CANCELLED"
+      ],
+      "type": "string"
+    },
+    "version": {
+      "const": "1",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "lease_id",
+    "resource_id",
+    "resource_class",
+    "owner",
+    "status",
+    "acquired_at_utc",
+    "expires_at_utc",
+    "cas_base_hash",
+    "journal_path"
+  ],
+  "title": "ResourceLease",
+  "type": "object"
+}

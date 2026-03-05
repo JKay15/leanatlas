@@ -7,6 +7,8 @@
 - reporting generation
 - automation execution wrappers (`tools/coordination/run_automation.py`, `run_automation_local.py`)
 - automation stuck-run recovery (`tools/coordination/recover_stuck_automation_runs.py`)
+- LOOP runtime core (`tools/loop/**`): execution state model, run-key materialization, append-only evidence store
+- formalization deterministic core (`tools/formalization/**`): ledger upgrade adapters, worklist/apply flow, anti-cheat, strong validation
 
 ## Non-negotiables
 - No network access.

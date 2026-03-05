@@ -56,7 +56,7 @@ It verifies:
 - pack runner (v0): `tools/agent_eval/run_pack.py`
   - `--mode plan`: only generate Plan.json (CI/core)
   - `--mode materialize`: generate isolated workspaces + PROMPT.md (local/nightly)
-  - `--mode run`: execute external agent cmd via `tools/workflow/run_cmd.py` (requires `--agent-cmd`)
+  - `--mode run`: execute external agent via provider/profile (`--agent-provider`, optional `--agent-profile`) or legacy `--agent-cmd`
 - deterministic grader (v0): `tools/agent_eval/grade_pack.py`
   - pure file/schema/field comparisons (no LLM)
 
@@ -66,5 +66,5 @@ Core profile tests:
 
 ## 5) Next (Phase6.2+)
 - scenario runner: three classes (interleaving / regression / pressure) written into contract + tests
-- a standard non-interactive agent interface for `--agent-cmd` + trace/artifacts mounting rules
+- a standard non-interactive agent interface for provider/profile + trace/artifacts mounting rules (legacy `--agent-cmd` remains supported)
 - add a small amount of rubric grading (only when deterministic checks cannot measure a dimension)

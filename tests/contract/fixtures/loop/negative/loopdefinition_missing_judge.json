@@ -1,0 +1,23 @@
+{
+  "version": "1",
+  "loop_id": "loop.demo.v1",
+  "component_refs": {
+    "proposer": "proposer.codex.v1",
+    "reviewer": "reviewer.fidelity.v1"
+  },
+  "default_budgets": {
+    "max_retry_per_node": 2,
+    "max_dynamic_recovery_rounds_per_exception": 2,
+    "max_dynamic_recovery_total_minutes": 45,
+    "max_temp_graph_nodes": 6,
+    "max_temp_graph_depth": 2,
+    "max_parallel_branches": 3
+  },
+  "tuning_band": {
+    "rounds": {"min": 1, "max": 3},
+    "total_minutes": {"min": 20, "max": 90},
+    "temp_graph_nodes": {"min": 3, "max": 10}
+  },
+  "input_contract": "docs/contracts/LOOP_RUNTIME_CONTRACT.md",
+  "output_contract": "docs/contracts/LOOP_AUDIT_CONTRACT.md"
+}

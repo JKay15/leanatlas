@@ -475,6 +475,10 @@
           },
           "timed_out": {
             "type": "boolean"
+          },
+          "uv_cache_dir": {
+            "minLength": 1,
+            "type": "string"
           }
         },
         "required": [

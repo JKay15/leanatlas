@@ -19,6 +19,7 @@ Optional:
 - `Artifacts/` (patches/diffs/extra outputs)
 - `Cmd/` (runner-captured command stdout/stderr logs)
 - `pins_used.json` (AgentEval sidecar: dependency pin fingerprint; runner-generated in AgentEval `--mode run`)
+- `Formalization/` (formalization gate/governor decisions, when formalization workflow is enabled)
 
 Evidence-chain rule (Phase6+):
 - If `AttemptLog.jsonl` contains `exec_spans[*].stdout_path/stderr_path`, then those paths MUST exist within the run directory.
@@ -26,6 +27,10 @@ Evidence-chain rule (Phase6+):
 
 Rationale:
 - Phase 6 requires audit-grade evidence. JSON summaries are not enough; we need the command outputs.
+
+Formalization extension:
+- When dual-gate formalization workflow runs, governor outputs should be archived as machine-readable JSON
+  under `Formalization/` (or an equivalent deterministic path referenced by run artifacts).
 
 ## 3) run_id rules
 - `run_id` is the folder name.

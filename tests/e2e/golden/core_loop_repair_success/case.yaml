@@ -1,0 +1,11 @@
+id: core_loop_repair_success
+tier: core
+execution:
+  enabled: true
+expected:
+  final_status: SUCCESS
+coverage_tags:
+- family:TACTIC
+- stage:build
+patch_sequence:
+- patches/001

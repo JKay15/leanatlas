@@ -80,6 +80,10 @@ def main() -> int:
     return die("QUICKSTART.md must include uv fallback command for core tests")
   if "LEANATLAS_REAL_AGENT_CMD" not in quickstart:
     return die("QUICKSTART.md must explain LEANATLAS_REAL_AGENT_CMD setup for Phase6 real-agent checks")
+  if "LEANATLAS_REAL_AGENT_PROVIDER" not in quickstart:
+    return die("QUICKSTART.md must explain LEANATLAS_REAL_AGENT_PROVIDER setup for provider-based Phase6 real-agent checks")
+  if "LEANATLAS_REAL_AGENT_PROFILE" not in quickstart:
+    return die("QUICKSTART.md must explain LEANATLAS_REAL_AGENT_PROFILE setup for profile-based Phase6 real-agent checks")
   if "scripts/install_repo_git_hooks.sh" not in quickstart:
     return die("QUICKSTART.md must explain repo-local git hook installer usage")
   if "TLS" not in quickstart and "handshake" not in quickstart:
