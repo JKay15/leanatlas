@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "lease_id": "lease_001",
+  "resource_id": "tools/index/gc_state.json",
+  "resource_class": "MUTABLE",
+  "owner": "loop.runner",
+  "status": "ACQUIRED",
+  "acquired_at_utc": "2026-03-05T00:00:00Z",
+  "expires_at_utc": "2026-03-05T00:05:00Z",
+  "cas_base_hash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "journal_path": "artifacts/loop_resources/journal/resource_journal.jsonl"
+}

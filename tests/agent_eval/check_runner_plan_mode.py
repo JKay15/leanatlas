@@ -41,6 +41,8 @@ def main() -> int:
         str(out_root),
         "--eval-id",
         "_plan_smoke",
+        "--agent-provider",
+        "codex_cli",
     ]
     p = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True)
     if p.returncode != 0:

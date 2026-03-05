@@ -70,7 +70,16 @@ python tools/agent_eval/run_scenario.py \
   --mode materialize
 ```
 
-Run with an external agent command:
+Run with provider/profile (preferred):
+
+```bash
+python tools/agent_eval/run_scenario.py \
+  --scenario tests/agent_eval/scenarios/mentor_keywords_interleaving_v0/scenario.yaml \
+  --mode run \
+  --agent-provider codex_cli
+```
+
+Legacy command mode:
 
 ```bash
 python tools/agent_eval/run_scenario.py \

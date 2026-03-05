@@ -31,6 +31,13 @@ AGENT_EVAL_SCENARIO_REPORT = json.loads((SCHEMAS_DIR / "AgentEvalScenarioReport.
 PINS_USED = json.loads((SCHEMAS_DIR / "PinsUsed.schema.json").read_text(encoding="utf-8"))
 FEEDBACK_DIGEST = json.loads((SCHEMAS_DIR / "FeedbackDigest.schema.json").read_text(encoding="utf-8"))
 FEEDBACK_LEDGER_LINE = json.loads((SCHEMAS_DIR / "FeedbackLedgerLine.schema.json").read_text(encoding="utf-8"))
+FORMALIZATION_LEDGER = json.loads((SCHEMAS_DIR / "FormalizationLedger.schema.json").read_text(encoding="utf-8"))
+PROOF_COMPLETION_WORKLIST = json.loads((SCHEMAS_DIR / "ProofCompletionWorklist.schema.json").read_text(encoding="utf-8"))
+PROOF_COMPLETION_DECISION_APPLY_REPORT = json.loads(
+  (SCHEMAS_DIR / "ProofCompletionDecisionApplyReport.schema.json").read_text(encoding="utf-8")
+)
+FORMALIZATION_GATE_REPORT = json.loads((SCHEMAS_DIR / "FormalizationGateReport.schema.json").read_text(encoding="utf-8"))
+AGENT_FIDELITY_REVIEW = json.loads((SCHEMAS_DIR / "AgentFidelityReview.schema.json").read_text(encoding="utf-8"))
 
 
 def pick_schema(fpath: Path):
@@ -71,8 +78,22 @@ def pick_schema(fpath: Path):
     return FEEDBACK_DIGEST, "FeedbackDigest"
   if n.startswith("feedbackledger_"):
     return FEEDBACK_LEDGER_LINE, "FeedbackLedgerLine"
+  if n.startswith("formalizationledger_"):
+    return FORMALIZATION_LEDGER, "FormalizationLedger"
+  if n.startswith("proofcompletionworklist_"):
+    return PROOF_COMPLETION_WORKLIST, "ProofCompletionWorklist"
+  if n.startswith("proofcompletiondecisionapplyreport_"):
+    return PROOF_COMPLETION_DECISION_APPLY_REPORT, "ProofCompletionDecisionApplyReport"
+  if n.startswith("formalizationgatereport_"):
+    return FORMALIZATION_GATE_REPORT, "FormalizationGateReport"
+  if n.startswith("agentfidelityreview_"):
+    return AGENT_FIDELITY_REVIEW, "AgentFidelityReview"
   raise RuntimeError(
-    f"Cannot infer schema for fixture: {n}. Prefix with runreport_, retrievaltrace_, attemptlog_, dedupreport_, promotionplan_, promotionreport_, gcplan_, gcreport_, gcstate_, problemstate_, testmanifest_, agentevaltask_, agentevalreport_, agentevalscenario_, agentevalscenarioreport_, pinsused_, feedbackdigest_, or feedbackledger_."
+    "Cannot infer schema for fixture: "
+    f"{n}. Prefix with runreport_, retrievaltrace_, attemptlog_, dedupreport_, promotionplan_, promotionreport_, "
+    "gcplan_, gcreport_, gcstate_, problemstate_, testmanifest_, agentevaltask_, agentevalreport_, agentevalscenario_, "
+    "agentevalscenarioreport_, pinsused_, feedbackdigest_, feedbackledger_, formalizationledger_, "
+    "proofcompletionworklist_, proofcompletiondecisionapplyreport_, formalizationgatereport_, or agentfidelityreview_."
   )
 
 def validate_one(fpath: Path) -> list[str]:

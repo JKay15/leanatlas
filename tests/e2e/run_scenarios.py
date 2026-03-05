@@ -24,8 +24,8 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # add `leanatlas/`
 from tools.workflow.patch_scope import check_patch_scope
 from tools.workflow.progress_signals import diagnostic_fingerprint
 from tools.workflow.judge import judge_decide
+from tools.workflow.run_cmd import run_cmd
 from tools.workflow.shared_cache import ensure_workspace_lake_packages
 
 
@@ -116,17 +117,163 @@ def make_run_id(prefix: str) -> str:
     return f"{prefix}-{now}-{h}"
 
 
-def lake_build(workdir: Path, target: str) -> Tuple[int, str, int]:
-    start = time.time()
-    p = subprocess.run(
-        ['lake', 'build', target],
-        cwd=str(workdir),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
+def hash_fixture_deps(fixture_root: Path) -> str:
+    """Hash files that determine dependency graph/toolchain."""
+    h = hashlib.sha256()
+    for rel in (Path("lean-toolchain"), Path("lakefile.lean"), Path("lake-manifest.json")):
+        p = fixture_root / rel
+        h.update(rel.as_posix().encode("utf-8"))
+        if p.exists():
+            h.update(p.read_bytes())
+        else:
+            h.update(b"<missing>")
+    return h.hexdigest()
+
+
+def reset_workdir_preserve_lake(*, fixture_root: Path, workdir: Path) -> None:
+    """Reset workspace content to fixture_root while preserving `.lake/` cache."""
+    workdir.mkdir(parents=True, exist_ok=True)
+    for child in workdir.iterdir():
+        if child.name == ".lake":
+            continue
+        if child.is_dir():
+            shutil.rmtree(child, ignore_errors=True)
+        else:
+            try:
+                child.unlink()
+            except FileNotFoundError:
+                pass
+    shutil.copytree(fixture_root, workdir, dirs_exist_ok=True)
+
+
+def _tail_last_nonempty_line(path: Path, max_bytes: int = 8192) -> str:
+    if not path.exists():
+        return ""
+    try:
+        with path.open("rb") as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            f.seek(max(0, size - max_bytes), os.SEEK_SET)
+            data = f.read()
+        txt = data.decode("utf-8", errors="replace")
+        for line in reversed(txt.splitlines()):
+            line = line.strip()
+            if line:
+                return line
+    except Exception:
+        return ""
+    return ""
+
+
+def _run_cmd_with_progress(
+    *,
+    scenario_label: str,
+    phase: str,
+    cmd: List[str],
+    cwd: Path,
+    log_dir: Path,
+    label: str,
+    timeout_s: int,
+    env: Optional[Dict[str, str]] = None,
+):
+    res_holder: Dict[str, Any] = {}
+    err_holder: Dict[str, BaseException] = {}
+    t0 = time.time()
+    stdout_path = log_dir / f"{label}.stdout.txt"
+    stderr_path = log_dir / f"{label}.stderr.txt"
+    last_progress_line = ""
+
+    def _worker() -> None:
+        try:
+            res_holder["res"] = run_cmd(
+                cmd=cmd,
+                cwd=cwd,
+                log_dir=log_dir,
+                label=label,
+                timeout_s=timeout_s,
+                env=env,
+                capture_text=True,
+            )
+        except BaseException as exc:
+            err_holder["err"] = exc
+
+    th = threading.Thread(target=_worker, daemon=True)
+    th.start()
+    while th.is_alive():
+        th.join(timeout=10.0)
+        if th.is_alive():
+            elapsed_s = int(time.time() - t0)
+            progress_line = _tail_last_nonempty_line(stderr_path) or _tail_last_nonempty_line(stdout_path)
+            if progress_line and progress_line != last_progress_line:
+                print(
+                    f"[e2e-scenarios] {scenario_label} {phase} progress: {progress_line}",
+                    flush=True,
+                )
+                last_progress_line = progress_line
+            print(
+                f"[e2e-scenarios] {scenario_label} {phase} still running elapsed_s={elapsed_s}",
+                flush=True,
+            )
+
+    if "err" in err_holder:
+        raise err_holder["err"]
+    res = res_holder["res"]
+    print(
+        f"[e2e-scenarios] {scenario_label} {phase} done rc={int(res.span.get('exit_code', 1))} duration_ms={int(res.span.get('duration_ms', 0))}",
+        flush=True,
     )
-    elapsed_ms = int((time.time() - start) * 1000)
-    return p.returncode, p.stdout, elapsed_ms
+    return res
+
+
+def _run_call_with_heartbeat(*, label: str, fn, heartbeat_s: int = 10):
+    res_holder: Dict[str, Any] = {}
+    err_holder: Dict[str, BaseException] = {}
+    t0 = time.time()
+
+    def _worker() -> None:
+        try:
+            res_holder["res"] = fn()
+        except BaseException as exc:
+            err_holder["err"] = exc
+
+    th = threading.Thread(target=_worker, daemon=True)
+    th.start()
+    while th.is_alive():
+        th.join(timeout=float(heartbeat_s))
+        if th.is_alive():
+            elapsed_s = int(time.time() - t0)
+            print(f"[e2e-scenarios] {label} still running elapsed_s={elapsed_s}", flush=True)
+
+    if "err" in err_holder:
+        raise err_holder["err"]
+    elapsed_ms = int((time.time() - t0) * 1000)
+    print(f"[e2e-scenarios] {label} done elapsed_ms={elapsed_ms}", flush=True)
+    return res_holder.get("res")
+
+
+def lake_build(
+    workdir: Path,
+    target: str,
+    *,
+    scenario_label: str,
+    phase: str,
+    log_dir: Path,
+    label: str,
+    timeout_s: int,
+) -> Tuple[int, str, int]:
+    res = _run_cmd_with_progress(
+        scenario_label=scenario_label,
+        phase=phase,
+        cmd=["lake", "build", target],
+        cwd=workdir,
+        log_dir=log_dir,
+        label=label,
+        timeout_s=timeout_s,
+    )
+    stdout = res.stdout_text or ""
+    stderr = res.stderr_text or ""
+    out = stdout + (f"\n{stderr}" if stderr else "")
+    return int(res.span.get("exit_code", 1)), out, int(res.span.get("duration_ms", 0))
 
 
 def _dedup_keep_order(items: List[str]) -> List[str]:
@@ -167,6 +314,8 @@ def execute_case_in_workdir(
     out_dir: Path,
     expected_override: Optional[Dict[str, Any]] = None,
     mode: str = "OPERATOR",
+    scenario_label: str = "scenario",
+    lake_timeout_s: int = 900,
 ) -> Dict[str, Any]:
     """Execute one golden case *inside an existing workspace*.
 
@@ -175,10 +324,18 @@ def execute_case_in_workdir(
     out_dir.mkdir(parents=True, exist_ok=True)
     reports_dir = out_dir / "Reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
+    cmd_dir = out_dir / "Cmd"
+    cmd_dir.mkdir(parents=True, exist_ok=True)
 
     exec_meta = meta.get("execution", {}) or {}
     fixture_dir = case_path / exec_meta.get("fixture_dir", "fixture")
-    copy_overlay(fixture_dir, workdir)  # baseline reset for this problem
+    if not fixture_dir.exists():
+        raise RuntimeError(f"missing fixture dir: {fixture_dir}")
+    # Remove previous materialization of this case to avoid stale-file bleed.
+    case_problem_dir = workdir / "Problems" / case_id
+    if case_problem_dir.exists():
+        shutil.rmtree(case_problem_dir, ignore_errors=True)
+    copy_overlay(fixture_dir, workdir)
 
     patch_sequence: List[str] = meta.get('patch_sequence', []) or []
     overlays = [None] + patch_sequence
@@ -225,7 +382,15 @@ def execute_case_in_workdir(
     suspected_family = cat.get("family", "UNKNOWN")
 
     def do_build() -> Tuple[int, str]:
-        rc, out, elapsed_ms = lake_build(workdir, build_target)
+        rc, out, elapsed_ms = lake_build(
+            workdir,
+            build_target,
+            scenario_label=scenario_label,
+            phase=f"{case_id} attempt={budgets['counters']['attempts_used']} lake build {build_target}",
+            log_dir=cmd_dir,
+            label=f"a{budgets['counters']['attempts_used']}_lake_build",
+            timeout_s=lake_timeout_s,
+        )
         budgets['counters']['wall_time_ms'] += int(elapsed_ms)
         return rc, out
 
@@ -246,6 +411,10 @@ def execute_case_in_workdir(
         )
 
         # Build
+        print(
+            f"[e2e-scenarios] {scenario_label} case={case_id} attempt={attempt_index} build_target={build_target}",
+            flush=True,
+        )
         rc, out = do_build()
         diags = parse_diagnostics(out)
         stage_build_status = "OK" if rc == 0 else "FAIL"
@@ -456,6 +625,7 @@ def execute_case_in_workdir(
         "judge_reason_code": attempt_lines[-1]["judge"]["reason_code"],
         "triage_level": attempt_lines[-1]["judge"]["triage_level"],
         "build_target": build_target,
+        "wall_time_ms": int(budgets["counters"]["wall_time_ms"]),
     }
 
 
@@ -466,6 +636,8 @@ def main() -> int:
     ap.add_argument('--scenario', dest='scenario_id', default=None, help='Run a single scenario by id')
     ap.add_argument('--keep-workdir', action='store_true', help='Keep the temp workdir for debugging')
     ap.add_argument('--update', action='store_true', help='Run `lake update` before executing')
+    ap.add_argument('--lake-timeout-s', type=int, default=900, help='Timeout (seconds) for each `lake build` invocation')
+    ap.add_argument('--step-timeout-s', type=int, default=900, help='Timeout (seconds) for each `run_cmd` scenario step')
     args = ap.parse_args()
     selected_profile = args.legacy_tier or args.profile
 
@@ -499,31 +671,108 @@ def main() -> int:
         print('[e2e-scenarios] no scenarios selected')
         return 0
 
+    print(f"[e2e-scenarios] selected {len(all_scenarios)} scenario(s)", flush=True)
+
+    # Reuse the same shared workspace root as run_cases to avoid duplicate
+    # huge `.lake` workspace trees across runners.
+    shared_root = repo_root / ".cache" / "leanatlas" / "e2e_run_cases"
+    shared_root.mkdir(parents=True, exist_ok=True)
+    tmp_root = repo_root / ".cache" / "leanatlas" / "e2e_scenarios"
+    tmp_root.mkdir(parents=True, exist_ok=True)
+
+    # Backward-compat cleanup for older per-scenario workspace directories.
+    for stale in tmp_root.glob("*__*"):
+        if stale.is_dir():
+            _run_call_with_heartbeat(
+                label=f"remove stale scenario workspace {stale.name}",
+                fn=lambda p=stale: shutil.rmtree(p, ignore_errors=True),
+            )
+
+    shared_workdir = shared_root / "workdir"
+    deps_stamp_path = shared_root / "deps_stamp.sha256"
+    desired_deps_stamp = hash_fixture_deps(fixture_root)
+    existing_deps_stamp = deps_stamp_path.read_text(encoding="utf-8").strip() if deps_stamp_path.exists() else ""
+    cold_init = bool((not shared_workdir.exists()) or (existing_deps_stamp != desired_deps_stamp))
+
+    if cold_init:
+        print("[e2e-scenarios] shared workspace cold-init (deps/toolchain changed or missing)", flush=True)
+        _run_call_with_heartbeat(
+            label="e2e-scenarios cold-init cleanup",
+            fn=lambda: shutil.rmtree(shared_workdir, ignore_errors=True),
+        )
+        _run_call_with_heartbeat(
+            label="e2e-scenarios cold-init copy fixture_root",
+            fn=lambda: shutil.copytree(fixture_root, shared_workdir),
+        )
+    else:
+        print("[e2e-scenarios] shared workspace warm-reset (reuse existing .lake cache)", flush=True)
+        _run_call_with_heartbeat(
+            label="e2e-scenarios warm-reset shared workdir",
+            fn=lambda: reset_workdir_preserve_lake(fixture_root=fixture_root, workdir=shared_workdir),
+        )
+    deps_stamp_path.write_text(desired_deps_stamp + "\n", encoding="utf-8")
+
+    cache_policy = _run_call_with_heartbeat(
+        label="e2e-scenarios ensure shared lake cache",
+        fn=lambda: ensure_workspace_lake_packages(
+            repo_root=repo_root,
+            workspace_root=shared_workdir,
+            purpose="e2e_scenarios:shared_workdir",
+        ),
+    )
+    print("[e2e-scenarios] shared workspace/cache ready", flush=True)
+    if not cache_policy.ok:
+        print(f"[e2e-scenarios][FAIL] shared cache policy not satisfied: {cache_policy.note}")
+        return 2
+
+    if args.update:
+        _run_cmd_with_progress(
+            scenario_label="global",
+            phase="lake update",
+            cmd=["lake", "update"],
+            cwd=shared_workdir,
+            log_dir=shared_workdir / "Cmd",
+            label="lake_update_global",
+            timeout_s=args.lake_timeout_s,
+        )
+
     rc_all = 0
     for sc_dir in all_scenarios:
         sc_meta = load_yaml(sc_dir / 'scenario.yaml')
         scenario_id = sc_meta['id']
         scenario_run_id = make_run_id(scenario_id)
-
-        workdir = Path(os.getenv("LEANATLAS_E2E_WORKDIR", "")) if False else Path()
-        tmp_root = Path(os.path.abspath(os.path.join(repo_root, '.cache', 'leanatlas', 'e2e_scenarios')))
-        tmp_root.mkdir(parents=True, exist_ok=True)
-        workdir = tmp_root / f"{scenario_id}__{scenario_run_id}"
-        if workdir.exists():
-            shutil.rmtree(workdir)
-        shutil.copytree(fixture_root, workdir)
-        cache_policy = ensure_workspace_lake_packages(
-            repo_root=repo_root,
-            workspace_root=workdir,
-            purpose=f"e2e_scenario:{scenario_id}",
+        scenario_label = f"{scenario_id} ({scenario_run_id})"
+        print(f"[e2e-scenarios] start {scenario_label}", flush=True)
+        workdir = shared_workdir
+        print(f"[e2e-scenarios] {scenario_label} warm-reset shared workspace -> {workdir}", flush=True)
+        _run_call_with_heartbeat(
+            label=f"{scenario_label} warm-reset workspace",
+            fn=lambda: reset_workdir_preserve_lake(fixture_root=fixture_root, workdir=workdir),
         )
+        cache_policy = _run_call_with_heartbeat(
+            label=f"{scenario_label} ensure workspace lake cache",
+            fn=lambda: ensure_workspace_lake_packages(
+                repo_root=repo_root,
+                workspace_root=workdir,
+                purpose=f"e2e_scenario:{scenario_id}",
+            ),
+        )
+        print(f"[e2e-scenarios] {scenario_label} workspace/cache ready", flush=True)
         if not cache_policy.ok:
             print(f"[e2e-scenarios][FAIL] shared cache policy not satisfied: {cache_policy.note}")
             rc_all = 2
             continue
 
         if args.update:
-            subprocess.run(['lake', 'update'], cwd=str(workdir))
+            _run_cmd_with_progress(
+                scenario_label=scenario_label,
+                phase="lake update",
+                cmd=['lake', 'update'],
+                cwd=workdir,
+                log_dir=workdir / "Cmd",
+                label='lake_update',
+                timeout_s=args.lake_timeout_s,
+            )
 
         # scenario artifacts root
         artifacts_root = repo_root / 'artifacts' / 'e2e_scenarios' / scenario_id / scenario_run_id
@@ -535,6 +784,7 @@ def main() -> int:
         for i, step in enumerate(sc_meta.get('steps', []) or []):
             kind = step.get('kind')
             step_name = f"step_{i:02d}_{kind}"
+            print(f"[e2e-scenarios] {scenario_label} {step_name} start", flush=True)
             if kind == 'run_case':
                 case_id = step['case_id']
                 case_path = golden_root / case_id
@@ -549,6 +799,8 @@ def main() -> int:
                     out_dir=out_dir,
                     expected_override=expected_override,
                     mode="OPERATOR",
+                    scenario_label=scenario_label,
+                    lake_timeout_s=args.lake_timeout_s,
                 )
                 # expectation check
                 expect = expected_override or (meta.get('expected', {}) or {})
@@ -568,6 +820,7 @@ def main() -> int:
                         step_results.append({"step": i, "kind": kind, "case_id": case_id, "ok": False, "reason": f"triage_level {res.get('triage_level')} != {exp_level}", "result": res})
                     else:
                         step_results.append({"step": i, "kind": kind, "case_id": case_id, "ok": True, "result": res})
+                print(f"[e2e-scenarios] {scenario_label} {step_name} done ok={step_results[-1].get('ok', False)}", flush=True)
 
             elif kind == 'apply_overlay':
                 overlay_ref = step['overlay']
@@ -576,6 +829,7 @@ def main() -> int:
                 touched = copy_overlay(overlay_path, workdir)
                 patch_scope = check_patch_scope(problem_slug=step.get("problem_slug_for_scope", "dummy"), mode=mode, touched_files=touched)
                 step_results.append({"step": i, "kind": kind, "overlay": overlay_ref, "mode": mode, "ok": True, "touched_files": touched, "patch_scope": patch_scope})
+                print(f"[e2e-scenarios] {scenario_label} {step_name} done ok=True", flush=True)
 
             elif kind == 'lake_build':
                 target = step['target']
@@ -587,7 +841,15 @@ def main() -> int:
                 out_chunks: List[str] = []
                 diags: List[Dict[str, Any]] = []
                 for t in targets:
-                    rc_i, out_i, elapsed_i = lake_build(workdir, t)
+                    rc_i, out_i, elapsed_i = lake_build(
+                        workdir,
+                        t,
+                        scenario_label=scenario_label,
+                        phase=f"{step_name} lake build {t}",
+                        log_dir=artifacts_root / "Cmd",
+                        label=f"{step_name}__lake_build_{t.replace('.', '_')}",
+                        timeout_s=args.lake_timeout_s,
+                    )
                     elapsed_ms_total += int(elapsed_i)
                     out_chunks.append(f"$ lake build {t}\n{out_i}")
                     diags.extend(parse_diagnostics(out_i))
@@ -612,6 +874,7 @@ def main() -> int:
                     step_results.append({**rep, "ok": False, "reason": f"rc {rc} != {expect_rc}"})
                 else:
                     step_results.append({**rep, "ok": True})
+                print(f"[e2e-scenarios] {scenario_label} {step_name} done ok={step_results[-1].get('ok', False)}", flush=True)
             elif kind == 'run_cmd':
                 step_ok = True
                 raw_cmd = step.get('cmd') or []
@@ -642,26 +905,37 @@ def main() -> int:
                 env = dict(os.environ)
                 for k, v in (step.get('env') or {}).items():
                     env[str(k)] = subst(str(v))
-
-                start = time.time()
-                p = subprocess.run(cmd, cwd=str(cwd), env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-                elapsed_ms = int((time.time() - start) * 1000)
+                cmd_log_dir = artifacts_root / "Cmd"
+                cmd_log_dir.mkdir(parents=True, exist_ok=True)
+                res = _run_cmd_with_progress(
+                    scenario_label=scenario_label,
+                    phase=f"{step_name} run_cmd",
+                    cmd=cmd,
+                    cwd=Path(cwd),
+                    log_dir=cmd_log_dir,
+                    label=f"{step_name}__run_cmd",
+                    timeout_s=max(1, int(step.get('timeout_s', args.step_timeout_s))),
+                    env=env,
+                )
+                p_rc = int(res.span.get("exit_code", 1))
+                p_out = (res.stdout_text or "") + (f"\n{res.stderr_text}" if res.stderr_text else "")
+                elapsed_ms = int(res.span.get("duration_ms", 0))
                 rep = {
                     "step": i,
                     "kind": kind,
                     "cmd": cmd,
                     "cwd": str(cwd),
-                    "rc": int(p.returncode),
+                    "rc": p_rc,
                     "elapsed_ms": int(elapsed_ms),
-                    "output": p.stdout,
+                    "output": p_out,
                 }
                 (artifacts_root / f"{step_name}__run_cmd.json").write_text(json.dumps(rep, indent=2, sort_keys=True, ensure_ascii=False) + '\n', encoding='utf-8')
 
                 expect_rc = int(step.get('expect_rc', 0))
-                if p.returncode != expect_rc:
+                if p_rc != expect_rc:
                     step_ok = False
                     ok = False
-                    step_results.append({**rep, "ok": False, "reason": f"rc {p.returncode} != {expect_rc}"})
+                    step_results.append({**rep, "ok": False, "reason": f"rc {p_rc} != {expect_rc}"})
                     continue
 
                 # Optional outputs checks
@@ -696,6 +970,7 @@ def main() -> int:
 
                 rep2 = {**rep, "outputs": out_checks}
                 step_results.append({**rep2, "ok": bool(step_ok)})
+                print(f"[e2e-scenarios] {scenario_label} {step_name} done ok={bool(step_ok)}", flush=True)
 
             elif kind == 'clean':
                 # Conservative clean inside workspace
@@ -705,10 +980,12 @@ def main() -> int:
                 if (workdir / "artifacts").exists():
                     shutil.rmtree(workdir / "artifacts", ignore_errors=True)
                 step_results.append({"step": i, "kind": kind, "ok": True})
+                print(f"[e2e-scenarios] {scenario_label} {step_name} done ok=True", flush=True)
 
             else:
                 ok = False
                 step_results.append({"step": i, "kind": kind, "ok": False, "reason": "unknown kind"})
+                print(f"[e2e-scenarios] {scenario_label} {step_name} done ok=False", flush=True)
 
         scenario_report = {
             "schema": "leanatlas.e2e_scenario_report",
@@ -722,15 +999,15 @@ def main() -> int:
         (artifacts_root / "ScenarioReport.json").write_text(json.dumps(scenario_report, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
 
         if ok:
-            print(f"[e2e-scenarios][OK] {scenario_id} ({scenario_run_id})")
+            print(f"[e2e-scenarios][OK] {scenario_id} ({scenario_run_id})", flush=True)
         else:
-            print(f"[e2e-scenarios][FAIL] {scenario_id} ({scenario_run_id})")
+            print(f"[e2e-scenarios][FAIL] {scenario_id} ({scenario_run_id})", flush=True)
             rc_all = 1
 
-        if not args.keep_workdir:
-            shutil.rmtree(workdir, ignore_errors=True)
-        else:
-            print(f"[e2e-scenarios] kept workdir: {workdir}")
+    if args.keep_workdir:
+        print(f"[e2e-scenarios] kept shared workdir: {shared_workdir}", flush=True)
+    else:
+        print(f"[e2e-scenarios] shared workdir: {shared_workdir}", flush=True)
 
     return rc_all
 

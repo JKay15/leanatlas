@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "graph_mode": {
+            "const": "SYSTEM_EXCEPTION_MODE"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "exception_context"
+        ]
+      }
+    }
+  ],
+  "properties": {
+    "edges": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "SERIAL",
+              "PARALLEL",
+              "NESTED",
+              "RACE",
+              "QUORUM",
+              "BARRIER"
+            ],
+            "type": "string"
+          },
+          "to": {
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "exception_context": {
+      "additionalProperties": false,
+      "properties": {
+        "root_cause_signature": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_run_key": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "trigger_reason": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "trigger_reason",
+        "root_cause_signature"
+      ],
+      "type": "object"
+    },
+    "graph_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "graph_mode": {
+      "enum": [
+        "STATIC_USER_MODE",
+        "SYSTEM_EXCEPTION_MODE"
+      ],
+      "type": "string"
+    },
+    "merge_policy": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "nodes": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "loop_id": {
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "type": "string"
+          },
+          "node_id": {
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "WORKER",
+              "RECOVERY",
+              "PROPOSER",
+              "REVIEWER",
+              "JUDGE"
+            ],
+            "type": "string"
+          },
+          "run_key": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "loop_id"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "scheduler": {
+      "additionalProperties": false,
+      "properties": {
+        "barrier_points": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "max_parallel_branches": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "version": {
+      "const": "1",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "graph_id",
+    "graph_mode",
+    "nodes",
+    "edges"
+  ],
+  "title": "LoopGraphSpec",
+  "type": "object"
+}

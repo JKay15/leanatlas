@@ -1,0 +1,29 @@
+{
+  "agent_provider_id": "codex_cli",
+  "confidence": 0.91,
+  "findings": [
+    {
+      "evidence": [
+        "artifacts/review/f1.md"
+      ],
+      "finding_id": "finding.001",
+      "repairable": false,
+      "severity": "INFO",
+      "summary": "No issues."
+    }
+  ],
+  "generated_at_utc": "2026-03-05T00:00:00Z",
+  "instruction_scope_refs": [
+    "docs/contracts/FORMALIZATION_GOVERNANCE_CONTRACT.md"
+  ],
+  "resolved_invocation_signature": "codex exec review",
+  "review_history_consistency": {
+    "contradiction_count": 0,
+    "contradiction_refs": [],
+    "nitpick_refs": [],
+    "potential_nitpick_count": 0
+  },
+  "scope_ref": "docs/contracts/FORMALIZATION_GOVERNANCE_CONTRACT.md",
+  "verdict": "PASS",
+  "version": "0.1"
+}

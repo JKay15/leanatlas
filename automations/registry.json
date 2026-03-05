@@ -91,6 +91,7 @@
         ]
       },
       "advisor": {
+        "agent_provider": "codex_cli",
         "enabled": true,
         "when": "findings",
         "skill": "leanatlas-automations",
@@ -162,6 +163,7 @@
         ]
       },
       "advisor": {
+        "agent_provider": "codex_cli",
         "enabled": true,
         "when": "findings",
         "skill": "leanatlas-automations",
@@ -263,6 +265,7 @@
         ]
       },
       "advisor": {
+        "agent_provider": "codex_cli",
         "enabled": true,
         "when": "findings",
         "skill": "leanatlas-automations",
@@ -330,6 +333,7 @@
         ]
       },
       "advisor": {
+        "agent_provider": "codex_cli",
         "enabled": true,
         "when": "findings",
         "skill": "leanatlas-automations",
@@ -405,6 +409,7 @@
         ]
       },
       "advisor": {
+        "agent_provider": "codex_cli",
         "enabled": true,
         "when": "findings",
         "skill": "leanatlas-automations",
@@ -464,6 +469,7 @@
         ]
       },
       "advisor": {
+        "agent_provider": "codex_cli",
         "enabled": true,
         "when": "findings",
         "skill": "leanatlas-automations",
@@ -558,6 +564,7 @@
         ]
       },
       "advisor": {
+        "agent_provider": "codex_cli",
         "enabled": true,
         "when": "findings",
         "skill": "leanatlas-automations",

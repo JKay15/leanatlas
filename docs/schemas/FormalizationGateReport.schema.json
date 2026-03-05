@@ -1,0 +1,243 @@
+{
+  "$defs": {
+    "check": {
+      "additionalProperties": false,
+      "properties": {
+        "details": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pass": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "pass",
+        "details"
+      ],
+      "type": "object"
+    },
+    "gate": {
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/check"
+          },
+          "type": "array"
+        },
+        "counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/issue"
+          },
+          "type": "array"
+        },
+        "pass": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "pass",
+        "checks",
+        "counts",
+        "issues"
+      ],
+      "type": "object"
+    },
+    "issue": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "S1_CRITICAL",
+            "S2_MAJOR",
+            "S3_MINOR",
+            "INFO"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "severity"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://leanatlas.local/schemas/FormalizationGateReport.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "formalization_gate": {
+            "properties": {
+              "pass": {
+                "const": true
+              }
+            },
+            "required": [
+              "pass"
+            ]
+          },
+          "mapping_gate": {
+            "properties": {
+              "pass": {
+                "const": true
+              }
+            },
+            "required": [
+              "pass"
+            ]
+          }
+        },
+        "required": [
+          "formalization_gate",
+          "mapping_gate"
+        ]
+      },
+      "then": {
+        "properties": {
+          "gate_pass": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "properties": {
+              "formalization_gate": {
+                "properties": {
+                  "pass": {
+                    "const": false
+                  }
+                },
+                "required": [
+                  "pass"
+                ]
+              }
+            },
+            "required": [
+              "formalization_gate"
+            ]
+          },
+          {
+            "properties": {
+              "mapping_gate": {
+                "properties": {
+                  "pass": {
+                    "const": false
+                  }
+                },
+                "required": [
+                  "pass"
+                ]
+              }
+            },
+            "required": [
+              "mapping_gate"
+            ]
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "gate_pass": {
+            "const": false
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "checks": {
+      "items": {
+        "$ref": "#/$defs/check"
+      },
+      "type": "array"
+    },
+    "counts": {
+      "additionalProperties": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "type": "object"
+    },
+    "formalization_gate": {
+      "$ref": "#/$defs/gate"
+    },
+    "gate_pass": {
+      "type": "boolean"
+    },
+    "generated_at_utc": {
+      "type": "string"
+    },
+    "issues": {
+      "items": {
+        "$ref": "#/$defs/issue"
+      },
+      "type": "array"
+    },
+    "ledger_path": {
+      "type": "string"
+    },
+    "mapping_gate": {
+      "$ref": "#/$defs/gate"
+    },
+    "policy_version": {
+      "type": "string"
+    },
+    "scope_categories": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "stage": {
+      "enum": [
+        "candidate",
+        "draft",
+        "freeze"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "generated_at_utc",
+    "policy_version",
+    "stage",
+    "gate_pass",
+    "formalization_gate",
+    "mapping_gate",
+    "checks",
+    "counts",
+    "issues"
+  ],
+  "title": "FormalizationGateReport",
+  "type": "object"
+}

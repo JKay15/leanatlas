@@ -1,0 +1,14 @@
+id: scenario_loop_exception_recovery_chain
+tier: core
+execution:
+  enabled: true
+  workspace: shared
+steps:
+- kind: run_case
+  case_id: core_loop_repair_success
+- kind: run_case
+  case_id: core_type_mismatch
+- kind: run_case
+  case_id: core_loop_audit_block_s1
+- kind: run_case
+  case_id: core_name_notation

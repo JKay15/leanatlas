@@ -5,7 +5,46 @@
       "items": {
         "properties": {
           "advisor": {
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "enabled": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "enabled"
+                  ]
+                },
+                "then": {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "exec_cmd"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "agent_provider"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "agent_profile"
+                      ]
+                    }
+                  ]
+                }
+              }
+            ],
             "properties": {
+              "agent_profile": {
+                "type": "string"
+              },
+              "agent_provider": {
+                "type": "string"
+              },
               "enabled": {
                 "type": "boolean"
               },

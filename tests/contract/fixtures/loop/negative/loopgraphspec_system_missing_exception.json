@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "graph_id": "graph.demo.v1",
+  "graph_mode": "SYSTEM_EXCEPTION_MODE",
+  "nodes": [
+    {"node_id": "n1", "loop_id": "loop.demo.v1"}
+  ],
+  "edges": []
+}

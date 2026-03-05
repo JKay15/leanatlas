@@ -103,11 +103,10 @@ Phase6 is about evaluating an agent against a fixed harness.
 Intent:
 
 - The runner defines the workspace and contracts.
-- The agent is invoked via `--agent-cmd`.
+- The agent is invoked via provider/profile (`--agent-provider`, optional `--agent-profile`) or legacy `--agent-cmd`.
 - Graders score based on artifacts.
 
 Key invariant:
 
 - Required reporting artifacts must exist.
 - `pins_used.json` is runner-owned to avoid punishing agents for missing bookkeeping.
-

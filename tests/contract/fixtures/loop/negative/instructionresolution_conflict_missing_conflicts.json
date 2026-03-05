@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "target_path": "Problems/demo/Proof.lean",
+  "applied_chain": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "scope": "ROOT",
+      "precedence": 0
+    }
+  ],
+  "resolution_status": "CONFLICT_REJECTED",
+  "final_mode": "OPERATOR"
+}

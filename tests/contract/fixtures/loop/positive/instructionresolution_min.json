@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "target_path": "Problems/demo/Proof.lean",
+  "applied_chain": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "scope": "ROOT",
+      "precedence": 0
+    }
+  ],
+  "resolution_status": "RESOLVED",
+  "final_mode": "OPERATOR",
+  "generated_at_utc": "2026-03-05T00:00:00Z"
+}

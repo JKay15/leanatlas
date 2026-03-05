@@ -20,3 +20,8 @@ See: `docs/agents/PLANS.md`
 - 2026-03-04: Onboarding banner locale upgrade: `20260304_onboarding_banner_locale_upgrade.md`
 - 2026-03-04: FILE_INDEX tracked-only generation: `20260304_file_index_tracked_only.md`
 - 2026-03-03: Generator newline canonicalization: `20260303_generator_newline_canonicalization.md`
+- 2026-03-05: Wave review-closure hardening: `20260305_wave_review_closure_hardening_v0.md`
+- 2026-03-05: Dynamic timeout reconnect policy: `20260305_dynamic_timeout_reconnect_policy_v0.md`
+- 2026-03-05: Wave isolated-review hang recovery hardening: `20260305_wave_review_workspace_hang_fix_v0.md`
+- 2026-03-05: LOOP Wave-C hardening backlog: `20260305_loop_waveC_hardening_backlog_v0.md`
+- 2026-03-05: Master closeout before LangChain/LangGraph adaptation: `20260305_loop_full_closeout_before_langgraph_v0.md`
