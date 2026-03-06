@@ -18,6 +18,14 @@ STRICT completion gate (hard rule):
 Design principle:
 - only strict/publication-grade outcomes pay full review cost; low-risk iterations stay efficient.
 
+Maintainer-loop requirement for non-trivial system changes:
+- `ExecPlan -> graph_spec -> test node -> implement node -> verify node -> AI review node -> LOOP closeout`
+- For maintainer work on system surfaces, this sequence must be materialized as a LOOP graph before routine implementation begins.
+- manual closeout is exceptional only.
+- If AI review cannot complete after bounded tooling attempts, closeout may use `TRIAGED_TOOLING` with persisted attempt evidence instead of silently skipping review.
+- A maintainer `LOOP closeout` node must still execute after `AI review` reaches `FAILED` or `TRIAGED`; use graph-level closeout materialization rather than leaving the run in implicit `UPSTREAM_BLOCKED`.
+- That closeout node must not improve the terminal class decided by `AI review`; it records the same terminal state (`PASSED|FAILED|TRIAGED`) rather than overriding it.
+
 ## 1) Execution meta-loop states
 
 Execution track for the Wave process:
@@ -74,9 +82,37 @@ Provider-routing evidence (required for every Wave run):
 Hard rule:
 - the resolved provider invocation must match configured provider selection (for example `codex_cli -> codex exec review`).
 - provider-invoked reviewers MUST be launched with repo-root context and instruction scope visibility (`instruction_scope_refs` must include active `AGENTS.md` chain references).
+- maintainer AI review nodes MUST execute through a deterministic reviewer runner rather than ad-hoc shell closeout.
+- review scope MUST be a non-empty file list rooted under the repository.
+- raw provider capture and LOOP closeout MUST be separate stages: `stdout/stderr/response artifacts -> CanonicalReviewResult -> REVIEW_RUN|REVIEW_SKIPPED`.
+- reviewer launch MUST freeze a visibility/context pack before invocation. That pack MUST include:
+  - normalized `scope_paths`
+  - `scope_fingerprint`
+  - `instruction_scope_refs`
+  - `required_context_refs`
+  - provider routing / semantic-closeout expectations
+- the visibility/context pack MUST also freeze an `observation_policy` section so later auditors can see exactly which waiting rules governed the attempt.
+- `instruction_scope_refs` MUST cover the active `AGENTS.md` chain induced by the scoped files and `required_context_refs`; arbitrary unrelated `AGENTS.md` files are insufficient.
+- maintainer session materializers must derive that active chain from frozen maintainer inputs, including `execplan_ref`, not only mutable review scope files.
+- maintainer materializers SHOULD canonicalize `instruction_scope_refs` to that active chain before hashing run identity so unrelated extra refs cannot fork a review session.
+- `required_context_refs` MUST be a non-empty file-scoped list of immutable context evidence needed by the reviewer (for example active ExecPlan, relevant contracts/tests, latest verify evidence).
 - provider-invoked reviewers MUST use bounded execution (hard timeout + idle timeout). Unbounded reviewer invocations are forbidden.
+- reviewer runners MUST distinguish transport idle from semantic idle. Stderr warnings or other non-semantic chatter MUST NOT reset the semantic-idle clock.
+- semantic progress is limited to canonical response growth, provider event-stream growth on declared semantic streams, or deterministic extraction/materialization of a terminal assistant response.
+- canonical response growth on declared semantic activity paths MUST also suppress transport-idle timeout; a reviewer that is steadily extending `response_ref` is active, not silent.
+- subjective early termination is forbidden. Maintainers must not stop a live reviewer attempt merely because it feels slow while the provider is still within the frozen observation policy.
+- high-thinking provider modes are expected to be slow; operator impatience is not a valid closeout reason.
+- minimum observation window for `codex_cli` is 600 seconds.
+- two-minute impatience aborts are invalid for `codex_cli`; short waits of that class are policy violations unless an explicitly different frozen provider contract says otherwise.
+- default `codex_cli` observation policy:
+  - 60-minute hard timeout
+  - 10-minute transport-idle default
+  - 20-minute semantic-idle default
+- if semantic progress does not occur within the configured semantic-idle timeout, the runner MUST terminate the provider attempt as `SEMANTIC_IDLE_TIMEOUT` and treat the round as unresolved tooling triage rather than waiting indefinitely.
 - reconnect-aware grace is allowed only as a bounded extension (default cap: max 5 reconnect events); reconnect grace must not remove hard-timeout fallback.
 - if reviewer execution times out/stalls, the run MUST persist command evidence (`timed_out=true`, `exit_code=124`, stdout/stderr refs) and treat that review round as unresolved blocker (`UNRESOLVED_BLOCKER` / `REVIEW_UNRESOLVED_BLOCKER`) instead of hanging.
+- partial or streamed `response_ref` bytes do not override timeout/stale classification; if the provider times out or the scoped inputs drift, the round MUST NOT be accepted as `REVIEW_RUN` merely because the response file is non-empty.
+- if any file in `scope_paths` is deleted, renamed, or otherwise becomes unreadable during execution, the runner MUST still record the round as `STALE_INPUT` with attempt evidence rather than aborting before closeout evidence is written.
 - timeout command evidence MUST be materialized as `evidence.timeout_command_span` with fields:
   - `timed_out=true`
   - `exit_code=124`
@@ -85,6 +121,15 @@ Hard rule:
 - if final reason is `REVIEW_WALL_CLOCK_BUDGET_EXHAUSTED`, `evidence.timeout_command_span` is mandatory (machine-checkable blocking gate).
 - if `REVIEW_REPAIR_LOOP` occurs, terminal closure MUST come from a later AI review round.
 - reusing the same `prompt_ref` or `response_ref` across distinct AI review rounds is forbidden.
+- every maintainer AI review attempt MUST materialize a canonical review payload that validates against `CanonicalReviewResult.schema.json`.
+- response artifact MUST exist and be non-empty before `REVIEW_RUN`.
+- provider JSON event stream may be used as a fallback semantic source only when the runner deterministically extracts a terminal assistant message and materializes the canonical `response_ref` from it.
+- acceptable fallback extraction shapes include terminal assistant message carriers such as `event.message.assistant`, `event.item.assistant_message`, and `event.item.agent_message`; non-assistant `final_message` / `last_message` fallbacks are forbidden.
+- if the provider exits without a non-empty canonical response and without an acceptable terminal assistant event, the runner MUST classify the attempt as `NO_TERMINAL_EVENT` (or stricter invalid-response subtype) and MUST NOT accept the round as `REVIEW_RUN`.
+- scope fingerprint mismatch makes the attempt stale and unusable for closeout; the stale attempt must be recorded, not silently accepted.
+- scope observed stamp mismatch also makes the attempt stale, including mutate-and-restore rewrites that restore the original content before process exit.
+- reviewer attempts and their command evidence MUST be persisted under `artifacts/reviews/`.
+- bounded failed attempts may terminate as `TRIAGED_TOOLING`, but only with append-only attempt evidence showing why no valid `response_ref` was accepted.
 
 Reviewer-memory consistency evidence (required for every Wave run):
 - `review_history_consistency` summary with:
@@ -180,6 +225,8 @@ Suggested artifact paths:
 ## 6) Codex execution hook (non-normative example)
 
 Recommended AI review invocation:
-- `codex exec review --reviewer codex --prompt-file <path> --out <path>`
+- `codex exec review -o <path> "$(cat <prompt-file>)"`
+
+The persisted `prompt_ref` still points at `<prompt-file>` even when the provider CLI consumes prompt text positionally rather than via a prompt-file flag.
 
 Equivalent `codex exec` wrappers are allowed if they preserve the required review evidence fields.

@@ -144,6 +144,9 @@ def run_cmd(
     label: str,
     timeout_s: Optional[int] = None,
     idle_timeout_s: Optional[int] = None,
+    semantic_idle_timeout_s: Optional[int] = None,
+    semantic_activity_streams: Optional[Sequence[str]] = None,
+    semantic_activity_paths: Optional[Sequence[Union[str, Path]]] = None,
     reconnect_grace_s: Optional[int] = None,
     reconnect_max_events: int = 0,
     reconnect_pattern: str = r"\breconnect(?:ing|ed|ion)?\b",
@@ -167,6 +170,12 @@ def run_cmd(
       optional timeout.
     idle_timeout_s:
       optional inactivity timeout in seconds (stdout/stderr unchanged).
+    semantic_idle_timeout_s:
+      optional timeout in seconds for lack of semantic progress on declared semantic streams/files.
+    semantic_activity_streams:
+      optional subset of {"stdout", "stderr"} counted as semantic progress when their files grow.
+    semantic_activity_paths:
+      optional extra file paths counted as semantic progress when their size increases.
     reconnect_grace_s:
       optional extra grace seconds granted when reconnect markers appear in output.
     reconnect_max_events:
@@ -200,13 +209,26 @@ def run_cmd(
     t0 = time.time()
     hard_timeout_s = _as_positive_timeout(timeout_s)
     idle_timeout_val_s = _as_positive_timeout(idle_timeout_s)
+    semantic_idle_timeout_val_s = _as_positive_timeout(semantic_idle_timeout_s)
     reconnect_grace_val_s = _as_positive_timeout(reconnect_grace_s)
     reconnect_max_events_val = _as_nonnegative_int(reconnect_max_events)
     reconnect_re: Optional[re.Pattern[str]] = None
     if reconnect_grace_val_s is not None and reconnect_max_events_val > 0:
         reconnect_re = re.compile(reconnect_pattern, flags=re.IGNORECASE)
     timed_out = False
+    timeout_kind: Optional[str] = None
     cmd_env = _prepare_env(cwd, env)
+    semantic_streams = {str(name).strip().lower() for name in (semantic_activity_streams or ()) if str(name).strip()}
+    bad_streams = sorted(stream for stream in semantic_streams if stream not in {"stdout", "stderr"})
+    if bad_streams:
+        raise ValueError(f"semantic_activity_streams must only contain stdout/stderr; got: {', '.join(bad_streams)}")
+    semantic_paths: list[Path] = []
+    base_cwd = Path(cwd).resolve()
+    for raw in semantic_activity_paths or ():
+        p = Path(raw)
+        if not p.is_absolute():
+            p = base_cwd / p
+        semantic_paths.append(p.resolve())
 
     with stdout_path.open("w", encoding="utf-8", errors="replace") as out_f, stderr_path.open(
         "w", encoding="utf-8", errors="replace"
@@ -223,9 +245,16 @@ def run_cmd(
         start_mono = time.monotonic()
         hard_deadline_mono = (start_mono + hard_timeout_s) if hard_timeout_s is not None else None
         last_activity_mono = start_mono
+        last_semantic_activity_mono = start_mono
         idle_extend_until_mono = start_mono
         last_stdout_size = 0
         last_stderr_size = 0
+        semantic_stdout_size = 0
+        semantic_stderr_size = 0
+        semantic_path_sizes = {
+            path: (path.stat().st_size if path.exists() else 0)
+            for path in semantic_paths
+        }
         scan_stdout_pos = 0
         scan_stderr_pos = 0
         reconnect_events_applied = 0
@@ -238,12 +267,12 @@ def run_cmd(
                 break
 
             now = time.monotonic()
+            stdout_size = stdout_path.stat().st_size
+            stderr_size = stderr_path.stat().st_size
             should_timeout = False
             if hard_deadline_mono is not None and now >= hard_deadline_mono:
                 should_timeout = True
             elif idle_timeout_val_s is not None:
-                stdout_size = stdout_path.stat().st_size
-                stderr_size = stderr_path.stat().st_size
                 if stdout_size != last_stdout_size or stderr_size != last_stderr_size:
                     last_stdout_size = stdout_size
                     last_stderr_size = stderr_size
@@ -284,6 +313,31 @@ def run_cmd(
                 elif (now - last_activity_mono) >= idle_timeout_val_s:
                     if now >= idle_extend_until_mono:
                         should_timeout = True
+                        timeout_kind = "transport"
+
+            semantic_progress = False
+            if "stdout" in semantic_streams and stdout_size > semantic_stdout_size:
+                semantic_progress = True
+            semantic_stdout_size = stdout_size
+            if "stderr" in semantic_streams and stderr_size > semantic_stderr_size:
+                semantic_progress = True
+            semantic_stderr_size = stderr_size
+            semantic_path_progress = False
+            for path, previous_size in tuple(semantic_path_sizes.items()):
+                current_size = path.stat().st_size if path.exists() else 0
+                if current_size > previous_size:
+                    semantic_progress = True
+                    semantic_path_progress = True
+                semantic_path_sizes[path] = current_size
+            if semantic_path_progress:
+                last_activity_mono = now
+            if semantic_progress:
+                last_semantic_activity_mono = now
+
+            if not should_timeout and semantic_idle_timeout_val_s is not None:
+                if (now - last_semantic_activity_mono) >= semantic_idle_timeout_val_s:
+                    should_timeout = True
+                    timeout_kind = "semantic"
 
             if should_timeout:
                 timed_out = True
@@ -325,6 +379,8 @@ def run_cmd(
     }
     if timed_out:
         span["timed_out"] = True
+    if timeout_kind is not None:
+        span["timeout_kind"] = timeout_kind
     uv_cache_dir = str(cmd_env.get("UV_CACHE_DIR") or "")
     if uv_cache_dir:
         span["uv_cache_dir"] = uv_cache_dir

@@ -84,6 +84,14 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260305_waveB_execution_loop_blocking_gate_v0.md`
 - `docs/agents/execplans/20260305_wave_review_closure_hardening_v0.md`
 - `docs/agents/execplans/20260305_wave_review_workspace_hang_fix_v0.md`
+- `docs/agents/execplans/20260306_loop_composition_presets_v0.md`
+- `docs/agents/execplans/20260306_maintainer_loop_facade_visibility_v0.md`
+- `docs/agents/execplans/20260306_maintainer_loop_requirement_v0.md`
+- `docs/agents/execplans/20260306_maintainer_loop_visibility_wait_policy_v0.md`
+- `docs/agents/execplans/20260306_review_canonical_payload_v0.md`
+- `docs/agents/execplans/20260306_review_runner_hardening_v0.md`
+- `docs/agents/execplans/20260306_review_runner_semantic_idle_v0.md`
+- `docs/agents/execplans/20260306_review_runner_visibility_adapter_v0.md`
 - `docs/agents/execplans/README.md`
 - `docs/agents/execplans/phase3_dedup_gate_v0.md`
 - `docs/agents/execplans/phase3_gc_gate_v0.md`
@@ -186,6 +194,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/schemas/AttemptLogLine.schema.json`
 - `docs/schemas/AuditFlaggedEvent.schema.json`
 - `docs/schemas/AutomationRegistry.schema.json`
+- `docs/schemas/CanonicalReviewResult.schema.json`
 - `docs/schemas/CapabilityManifest.schema.json`
 - `docs/schemas/DedupReport.schema.json`
 - `docs/schemas/E2ECase.schema.json`
@@ -417,14 +426,17 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_hard_requirements_contract.py`
 - `tests/contract/check_judge_determinism.py`
 - `tests/contract/check_loop_assurance_gate_policy.py`
+- `tests/contract/check_loop_composition_presets.py`
 - `tests/contract/check_loop_contract_docs.py`
 - `tests/contract/check_loop_dynamic_exception_entry_policy.py`
 - `tests/contract/check_loop_graph_merge_semantics.py`
+- `tests/contract/check_loop_maintainer_session.py`
 - `tests/contract/check_loop_policy_stress.py`
 - `tests/contract/check_loop_python_sdk_contract_surface.py`
 - `tests/contract/check_loop_resource_arbiter_cas.py`
 - `tests/contract/check_loop_resume_recovery.py`
 - `tests/contract/check_loop_review_history_runtime.py`
+- `tests/contract/check_loop_review_runner.py`
 - `tests/contract/check_loop_runtime_determinism.py`
 - `tests/contract/check_loop_schema_validity.py`
 - `tests/contract/check_loop_sdk_error_envelope_runtime.py`
@@ -433,6 +445,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_loop_wave_blocking_gate.py`
 - `tests/contract/check_loop_wave_execution_policy.py`
 - `tests/contract/check_loop_wave_execution_runtime.py`
+- `tests/contract/check_maintainer_loop_requirement.py`
 - `tests/contract/check_manifest_completeness.py`
 - `tests/contract/check_memory_coverage_has_user_requirements.py`
 - `tests/contract/check_onboarding_agents_compaction.py`
@@ -458,6 +471,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_tools_subprocess_wrapper.py`
 - `tests/contract/check_uv_only_policy.py`
 - `tests/contract/fixtures/loop/negative/auditflagged_accepted_risk_missing_payload.json`
+- `tests/contract/fixtures/loop/negative/canonicalreviewresult_missing_terminal.json`
 - `tests/contract/fixtures/loop/negative/instructionresolution_conflict_missing_conflicts.json`
 - `tests/contract/fixtures/loop/negative/loopdefinition_missing_judge.json`
 - `tests/contract/fixtures/loop/negative/loopgraphspec_system_missing_exception.json`
@@ -469,6 +483,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/fixtures/loop/negative/waveexecutionlooprun_missing_review_evidence.json`
 - `tests/contract/fixtures/loop/negative/waveexecutionlooprun_strict_missing_completion_evidence.json`
 - `tests/contract/fixtures/loop/positive/auditflagged_min.json`
+- `tests/contract/fixtures/loop/positive/canonicalreviewresult_min.json`
 - `tests/contract/fixtures/loop/positive/instructionresolution_min.json`
 - `tests/contract/fixtures/loop/positive/loopdefinition_min.json`
 - `tests/contract/fixtures/loop/positive/loopgraphspec_min.json`
@@ -476,6 +491,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/fixtures/loop/positive/loopsdkcall_ok.json`
 - `tests/contract/fixtures/loop/positive/resourcelease_min.json`
 - `tests/contract/fixtures/loop/positive/waveexecutionlooprun_min.json`
+- `tests/contract/fixtures/review_runner/codex_round2_agent_message.stdout.jsonl`
 - `tests/determinism/check_canonical_json.py`
 - `tests/e2e/README.md`
 - `tests/e2e/__init__.py`
@@ -721,9 +737,13 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tools/loop/dirty_tree_gate.py`
 - `tools/loop/errors.py`
 - `tools/loop/graph_runtime.py`
+- `tools/loop/maintainer.py`
 - `tools/loop/model.py`
+- `tools/loop/presets.py`
 - `tools/loop/resource_arbiter.py`
+- `tools/loop/review_canonical.py`
 - `tools/loop/review_history.py`
+- `tools/loop/review_runner.py`
 - `tools/loop/run_key.py`
 - `tools/loop/runtime.py`
 - `tools/loop/sdk.py`

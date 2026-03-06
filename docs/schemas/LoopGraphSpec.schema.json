@@ -92,6 +92,9 @@
       "items": {
         "additionalProperties": false,
         "properties": {
+          "allow_terminal_predecessors": {
+            "type": "boolean"
+          },
           "loop_id": {
             "pattern": "^[A-Za-z0-9._-]+$",
             "type": "string"

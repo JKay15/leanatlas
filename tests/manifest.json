@@ -1696,6 +1696,90 @@
       "area": [
         "loop",
         "graph",
+        "compositions"
+      ],
+      "goal": "Validate host-local LOOP composition presets for task bootstrap, formalization, dynamic recovery, and maintainer graphs.",
+      "id": "loop_composition_presets",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_composition_presets.py",
+      "tags": [
+        "loop",
+        "graph",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "maintainer",
+        "contracts"
+      ],
+      "goal": "Require non-trivial maintainer work to materialize and close through a maintainer LOOP graph.",
+      "id": "maintainer_loop_requirement",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_maintainer_loop_requirement.py",
+      "tags": [
+        "loop",
+        "maintainer",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "maintainer",
+        "session"
+      ],
+      "goal": "Require non-trivial maintainer work to materialize an upfront session and append-only node journal before closeout.",
+      "id": "loop_maintainer_session",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_maintainer_session.py",
+      "tags": [
+        "loop",
+        "maintainer",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "maintainer",
+        "tooling"
+      ],
+      "goal": "Harden maintainer AI review execution with deterministic scope, timeout, and response-artifact evidence.",
+      "id": "loop_review_runner",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_review_runner.py",
+      "tags": [
+        "loop",
+        "review",
+        "tooling"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "graph",
         "merge_semantics"
       ],
       "goal": "Validate deterministic RACE/QUORUM merge semantics and arbitration winner evidence in LOOP graph runtime.",

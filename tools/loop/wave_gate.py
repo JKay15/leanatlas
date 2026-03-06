@@ -11,10 +11,13 @@ from typing import Any
 
 from .dirty_tree_gate import validate_dirty_tree_snapshot
 
-try:
-    import jsonschema
-except Exception as exc:  # pragma: no cover - dependency guard in runtime env
-    raise RuntimeError("jsonschema is required for wave gate checks") from exc
+
+def _require_jsonschema() -> Any:
+    try:
+        import jsonschema
+    except Exception as exc:  # pragma: no cover - dependency guard in runtime env
+        raise RuntimeError("jsonschema is required for wave gate checks") from exc
+    return jsonschema
 
 
 def _root_from_repo(repo_root: Path | str | None) -> Path:
@@ -31,6 +34,7 @@ def _load_wave_schema(repo_root_str: str) -> dict[str, Any]:
 
 
 def _schema_errors(report: dict[str, Any], *, repo_root: Path) -> list[str]:
+    jsonschema = _require_jsonschema()
     schema = _load_wave_schema(str(repo_root))
     validator = jsonschema.Draft202012Validator(
         schema,
