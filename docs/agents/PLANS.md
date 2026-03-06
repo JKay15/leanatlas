@@ -18,6 +18,19 @@ An ExecPlan should be sufficient for someone unfamiliar with the repo to reprodu
 4) **TDD first**: write/update tests first, then implement, then update docs.
 5) **Clean artifacts**: do not commit temporary logs/artifacts; update `.gitignore` and cleaning scripts when needed.
 
+## Maintainer LOOP rule
+For non-trivial maintainer work on system surfaces, the plan is not the whole process. non-trivial maintainer work MUST materialize a maintainer LOOP graph and close through that graph.
+
+Required sequence:
+- `ExecPlan -> graph_spec -> test node -> implement node -> verify node -> AI review node -> LOOP closeout`
+
+Implications:
+- `ExecPlan` freezes scope and acceptance before code changes.
+- maintainer session materialization must happen before implementation begins; observers should be able to see `GraphSpec.json` plus append-only maintainer session/node-journal artifacts even before closeout.
+- preferred maintainer path: use the Python maintainer facade (`MaintainerLoopSession` or an equivalent canonical helper), not a post-hoc summary-only flow.
+- `test node` must exist before `implement node`; TDD still applies.
+- routine `manual closeout` is not an ordinary maintainer path; it is an exception path only.
+
 ## Where ExecPlans live
 - New plans: `docs/agents/execplans/<YYYYMMDD>_<short_name>.md`
 - One plan solves one thing; split large tasks into multiple plans.

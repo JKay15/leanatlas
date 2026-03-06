@@ -1,26 +1,93 @@
 """LOOP runtime package (Wave-B M1 minimal surface)."""
 
-from .assurance import AssuranceLevel, evaluate_wave_completion_gate, normalize_assurance_level
-from .dirty_tree_gate import collect_dirty_tree_snapshot, run_dirty_tree_gate, validate_dirty_tree_snapshot
-from .errors import LoopErrorEnvelope, LoopException
-from .graph_runtime import DynamicEntryViolation, LoopGraphRuntime
-from .model import EXEC_ALLOWED, ExecutionState, require_execution_transition, validate_execution_trace
-from .review_history import summarize_review_history
-from .resource_arbiter import LoopResourceArbiter, ResourceClass, ResourceConflict
-from .run_key import RunKeyInput, compute_run_key
-from .runtime import LoopRuntime, RuntimeBudgets
-from .sdk import loop, nested, parallel, resume, run, serial
-from .store import LoopStore
-from .wave_gate import assert_wave_execution_report, validate_wave_execution_report
+from __future__ import annotations
+
+from importlib import import_module
+from typing import Any
+
+_EXPORTS = {
+    "AssuranceLevel": (".assurance", "AssuranceLevel"),
+    "DynamicEntryViolation": (".graph_runtime", "DynamicEntryViolation"),
+    "EXEC_ALLOWED": (".model", "EXEC_ALLOWED"),
+    "ExecutionState": (".model", "ExecutionState"),
+    "LoopErrorEnvelope": (".errors", "LoopErrorEnvelope"),
+    "LoopException": (".errors", "LoopException"),
+    "LoopGraphRuntime": (".graph_runtime", "LoopGraphRuntime"),
+    "MaintainerLoopSession": (".maintainer", "MaintainerLoopSession"),
+    "LoopResourceArbiter": (".resource_arbiter", "LoopResourceArbiter"),
+    "LoopRuntime": (".runtime", "LoopRuntime"),
+    "LoopStore": (".store", "LoopStore"),
+    "ResourceClass": (".resource_arbiter", "ResourceClass"),
+    "ResourceConflict": (".resource_arbiter", "ResourceConflict"),
+    "RunKeyInput": (".run_key", "RunKeyInput"),
+    "RuntimeBudgets": (".runtime", "RuntimeBudgets"),
+    "assert_wave_execution_report": (".wave_gate", "assert_wave_execution_report"),
+    "build_dynamic_recovery_bundle": (".presets", "build_dynamic_recovery_bundle"),
+    "build_dynamic_recovery_graph": (".presets", "build_dynamic_recovery_graph"),
+    "build_formalization_bundle": (".presets", "build_formalization_bundle"),
+    "build_formalization_graph": (".presets", "build_formalization_graph"),
+    "build_maintainer_change_bundle": (".presets", "build_maintainer_change_bundle"),
+    "build_maintainer_change_graph": (".presets", "build_maintainer_change_graph"),
+    "build_task_bootstrap_bundle": (".presets", "build_task_bootstrap_bundle"),
+    "build_task_bootstrap_graph": (".presets", "build_task_bootstrap_graph"),
+    "collect_dirty_tree_snapshot": (".dirty_tree_gate", "collect_dirty_tree_snapshot"),
+    "compute_run_key": (".run_key", "compute_run_key"),
+    "compute_review_scope_fingerprint": (".review_runner", "compute_review_scope_fingerprint"),
+    "evaluate_wave_completion_gate": (".assurance", "evaluate_wave_completion_gate"),
+    "close_maintainer_session": (".maintainer", "close_maintainer_session"),
+    "execute_recorded_graph": (".maintainer", "execute_recorded_graph"),
+    "load_canonical_review_result": (".review_canonical", "load_canonical_review_result"),
+    "loop": (".sdk", "loop"),
+    "materialize_maintainer_session": (".maintainer", "materialize_maintainer_session"),
+    "nested": (".sdk", "nested"),
+    "normalize_assurance_level": (".assurance", "normalize_assurance_level"),
+    "parallel": (".sdk", "parallel"),
+    "record_maintainer_node_result": (".maintainer", "record_maintainer_node_result"),
+    "require_execution_transition": (".model", "require_execution_transition"),
+    "resume": (".sdk", "resume"),
+    "run": (".sdk", "run"),
+    "run_dirty_tree_gate": (".dirty_tree_gate", "run_dirty_tree_gate"),
+    "run_review_closure": (".review_runner", "run_review_closure"),
+    "serial": (".sdk", "serial"),
+    "summarize_review_history": (".review_history", "summarize_review_history"),
+    "validate_dirty_tree_snapshot": (".dirty_tree_gate", "validate_dirty_tree_snapshot"),
+    "validate_execution_trace": (".model", "validate_execution_trace"),
+    "validate_wave_execution_report": (".wave_gate", "validate_wave_execution_report"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    try:
+        module_name, attr_name = _EXPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
+    module = import_module(module_name, __name__)
+    value = getattr(module, attr_name)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(_EXPORTS))
 
 __all__ = [
+    "AssuranceLevel",
     "DynamicEntryViolation",
     "EXEC_ALLOWED",
     "ExecutionState",
-    "AssuranceLevel",
+    "build_dynamic_recovery_bundle",
+    "build_dynamic_recovery_graph",
+    "build_formalization_bundle",
+    "build_formalization_graph",
+    "build_maintainer_change_bundle",
+    "build_maintainer_change_graph",
+    "build_task_bootstrap_bundle",
+    "build_task_bootstrap_graph",
+    "close_maintainer_session",
     "LoopErrorEnvelope",
     "LoopException",
     "LoopGraphRuntime",
+    "MaintainerLoopSession",
     "LoopResourceArbiter",
     "LoopStore",
     "LoopRuntime",
@@ -29,14 +96,20 @@ __all__ = [
     "RunKeyInput",
     "RuntimeBudgets",
     "compute_run_key",
+    "compute_review_scope_fingerprint",
     "collect_dirty_tree_snapshot",
+    "execute_recorded_graph",
     "evaluate_wave_completion_gate",
+    "load_canonical_review_result",
     "loop",
+    "materialize_maintainer_session",
     "nested",
     "normalize_assurance_level",
     "parallel",
+    "record_maintainer_node_result",
     "resume",
     "run",
+    "run_review_closure",
     "require_execution_transition",
     "serial",
     "summarize_review_history",

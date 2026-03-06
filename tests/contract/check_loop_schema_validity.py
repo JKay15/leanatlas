@@ -32,6 +32,7 @@ SCHEMA_FILES = {
     "resourcelease": "ResourceLease.schema.json",
     "instructionresolution": "InstructionResolutionReport.schema.json",
     "auditflagged": "AuditFlaggedEvent.schema.json",
+    "canonicalreviewresult": "CanonicalReviewResult.schema.json",
     "loopsdkcall": "LoopSDKCallContract.schema.json",
     "waveexecutionlooprun": "WaveExecutionLoopRun.schema.json",
 }
@@ -105,6 +106,45 @@ def main() -> int:
     for req in ("severity", "category", "evidence_refs", "run_key"):
         if req not in audit_required:
             print(f"[loop-schema][FAIL] AuditFlaggedEvent missing required field `{req}`", file=sys.stderr)
+            bad += 1
+
+    canonical_required = set(raw["canonicalreviewresult"].get("required") or [])
+    for req in (
+        "review_id",
+        "attempt_index",
+        "agent_provider_id",
+        "provider_adapter_id",
+        "status",
+        "reason_code",
+        "terminal",
+        "response_ref",
+    ):
+        if req not in canonical_required:
+            print(f"[loop-schema][FAIL] CanonicalReviewResult missing required field `{req}`", file=sys.stderr)
+            bad += 1
+    canonical_status_enum = (raw["canonicalreviewresult"].get("properties") or {}).get("status", {}).get("enum") or []
+    for req in (
+        "SUCCEEDED",
+        "STALE_INPUT",
+        "COMMAND_FAILED",
+        "REVIEW_TIMEOUT",
+        "SEMANTIC_IDLE_TIMEOUT",
+        "RESPONSE_INVALID",
+        "NO_TERMINAL_EVENT",
+    ):
+        if req not in canonical_status_enum:
+            print(f"[loop-schema][FAIL] CanonicalReviewResult status enum missing `{req}`", file=sys.stderr)
+            bad += 1
+    source_schema = (raw["canonicalreviewresult"].get("properties") or {}).get("semantic_response_source") or {}
+    source_any_of = source_schema.get("anyOf") or []
+    flattened_source_values = {
+        value
+        for branch in source_any_of
+        for value in ((branch.get("enum") or []) if isinstance(branch, dict) else [])
+    }
+    for req in ("response_file", "provider_event_jsonl"):
+        if req not in flattened_source_values:
+            print(f"[loop-schema][FAIL] CanonicalReviewResult semantic_response_source missing `{req}`", file=sys.stderr)
             bad += 1
 
     sdk_required = set(raw["loopsdkcall"]["required"])

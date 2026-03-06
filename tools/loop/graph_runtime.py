@@ -13,6 +13,16 @@ from .store import LoopStore
 EDGE_KINDS = {"SERIAL", "PARALLEL", "NESTED", "RACE", "QUORUM", "BARRIER"}
 TERMINAL_STATES = {"PASSED", "FAILED", "TRIAGED"}
 STATUS_PRIORITY = {"PASSED": 0, "TRIAGED": 1, "FAILED": 2}
+_RESERVED_SUMMARY_KEYS = {
+    "version",
+    "graph_id",
+    "graph_mode",
+    "run_key",
+    "final_status",
+    "return_to_static_flow",
+    "node_decisions",
+    "exception_context",
+}
 
 
 class DynamicEntryViolation(LoopException):
@@ -37,14 +47,34 @@ class LoopGraphRuntime:
         nodes = graph_spec.get("nodes") or []
         edges = graph_spec.get("edges") or []
         node_ids = {n.get("node_id") for n in nodes}
+        outgoing: dict[str, set[str]] = defaultdict(set)
+        incoming_kinds: dict[str, set[str]] = defaultdict(set)
         if not node_ids:
             raise ValueError("graph_spec.nodes must be non-empty")
         for e in edges:
             kind = e.get("kind")
             if kind not in EDGE_KINDS:
                 raise ValueError(f"unsupported edge kind: {kind}")
-            if e.get("from") not in node_ids or e.get("to") not in node_ids:
+            src = str(e.get("from"))
+            dst = str(e.get("to"))
+            if src not in node_ids or dst not in node_ids:
                 raise ValueError("edge references unknown node_id")
+            outgoing[src].add(dst)
+            incoming_kinds[dst].add(str(kind))
+        for node in nodes:
+            node_id = str(node.get("node_id"))
+            if not node.get("allow_terminal_predecessors"):
+                continue
+            if outgoing.get(node_id):
+                raise ValueError("allow_terminal_predecessors is only valid on sink nodes")
+            if not incoming_kinds.get(node_id):
+                raise ValueError("allow_terminal_predecessors requires at least one incoming edge")
+            unsupported_incoming = sorted(incoming_kinds.get(node_id, set()) - {"SERIAL", "PARALLEL", "NESTED", "BARRIER"})
+            if unsupported_incoming:
+                raise ValueError(
+                    "allow_terminal_predecessors only supports SERIAL/PARALLEL/NESTED/BARRIER incoming edges; "
+                    f"got {', '.join(unsupported_incoming)}"
+                )
 
     @staticmethod
     def _topological_batches(graph_spec: dict[str, Any]) -> list[list[str]]:
@@ -125,6 +155,7 @@ class LoopGraphRuntime:
         predecessors: list[str],
         node_states: dict[str, str],
         merge_policy: dict[str, Any],
+        allow_terminal_predecessors: bool = False,
     ) -> dict[str, Any]:
         pred_ids = sorted(dict.fromkeys(predecessors))
         pred_states = {p: node_states.get(p, "FAILED") for p in pred_ids}
@@ -174,7 +205,7 @@ class LoopGraphRuntime:
                 "predecessor_states": pred_states,
             }
 
-        # SERIAL / PARALLEL / NESTED / BARRIER use all-pass gate.
+        # SERIAL / PARALLEL / NESTED / BARRIER use all-pass gate by default.
         if not non_pass:
             return {
                 "execute": True,
@@ -182,6 +213,15 @@ class LoopGraphRuntime:
                 "winner_nodes": pred_ids,
                 "winner_state": "PASSED",
                 "reason_code": "UPSTREAM_ALL_PASS",
+                "predecessor_states": pred_states,
+            }
+        if allow_terminal_predecessors and pred_ids and all(pred_states[p] in TERMINAL_STATES for p in pred_ids):
+            return {
+                "execute": True,
+                "winner_rule": "ALL_TERMINAL_REQUIRED",
+                "winner_nodes": pred_ids,
+                "winner_state": cls._status_worst(list(pred_states.values())),
+                "reason_code": "UPSTREAM_ALL_TERMINAL",
                 "predecessor_states": pred_states,
             }
         blocked_state = pred_states[non_pass[0]]
@@ -204,13 +244,14 @@ class LoopGraphRuntime:
             raise ValueError("incoming edges for one target must share the same kind")
         return next(iter(kinds))
 
-    def execute(
+    def _evaluate_execution(
         self,
         *,
         graph_spec: dict[str, Any],
         node_executor: Callable[[dict[str, Any]], dict[str, Any]],
         unresolved_exception: bool | None = None,
-    ) -> dict[str, Any]:
+        summary_overlay: dict[str, Any] | None = None,
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         self._validate_graph(graph_spec)
         graph_mode = str(graph_spec.get("graph_mode"))
         if graph_mode not in {"STATIC_USER_MODE", "SYSTEM_EXCEPTION_MODE"}:
@@ -228,18 +269,26 @@ class LoopGraphRuntime:
         node_decisions: list[dict[str, Any]] = []
         arbitration_records: list[dict[str, Any]] = []
         node_states: dict[str, str] = {}
+        effective_states: dict[str, str] = {}
 
         for level_idx, batch in enumerate(batches, start=1):
             batch_states: list[str] = []
+            batch_effective_states: list[str] = []
             for node_id in batch:
                 deps = incoming.get(node_id, [])
                 edge_kind = self._edge_kind_for_target(deps)
+                allow_terminal_predecessors = bool(nodes_by_id[node_id].get("allow_terminal_predecessors"))
+                propagated_terminal_state: str | None = None
                 if deps:
+                    gate_node_states = node_states
+                    if allow_terminal_predecessors and (edge_kind or "SERIAL") not in {"RACE", "QUORUM"}:
+                        gate_node_states = effective_states
                     gate = self._evaluate_gate(
                         edge_kind=edge_kind or "SERIAL",
                         predecessors=[d["from"] for d in deps],
-                        node_states=node_states,
+                        node_states=gate_node_states,
                         merge_policy=merge_policy,
+                        allow_terminal_predecessors=allow_terminal_predecessors,
                     )
                     arbitration_records.append(
                         {
@@ -253,6 +302,10 @@ class LoopGraphRuntime:
                             "predecessor_states": gate["predecessor_states"],
                         }
                     )
+                    if gate.get("reason_code") == "UPSTREAM_ALL_TERMINAL":
+                        propagated_terminal_state = self._status_worst(
+                            [gate_node_states.get(d["from"], node_states.get(d["from"], "FAILED")) for d in deps]
+                        )
                     if not gate["execute"]:
                         blocked_state = str(gate.get("blocked_state", "FAILED"))
                         decision = {
@@ -265,13 +318,21 @@ class LoopGraphRuntime:
                         }
                         node_decisions.append(decision)
                         node_states[node_id] = blocked_state
+                        effective_states[node_id] = blocked_state
                         batch_states.append(blocked_state)
+                        batch_effective_states.append(blocked_state)
                         continue
 
                 res = node_executor(nodes_by_id[node_id])
                 state = str(res.get("state", "FAILED"))
                 if state not in TERMINAL_STATES:
                     state = "FAILED"
+                effective_state = state
+                if propagated_terminal_state is not None:
+                    # Terminal-predecessor sinks are bookkeeping nodes: they may execute after
+                    # upstream failure/triage, but must not erase the admitted terminal class
+                    # from the graph summary.
+                    effective_state = self._status_worst([state, propagated_terminal_state])
                 decision = {
                     "level_index": level_idx,
                     "node_id": node_id,
@@ -282,23 +343,22 @@ class LoopGraphRuntime:
                 }
                 node_decisions.append(decision)
                 node_states[node_id] = state
+                effective_states[node_id] = effective_state
                 batch_states.append(state)
+                batch_effective_states.append(effective_state)
             arbitration_records.append(
                 {
                     "graph_id": graph_spec["graph_id"],
                     "level_index": level_idx,
                     "batch_node_ids": batch,
                     "winner_rule": "ALL_PASS_REQUIRED",
-                    "winner_state": self._status_worst(batch_states),
+                    "winner_state": self._status_worst(batch_effective_states or batch_states),
                 }
             )
 
         sink_nodes = sorted([n for n in nodes_by_id if not outgoing.get(n)])
-        sink_states = [node_states.get(n, "FAILED") for n in sink_nodes]
+        sink_states = [effective_states.get(n, node_states.get(n, "FAILED")) for n in sink_nodes]
         final_status = self._status_worst(sink_states)
-
-        for rec in arbitration_records:
-            self.store.append_jsonl("graph/arbitration.jsonl", rec, stream="artifact")
 
         summary = {
             "version": "1",
@@ -310,6 +370,41 @@ class LoopGraphRuntime:
             "node_decisions": node_decisions,
             "exception_context": graph_spec.get("exception_context"),
         }
+        if summary_overlay:
+            overlap = sorted(_RESERVED_SUMMARY_KEYS & set(summary_overlay))
+            if overlap:
+                raise ValueError(
+                    "summary_overlay cannot override core summary fields: "
+                    + ", ".join(overlap)
+                )
+            summary.update(dict(summary_overlay))
+        return summary, arbitration_records
+
+    def _persist_execution(
+        self,
+        *,
+        summary: dict[str, Any],
+        arbitration_records: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        for rec in arbitration_records:
+            self.store.append_jsonl("graph/arbitration.jsonl", rec, stream="artifact")
         summary_path = self.store.append_jsonl("graph/GraphSummary.jsonl", summary, stream="artifact")
-        summary["summary_ref"] = str(summary_path)
-        return summary
+        persisted = dict(summary)
+        persisted["summary_ref"] = str(summary_path)
+        return persisted
+
+    def execute(
+        self,
+        *,
+        graph_spec: dict[str, Any],
+        node_executor: Callable[[dict[str, Any]], dict[str, Any]],
+        unresolved_exception: bool | None = None,
+        summary_overlay: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        summary, arbitration_records = self._evaluate_execution(
+            graph_spec=graph_spec,
+            node_executor=node_executor,
+            unresolved_exception=unresolved_exception,
+            summary_overlay=summary_overlay,
+        )
+        return self._persist_execution(summary=summary, arbitration_records=arbitration_records)

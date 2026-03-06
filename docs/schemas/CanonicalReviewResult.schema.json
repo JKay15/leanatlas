@@ -1,0 +1,126 @@
+{
+  "$id": "https://leanatlas.local/schemas/CanonicalReviewResult.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent_provider_id": {
+      "type": "string"
+    },
+    "attempt_index": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "extraction_kind": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "generated_at_utc": {
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "type": "string"
+    },
+    "provider_adapter_id": {
+      "type": "string"
+    },
+    "provider_event_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "reason_code": {
+      "type": "string"
+    },
+    "response_bytes": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "response_exists": {
+      "type": "boolean"
+    },
+    "response_ref": {
+      "type": "string"
+    },
+    "review_id": {
+      "type": "string"
+    },
+    "semantic_response_source": {
+      "anyOf": [
+        {
+          "enum": [
+            "response_file",
+            "provider_event_jsonl"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "status": {
+      "enum": [
+        "SUCCEEDED",
+        "STALE_INPUT",
+        "COMMAND_FAILED",
+        "REVIEW_TIMEOUT",
+        "SEMANTIC_IDLE_TIMEOUT",
+        "RESPONSE_INVALID",
+        "NO_TERMINAL_EVENT"
+      ],
+      "type": "string"
+    },
+    "stderr_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stdout_ref": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "terminal": {
+      "type": "boolean"
+    },
+    "version": {
+      "const": "1",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "review_id",
+    "attempt_index",
+    "generated_at_utc",
+    "agent_provider_id",
+    "provider_adapter_id",
+    "status",
+    "reason_code",
+    "terminal",
+    "response_ref",
+    "response_exists",
+    "response_bytes"
+  ],
+  "title": "CanonicalReviewResult",
+  "type": "object"
+}
