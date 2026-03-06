@@ -84,6 +84,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260305_waveB_execution_loop_blocking_gate_v0.md`
 - `docs/agents/execplans/20260305_wave_review_closure_hardening_v0.md`
 - `docs/agents/execplans/20260305_wave_review_workspace_hang_fix_v0.md`
+- `docs/agents/execplans/20260306_execplan_closeout_hygiene_v0.md`
 - `docs/agents/execplans/20260306_loop_composition_presets_v0.md`
 - `docs/agents/execplans/20260306_maintainer_loop_facade_visibility_v0.md`
 - `docs/agents/execplans/20260306_maintainer_loop_requirement_v0.md`
@@ -411,6 +412,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_doctor_python_preference_policy.py`
 - `tests/contract/check_english_only_policy.py`
 - `tests/contract/check_exec_span_evidence.py`
+- `tests/contract/check_execplan_closeout_hygiene.py`
 - `tests/contract/check_feedback_ledger_append_only.py`
 - `tests/contract/check_feedback_traceability_policy.py`
 - `tests/contract/check_file_index_ignores_untracked.py`

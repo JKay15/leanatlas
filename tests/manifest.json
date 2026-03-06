@@ -1600,6 +1600,26 @@
     },
     {
       "area": [
+        "docs",
+        "execplan"
+      ],
+      "goal": "Guardrail: stale active 2026-03-06 LOOP execplans must be closed out once outcomes are recorded.",
+      "id": "execplan_closeout_hygiene",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_execplan_closeout_hygiene.py",
+      "tags": [
+        "docs",
+        "contract",
+        "execplan"
+      ]
+    },
+    {
+      "area": [
         "loop",
         "contracts"
       ],
