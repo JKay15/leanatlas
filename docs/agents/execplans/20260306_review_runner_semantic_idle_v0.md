@@ -1,7 +1,7 @@
 ---
 title: Reviewer runner semantic-idle hardening for maintainer LOOP closeout
 owner: codex
-status: active
+status: done
 created: 2026-03-06
 ---
 
@@ -142,3 +142,6 @@ Out of scope:
   - second reviewer pass on the fixes ended as tooling triage because the provider exited without a usable final message (`RESPONSE_EMPTY`):
     - `artifacts/reviews/20260306_review_runner_semantic_idle_review_round2_summary.json`
     - `artifacts/reviews/20260306_review_runner_semantic_idle_review_round2_attempts.md`
+- Status closeout:
+  - this plan is complete; the semantic-idle gate itself landed and verified
+  - the later semantic-progress narrowing debt belongs to the follow-up canonical-payload hardening track, not to this plan's completion status

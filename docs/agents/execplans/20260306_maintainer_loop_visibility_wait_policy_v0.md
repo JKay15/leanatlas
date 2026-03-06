@@ -1,7 +1,7 @@
 ---
 title: Upfront maintainer LOOP materialization and review wait-policy hardening
 owner: codex
-status: active
+status: done
 created: 2026-03-06
 ---
 
@@ -130,4 +130,27 @@ Out of scope:
 - Re-run the targeted checks listed above to confirm rollback.
 
 ## Outcomes & retrospective (fill when done)
-- Pending.
+- Outcome: `DONE (completed via later split follow-ups)`
+- This umbrella plan was effectively completed by the narrower follow-up plans written the same day:
+  - `docs/agents/execplans/20260306_maintainer_loop_facade_visibility_v0.md`
+  - `docs/agents/execplans/20260306_review_runner_visibility_adapter_v0.md`
+  - `docs/agents/execplans/20260306_review_runner_semantic_idle_v0.md`
+  - `docs/agents/execplans/20260306_review_canonical_payload_v0.md`
+- What landed:
+  - maintainer work now materializes a visible session bundle before closeout via `MaintainerLoopSession`
+  - append-only maintainer session / node-journal artifacts are paired with `MaintainerProgress.json`
+  - maintainer review waiting policy explicitly rejects impatience-driven early termination for `codex_cli`
+  - reviewer closeout now runs through visibility/context packs, semantic-idle handling, and canonical review payload extraction
+- Verification/evidence captured in the follow-up plans includes:
+  - `uv run --locked python tests/contract/check_maintainer_loop_requirement.py` PASS
+  - `uv run --locked python tests/contract/check_loop_review_runner.py` PASS
+  - `uv run --locked python tests/contract/check_loop_contract_docs.py` PASS
+  - `uv run --locked python tests/run.py --profile core` PASS
+  - `uv run --locked python tests/run.py --profile nightly` PASS (`agent-eval-real` entries `SKIP` by design because `LEANATLAS_REAL_AGENT_CMD` / `LEANATLAS_REAL_AGENT_PROVIDER` are unset)
+  - `lake build` PASS
+- Final maintainer closeout evidence for the visible-facade/wait-policy endpoint:
+  - `artifacts/loop_runtime/by_key/1f187fcff663529b00c62c70e2774db668167108476dcc6c36b8d024bcfb9686/graph/GraphSummary.jsonl`
+  - `artifacts/reviews/20260306_maintainer_loop_facade_visibility_review_round8_summary.json`
+- Retrospective:
+  - keeping this umbrella plan as `active` after the later split plans landed was bookkeeping debt, not unfinished implementation work
+  - future split plans should either supersede the umbrella plan immediately or update the umbrella outcomes/status in the same change
