@@ -18,7 +18,7 @@ Required routing parameters (provider-neutral):
 - `instruction_scope_refs`
 - `review_history`
 - `review_plan` (optional deterministic reviewer rounds for local execution loop)
-- `assurance_level` (`FAST | LIGHT | STRICT`, default `LIGHT`)
+- `assurance_level` (`FAST | LIGHT | STRICT`, default `FAST`)
 
 Routing/evidence field emission rule:
 - optional routing fields MUST be omitted when unknown/empty; SDK MUST NOT emit `null` or empty-array placeholders that violate schema types.
@@ -30,15 +30,20 @@ The SDK is a facade over LOOP runtime contracts; it must not redefine semantics.
 Post-onboarding default preference requirement:
 - bounded user-facing LOOP defaults MAY be persisted at `.cache/leanatlas/onboarding/loop_preferences.json`
 - committed helper surface for those defaults:
+  - `build_default_review_policy(...)`
   - `build_preference_record(...)`
   - `default_preference_artifact_path(...)`
   - `load_preference_record(...)`
   - `write_preference_record(...)`
   - `resolve_effective_preferences(...)`
 - supported user-facing assurance presets:
-  - `Balanced`
   - `Budget Saver`
+  - `Balanced`
   - `Auditable`
+- `Budget Saver` is the committed default preset for the current mainline path.
+- `FAST + low` is the default reviewer path for the current mainline path.
+- `medium` is a bounded escalation for small-scope high-risk core logic.
+- `STRICT / xhigh` is exceptional and must not be treated as the normal default path.
 - preset storage is advisory and post-onboarding only; later runs may override the stored defaults without mutating the persisted preference artifact
 
 Layering rule:

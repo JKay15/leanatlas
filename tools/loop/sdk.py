@@ -169,7 +169,7 @@ def _build_wave_execution_report(
         "version": "1",
         "wave_id": str(spec.get("wave_id") or spec["loop_id"]),
         "run_key": rt.store.run_key,
-        "assurance_level": str(spec.get("assurance_level") or "LIGHT"),
+        "assurance_level": str(spec.get("assurance_level") or "FAST"),
         "agent_invocation": {
             "agent_provider_id": str(agent_provider or "loop.runtime.default"),
             "resolved_invocation": resolved_invocation,
@@ -305,7 +305,7 @@ def loop(
     instruction_chain_hash: str,
     dependency_pin_set_id: str,
     wave_id: str | None = None,
-    assurance_level: str = "LIGHT",
+    assurance_level: str = "FAST",
 ) -> dict[str, Any]:
     lvl = normalize_assurance_level(assurance_level)
     return {

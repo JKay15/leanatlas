@@ -8,16 +8,22 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-DEFAULT_ASSURANCE_PRESETS = ("Balanced", "Budget Saver", "Auditable")
+DEFAULT_ASSURANCE_PRESETS = ("Budget Saver", "Balanced", "Auditable")
+DEFAULT_ASSURANCE_PRESET = "Budget Saver"
 DEFAULT_FAST_REVIEWER_PROFILES = ("low", "medium")
+DEFAULT_FAST_REVIEWER_PROFILE = "low"
 DEFAULT_AGENT_PROVIDER_ID = "codex_cli"
 DEFAULT_PREFERENCE_ARTIFACT_REL = ".cache/leanatlas/onboarding/loop_preferences.json"
 PREFERENCE_SCHEMA = "leanatlas.loop_user_preferences"
 PREFERENCE_SCHEMA_VERSION = "0.1.0"
+DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE = True
+DEFAULT_MEDIUM_ESCALATION_PROFILE = "medium"
+DEFAULT_MEDIUM_ESCALATION_POLICY = "SMALL_SCOPE_HIGH_RISK_CORE_LOGIC_ONLY"
+DEFAULT_STRICT_EXCEPTION_POLICY = "EXPLICIT_EXCEPTION_ONLY"
 
 _ASSURANCE_LEVEL_BY_PRESET = {
-    "Balanced": "LIGHT",
     "Budget Saver": "FAST",
+    "Balanced": "LIGHT",
     "Auditable": "STRICT",
 }
 
@@ -63,12 +69,25 @@ def default_preference_artifact_path(repo_root: Path) -> Path:
     return repo_root / Path(DEFAULT_PREFERENCE_ARTIFACT_REL)
 
 
+def build_default_review_policy() -> dict[str, Any]:
+    return {
+        "assurance_preset": DEFAULT_ASSURANCE_PRESET,
+        "assurance_level": _ASSURANCE_LEVEL_BY_PRESET[DEFAULT_ASSURANCE_PRESET],
+        "agent_provider_id": DEFAULT_AGENT_PROVIDER_ID,
+        "fast_reviewer_profile": DEFAULT_FAST_REVIEWER_PROFILE,
+        "allow_pyramid_review_for_large_scope": DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE,
+        "medium_escalation_profile": DEFAULT_MEDIUM_ESCALATION_PROFILE,
+        "medium_escalation_policy": DEFAULT_MEDIUM_ESCALATION_POLICY,
+        "strict_exception_policy": DEFAULT_STRICT_EXCEPTION_POLICY,
+    }
+
+
 def build_preference_record(
     *,
-    assurance_preset: str = "Balanced",
+    assurance_preset: str = DEFAULT_ASSURANCE_PRESET,
     agent_provider_id: str = DEFAULT_AGENT_PROVIDER_ID,
-    fast_reviewer_profile: str = "low",
-    allow_pyramid_review_for_large_scope: bool = True,
+    fast_reviewer_profile: str = DEFAULT_FAST_REVIEWER_PROFILE,
+    allow_pyramid_review_for_large_scope: bool = DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE,
 ) -> dict[str, Any]:
     defaults = {
         "assurance_preset": _normalize_preset(assurance_preset),
@@ -90,21 +109,33 @@ def load_preference_record(*, repo_root: Path) -> dict[str, Any]:
     raw = json.loads(path.read_text(encoding="utf-8"))
     defaults = raw.get("defaults", {}) if isinstance(raw, dict) else {}
     return build_preference_record(
-        assurance_preset=defaults.get("assurance_preset", "Balanced"),
+        assurance_preset=defaults.get("assurance_preset", DEFAULT_ASSURANCE_PRESET),
         agent_provider_id=defaults.get("agent_provider_id", DEFAULT_AGENT_PROVIDER_ID),
-        fast_reviewer_profile=defaults.get("fast_reviewer_profile", "low"),
-        allow_pyramid_review_for_large_scope=defaults.get("allow_pyramid_review_for_large_scope", True),
+        fast_reviewer_profile=defaults.get("fast_reviewer_profile", DEFAULT_FAST_REVIEWER_PROFILE),
+        allow_pyramid_review_for_large_scope=defaults.get(
+            "allow_pyramid_review_for_large_scope",
+            DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE,
+        ),
     )
 
 
 def write_preference_record(*, repo_root: Path, record: dict[str, Any]) -> Path:
     normalized = build_preference_record(
-        assurance_preset=record.get("defaults", {}).get("assurance_preset", record.get("assurance_preset", "Balanced")),
+        assurance_preset=record.get("defaults", {}).get(
+            "assurance_preset",
+            record.get("assurance_preset", DEFAULT_ASSURANCE_PRESET),
+        ),
         agent_provider_id=record.get("defaults", {}).get("agent_provider_id", record.get("agent_provider_id", DEFAULT_AGENT_PROVIDER_ID)),
-        fast_reviewer_profile=record.get("defaults", {}).get("fast_reviewer_profile", record.get("fast_reviewer_profile", "low")),
+        fast_reviewer_profile=record.get("defaults", {}).get(
+            "fast_reviewer_profile",
+            record.get("fast_reviewer_profile", DEFAULT_FAST_REVIEWER_PROFILE),
+        ),
         allow_pyramid_review_for_large_scope=record.get("defaults", {}).get(
             "allow_pyramid_review_for_large_scope",
-            record.get("allow_pyramid_review_for_large_scope", True),
+            record.get(
+                "allow_pyramid_review_for_large_scope",
+                DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE,
+            ),
         ),
     )
     path = default_preference_artifact_path(repo_root)
