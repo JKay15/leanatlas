@@ -31,3 +31,6 @@ This means a hand-maintained list here must not be treated as the source of trut
   - `20260306_maintainer_loop_facade_visibility_v0.md`
   - `20260306_review_canonical_payload_v0.md`
   - `20260306_execplan_closeout_hygiene_v0.md`
+  - `20260307_loop_core_parallel_nested_batch_v0.md`
+  - `20260307_loop_mainline_productization_scope_clarity_v0.md`
+  - `20260307_loop_mainline_productization_integration_v0.md`

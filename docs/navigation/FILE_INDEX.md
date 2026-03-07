@@ -42,6 +42,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/EVAL_PROBLEM_PACK_GUIDE.md`
 - `docs/agents/FEEDBACK_LOOP.md`
 - `docs/agents/GLOSSARY.md`
+- `docs/agents/LOOP_MAINLINE.md`
 - `docs/agents/MAINTAINER_INIT_TASKS.md`
 - `docs/agents/MAINTAINER_TODO.md`
 - `docs/agents/MAINTAINER_WORKFLOW.md`
@@ -96,6 +97,8 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260306_review_runner_visibility_adapter_v0.md`
 - `docs/agents/execplans/20260307_batch_supervisor_autopilot_and_human_ingress_v0.md`
 - `docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md`
+- `docs/agents/execplans/20260307_loop_mainline_productization_integration_v0.md`
+- `docs/agents/execplans/20260307_loop_mainline_productization_scope_clarity_v0.md`
 - `docs/agents/execplans/20260307_maintainer_closeout_ref_v0.md`
 - `docs/agents/execplans/20260307_review_orchestration_automation_v0.md`
 - `docs/agents/execplans/README.md`
@@ -439,6 +442,8 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_loop_dynamic_exception_entry_policy.py`
 - `tests/contract/check_loop_graph_merge_semantics.py`
 - `tests/contract/check_loop_graph_parallel_nested_runtime.py`
+- `tests/contract/check_loop_mainline_docs_integration.py`
+- `tests/contract/check_loop_mainline_productization_scope.py`
 - `tests/contract/check_loop_maintainer_session.py`
 - `tests/contract/check_loop_policy_stress.py`
 - `tests/contract/check_loop_python_sdk_contract_surface.py`

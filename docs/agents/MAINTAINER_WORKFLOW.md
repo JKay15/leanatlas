@@ -6,6 +6,10 @@
 The maintenance period also follows AI-native engineering disciplines (no "no verification vibe coding"):
 - `docs/contracts/AI_NATIVE_ENGINEERING_CONTRACT.md`
 
+Current LOOP mainline entry:
+- `docs/agents/LOOP_MAINLINE.md`
+- `.agents/skills/leanatlas-loop-mainline/SKILL.md`
+
 ---
 
 ## When must I enter MAINTAINER?

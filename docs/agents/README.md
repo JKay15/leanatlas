@@ -4,6 +4,7 @@ This directory is for documentation "for Codex use" (not for human-readable essa
 
 ## Start here
 - First-run onboarding (welcome + consented setup): `docs/agents/ONBOARDING.md`
+- Current LOOP mainline system: `docs/agents/LOOP_MAINLINE.md`
 - Banner/source style: `docs/agents/BRANDING.md`
 - Maintainer initialization checklist: `INIT_FOR_CODEX.md`
 - Full file-level index (low-frequency lookup): `docs/navigation/FILE_INDEX.md`
@@ -21,6 +22,7 @@ The goal of LeanAtlas is not to write a piece of Lean code, but to make Codex wo
 |---|---|
 | First-run onboarding (welcome + consented setup) | `docs/agents/ONBOARDING.md` → `.agents/skills/leanatlas-onboard/SKILL.md` → `INIT_FOR_CODEX.md` → `docs/setup/QUICKSTART.md` |
 | Prove a problem (natural language → SUCCESS/TRIAGED) | `docs/agents/OPERATOR_WORKFLOW.md` → `docs/contracts/WORKFLOW_CONTRACT.md` → `docs/contracts/RUNREPORT_CONTRACT.md` → `docs/contracts/RETRIEVAL_TRACE_CONTRACT.md` → `.agents/skills/leanatlas-operator-proof-loop/SKILL.md` |
+| Understand/use the current mainline LOOP system | `docs/agents/LOOP_MAINLINE.md` → `.agents/skills/leanatlas-loop-mainline/SKILL.md` → `docs/agents/MAINTAINER_WORKFLOW.md` or `docs/agents/OPERATOR_WORKFLOW.md` depending on mode |
 | Update/extend domain dictionary (MSC2020/LOCAL) | `docs/contracts/MCP_MSC2020_CONTRACT.md` → `docs/setup/external/msc2020.md` → `tools/lean_domain_mcp/**` → `.agents/skills/leanatlas-domain-mcp/SKILL.md` |
 | Run automations (backend Advisor) | `docs/agents/AUTOMATIONS.md` → `docs/contracts/AUTOMATION_CONTRACT.md` → `automations/registry.json` → `.agents/skills/leanatlas-automations/SKILL.md` |
 | Deposit and route chat feedback | `docs/agents/FEEDBACK_LOOP.md` → `tools/feedback/mine_chat_feedback.py` → `automations/registry.json` (`nightly_chat_feedback_deposition`) |
@@ -45,6 +47,7 @@ therefore:
 
 ## Directory description
 - `STATUS.md`: current stage status and next step (single source of truth)
+- `LOOP_MAINLINE.md`: canonical entry for the committed mainline LOOP system
 - `OPERATOR_WORKFLOW.md`: lifetime workflow (from natural language questions to SUCCESS/TRIAGED)
 - `MAINTAINER_WORKFLOW.md`: Maintenance period workflow skeleton (system evolution, ExecPlan driver)
 - `PLANS.md`: ExecPlan specification (for complex changes/refactorings/new modules)

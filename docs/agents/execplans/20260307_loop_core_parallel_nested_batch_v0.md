@@ -6,7 +6,13 @@ created: 2026-03-07
 ---
 
 ## Purpose / Big Picture
-The current LOOP implementation already exposes graph-level `PARALLEL` and `NESTED` composition in contracts and the Python SDK, but runtime execution is still effectively serial and nested execution is not yet a first-class runtime/evidence capability. That gap makes it too easy to over-explain LOOP as if worktree orchestration or maintainer review automation were the core of parallelism, when those are only LeanAtlas-specific adapters. This batch corrects that layering. First, it upgrades LOOP core so native parallel execution and nested-loop lineage are real runtime features with deterministic evidence. Then it stages the next review/worktree/operator integrations on top of that core. The result should be: a role-neutral LOOP core that supports real concurrent branch execution and explicit nested child-loop evidence, plus a clear follow-on path for review orchestration, worktree orchestration, workflow integration, and docs/skills productization.
+The current LOOP implementation already exposes graph-level `PARALLEL` and `NESTED` composition in contracts and the Python SDK, but runtime execution is still effectively serial and nested execution is not yet a first-class runtime/evidence capability. That gap makes it too easy to over-explain LOOP as if worktree orchestration or maintainer review automation were the core of parallelism, when those are only LeanAtlas-specific adapters. This batch corrects that layering. First, it upgrades LOOP core so native parallel execution and nested-loop lineage are real runtime features with deterministic evidence. Then it stages the next review/worktree/operator integrations on top of that core. The result should be: a role-neutral LOOP core that supports real concurrent branch execution and explicit nested child-loop evidence, plus a clear follow-on path for review orchestration, worktree orchestration, workflow integration, and LOOP mainline productization.
+
+Clarification for the later docs/skills/mainline wave:
+- LOOP mainline productization is the primary subject of that wave.
+- LeanAtlas project-level integration is supporting work: update status/workflow docs, skills, and indices so they reflect LOOP's mainline role.
+- That later wave is not a generic whole-project documentation sweep.
+- `.cache/leanatlas/tmp/**` experimental assets must be classified, not wholesale copied into mainline.
 
 Batch-level end-state requirement (hard target for the full staged batch, not only the first wave):
 - after all staged follow-on themes are completed, LOOP must be able to automatically advance an approved batch from parent ExecPlan freeze through child-wave execution and final integrated closeout, rather than requiring a human to manually hand off every wave
@@ -38,7 +44,7 @@ Follow-on items staged by this plan but not all implemented in the first wave:
 - LeanAtlas worktree orchestration
 - OPERATOR/MAINTAINER workflow integration
 - graph/dataflow/live smoke expansion
-- docs/skills productization and LeanAtlas decoupling
+- LOOP mainline productization plus LeanAtlas project-level integration and bounded decoupling
 
 Out of scope for the first implementation wave:
 - full autonomous multi-worktree overnight execution
@@ -154,13 +160,16 @@ Deliverables:
   - LeanAtlas worktree orchestration
   - OPERATOR/MAINTAINER workflow integration
   - graph/dataflow/live smoke expansion
-  - docs/skills productization + decoupling
+  - LOOP mainline productization + LeanAtlas project-level integration + bounded decoupling
+- Point the final theme at an explicit child plan so later implementation cannot drift into a generic project-wide documentation cleanup.
+  - child plan: `docs/agents/execplans/20260307_loop_mainline_productization_integration_v0.md`
 
 Commands:
 - `sed -n '1,260p' docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md`
 
 Acceptance:
 - The batch has one authoritative plan and a clear implementation order after the first-wave core lands.
+- The staged docs/skills/mainline wave is explicitly LOOP-first rather than a generic project sweep.
 
 ### 6) Verification and closeout
 Deliverables:
@@ -207,6 +216,7 @@ Contamination control:
 - Nested LOOP is treated as a first-class runtime/evidence topic rather than a dormant SDK surface.
 - Full-batch automation is not considered delivered until a parent-loop supervisor/autopilot can materialize child waves, reconcile their evidence, and close out on the latest integrated state.
 - Human-provided external information must enter through explicit ingress/publish/rematerialize/adopt flow; implicit mid-run chat-state drift is forbidden.
+- The docs/skills/mainline-integration theme is defined as `LOOP-as-mainline` productization first, with project-level integration updates only insofar as they make LOOP usable as a LeanAtlas mainline system.
 
 ## Rollback plan
 - Revert the new core-parallel/nested runtime changes and first-wave tests/docs:
