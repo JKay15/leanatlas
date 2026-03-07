@@ -106,6 +106,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260308_loop_skills_decoupling_and_project_skills_governance_v0.md`
 - `docs/agents/execplans/20260308_loop_user_preferences_and_onboarding_defaults_v0.md`
 - `docs/agents/execplans/20260308_review_default_profile_policy_v0.md`
+- `docs/agents/execplans/20260308_review_supersession_reconciliation_runtime_v0.md`
 - `docs/agents/execplans/README.md`
 - `docs/agents/execplans/phase3_dedup_gate_v0.md`
 - `docs/agents/execplans/phase3_gc_gate_v0.md`
@@ -234,6 +235,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/schemas/ProofCompletionWorklist.schema.json`
 - `docs/schemas/ResourceLease.schema.json`
 - `docs/schemas/RetrievalTrace.schema.json`
+- `docs/schemas/ReviewSupersessionReconciliation.schema.json`
 - `docs/schemas/RunReport.schema.json`
 - `docs/schemas/TestManifest.schema.json`
 - `docs/schemas/WaveExecutionLoopRun.schema.json`
@@ -458,6 +460,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_loop_resume_recovery.py`
 - `tests/contract/check_loop_review_history_runtime.py`
 - `tests/contract/check_loop_review_orchestration.py`
+- `tests/contract/check_loop_review_reconciliation_runtime.py`
 - `tests/contract/check_loop_review_runner.py`
 - `tests/contract/check_loop_review_strategy.py`
 - `tests/contract/check_loop_runtime_determinism.py`
@@ -772,6 +775,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tools/loop/review_canonical.py`
 - `tools/loop/review_history.py`
 - `tools/loop/review_orchestration.py`
+- `tools/loop/review_reconciliation.py`
 - `tools/loop/review_runner.py`
 - `tools/loop/review_strategy.py`
 - `tools/loop/run_key.py`

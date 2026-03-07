@@ -1,0 +1,410 @@
+{
+  "$defs": {
+    "authoritativeFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "authoritative_source_review_round_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "disposition_basis": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "final_disposition": {
+          "enum": [
+            "CONFIRMED",
+            "DISMISSED"
+          ],
+          "type": "string"
+        },
+        "finding_group_key": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "finding_key": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "scope_lineage_keys": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "settled_by_review_round_id": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "finding_group_key",
+        "finding_key",
+        "scope_lineage_keys",
+        "final_disposition",
+        "disposition_basis",
+        "settled_by_review_round_id",
+        "authoritative_source_review_round_id"
+      ],
+      "type": "object"
+    },
+    "findingDisposition": {
+      "enum": [
+        "CONFIRMED",
+        "DISMISSED",
+        "SUPERSEDED"
+      ],
+      "type": "string"
+    },
+    "findingRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "disposition": {
+          "$ref": "#/$defs/findingDisposition"
+        },
+        "disposition_basis": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "effective_scope_fingerprint": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "effective_scope_paths": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "finding_group_key": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "finding_key": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "late_output_rationale": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "scope_lineage_key": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "selected_partition_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "settled_by_review_round_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_finding_fingerprint": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_finding_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_partition_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "source_review_round_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_stage_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "superseded_by_review_round_id": {
+          "$ref": "#/$defs/nullableString"
+        }
+      },
+      "required": [
+        "finding_group_key",
+        "finding_key",
+        "scope_lineage_key",
+        "source_review_round_id",
+        "source_stage_id",
+        "source_partition_id",
+        "disposition",
+        "disposition_basis",
+        "settled_by_review_round_id",
+        "selected_partition_ids",
+        "effective_scope_paths",
+        "effective_scope_fingerprint"
+      ],
+      "type": "object"
+    },
+    "ingestionDisposition": {
+      "enum": [
+        "APPLIED",
+        "NOOP_ALREADY_COVERED",
+        "REJECTED_WITH_RATIONALE"
+      ],
+      "type": "string"
+    },
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reviewRound": {
+      "additionalProperties": false,
+      "properties": {
+        "at_utc": {
+          "$ref": "#/$defs/utcTimestamp"
+        },
+        "closeout_authority": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "effective_scope_fingerprint": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "effective_scope_paths": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "finding_keys": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "ingestion_disposition": {
+          "$ref": "#/$defs/ingestionDisposition"
+        },
+        "late_output_rationale": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "node_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "partition_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "partition_scope_fingerprint": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "partition_scope_paths": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "review_round_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "review_tier": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "scope_fingerprint": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "scope_fingerprint_basis": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "scope_lineage_key": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "scope_paths": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "selected_partition_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "stage_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "supersede_created_at_utc": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/utcTimestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "supersede_reason": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "superseded_by_review_round_id": {
+          "$ref": "#/$defs/nullableString"
+        }
+      },
+      "required": [
+        "review_round_id",
+        "node_id",
+        "stage_id",
+        "review_tier",
+        "at_utc",
+        "scope_paths",
+        "scope_fingerprint",
+        "scope_lineage_key",
+        "finding_keys",
+        "ingestion_disposition",
+        "closeout_authority"
+      ],
+      "type": "object"
+    },
+    "supersessionRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "late_output_disposition": {
+          "$ref": "#/$defs/ingestionDisposition"
+        },
+        "late_output_rationale": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "supersede_created_at_utc": {
+          "$ref": "#/$defs/utcTimestamp"
+        },
+        "supersede_reason": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "superseded_review_round_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "superseding_review_round_id": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "superseded_review_round_id",
+        "superseding_review_round_id",
+        "supersede_reason",
+        "supersede_created_at_utc",
+        "late_output_disposition"
+      ],
+      "type": "object"
+    },
+    "utcTimestamp": {
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "type": "string"
+    }
+  },
+  "$id": "https://leanatlas.dev/schemas/ReviewSupersessionReconciliation.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "authoritative_closeout_review_round_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "authoritative_findings": {
+      "items": {
+        "$ref": "#/$defs/authoritativeFinding"
+      },
+      "type": "array"
+    },
+    "closeout_ready": {
+      "type": "boolean"
+    },
+    "effective_scope_fingerprint": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "effective_scope_paths": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "finding_records": {
+      "items": {
+        "$ref": "#/$defs/findingRecord"
+      },
+      "type": "array"
+    },
+    "generated_at_utc": {
+      "$ref": "#/$defs/utcTimestamp"
+    },
+    "producer_node_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "resource_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "review_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "review_rounds": {
+      "items": {
+        "$ref": "#/$defs/reviewRound"
+      },
+      "type": "array"
+    },
+    "selected_partition_ids": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "supersession_records": {
+      "items": {
+        "$ref": "#/$defs/supersessionRecord"
+      },
+      "type": "array"
+    },
+    "version": {
+      "const": "1"
+    }
+  },
+  "required": [
+    "version",
+    "review_id",
+    "generated_at_utc",
+    "resource_id",
+    "producer_node_id",
+    "authoritative_closeout_review_round_id",
+    "selected_partition_ids",
+    "effective_scope_paths",
+    "effective_scope_fingerprint",
+    "closeout_ready",
+    "review_rounds",
+    "supersession_records",
+    "finding_records",
+    "authoritative_findings"
+  ],
+  "title": "ReviewSupersessionReconciliation",
+  "type": "object"
+}

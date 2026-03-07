@@ -185,6 +185,24 @@ Maintainer orchestration requirement:
 - `strategy_plan.closeout_policy.intermediate_rounds_are_advisory` and `strategy_plan.closeout_policy.requires_integrated_scope_closeout` MUST remain `true` in authoritative replay plans; bundle compilation must reject contradictory policy flags even when the compiled graph/bundle payload would otherwise stay unchanged.
 - `build_review_orchestration_bundle(...)` MUST also return a machine-readable reconciliation contract for the `finding_dedupe` stage so later runners/auditors know which lineage record is required before STRICT closeout.
 - That reconciliation contract MUST include a stable `resource_id` locator for the reconciliation state, so later runners/auditors know where `finding_dedupe` lineage records live.
+- That reconciliation contract MUST also pin:
+  - `artifact_schema_ref = docs/schemas/ReviewSupersessionReconciliation.schema.json`
+  - `authoritative_closeout_stage_id = final_integrated_closeout`
+  - `late_output_disposition_enum = APPLIED | NOOP_ALREADY_COVERED | REJECTED_WITH_RATIONALE`
+  - `required_fields` including `finding_key`, `finding_group_key`, and `scope_lineage_key`
+- LOOP Python surfaces MUST expose a deterministic reconciliation runtime for staged review evidence:
+  - `reconcile_review_rounds(...)`
+  - `assert_review_reconciliation_ready(...)`
+  - `persist_review_reconciliation(...)`
+- `reconcile_review_rounds(...)` MUST consume the frozen review-orchestration bundle plus persisted review-round evidence and emit an authoritative finding ledger that validates against `ReviewSupersessionReconciliation.schema.json`.
+- That authoritative finding ledger MUST settle every finding occurrence as `CONFIRMED`, `DISMISSED`, or `SUPERSEDED`; later closeout code MUST consume the reconciled ledger rather than raw advisory findings.
+- That runtime MUST derive `scope_lineage_key` from the active source round scope path-set so unrelated partitions/scopes that reuse a source `finding_key` do not collapse into one authoritative finding group.
+- That runtime MUST emit a deterministic `finding_group_key` so unrelated occurrences that share a source `finding_key` remain distinguishable across persistence/replay.
+- Identical reconciliation inputs MUST yield identical immutable ledger payloads and ledger paths; append-only persistence journals may record wall-clock persistence time, but the immutable ledger itself must remain input-deterministic.
+- The immutable reconciliation ledger MUST live at a run-key-independent artifact path; only the append-only persistence journal may stay scoped under `artifacts/loop_runtime/by_key/<run_key>/...`.
+- That means the immutable reconciliation ledger lives outside any per-run `artifacts/loop_runtime/by_key/<run_key>/...` tree.
+- Supersession records MUST be rejected when they claim that an older review round supersedes a newer one.
+- `persist_review_reconciliation(...)` MUST materialize an immutable reconciliation ledger artifact plus an append-only journal, so later runtimes/auditors can replay the exact authoritative finding set instead of matching free-form reviewer text again.
 - Partitioned or low-tier intermediate review rounds are acceleration aids; final `AI_REVIEW_CLOSEOUT` still requires an integrated closeout review over the effective main scope.
 - `instruction_scope_refs` MUST cover the active `AGENTS.md` chain induced by the review scope and `required_context_refs`.
 - Maintainer session materialization MUST validate `instruction_scope_refs` against the active `AGENTS.md` chain induced by `execplan_ref` as well as `scope_paths` and `required_context_refs`; callers must not be able to freeze an incomplete chain.

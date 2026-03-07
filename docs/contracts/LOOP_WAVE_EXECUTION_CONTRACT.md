@@ -152,6 +152,8 @@ Review acceleration strategies (allowed, but constrained):
 - when the fast stage itself is replayed with a narrowed partition subset, the `finding_dedupe` reconciliation stage must freeze that narrowed fast-stage lineage in its `scope_paths` / `scope_fingerprint`; reconciliation artifacts must not silently widen back to the original full scope.
 - staged narrowing requires a machine-readable `finding_dedupe` lineage record for every advisory finding with at least:
   - `finding_key`
+  - `finding_group_key`
+  - `scope_lineage_key`
   - `source_stage_id`
   - `source_partition_id`
   - `disposition` (`CONFIRMED | DISMISSED | SUPERSEDED`)
@@ -159,6 +161,8 @@ Review acceleration strategies (allowed, but constrained):
   - `effective_scope_paths`
   - `effective_scope_fingerprint`
 - `finding_key` MUST bind back to a stable source-finding identifier from the upstream advisory review output; implementations MUST NOT invent dedupe-local opaque keys.
+- `finding_group_key` MUST be deterministic across identical inputs and MUST distinguish unrelated occurrences that happen to reuse the same upstream `finding_key`.
+- `scope_lineage_key` MUST be derived from the active scope path-set lineage for the source review round; reconciliation MUST NOT merge unrelated occurrences solely because they share the same upstream `finding_key`.
 - Preferred binding order:
   - if the upstream review emitted a stable `finding_id`, `finding_key` MUST equal that `finding_id`
   - otherwise `finding_key` MUST equal the stable advisory `finding_fingerprint`
@@ -193,6 +197,12 @@ Reviewer concurrency and supersession policy (when a workflow explicitly enables
   - `APPLIED`
   - `NOOP_ALREADY_COVERED`
   - `REJECTED_WITH_RATIONALE`
+- Workflows that enable staged narrowing or superseding reviewer rounds MUST materialize an authoritative reconciliation artifact that validates against `ReviewSupersessionReconciliation.schema.json`.
+- That reconciliation runtime MUST settle each finding occurrence as `CONFIRMED`, `DISMISSED`, or `SUPERSEDED`, and it MUST identify the authoritative integrated-closeout round that finally settled the finding set.
+- Identical reconciliation inputs MUST yield identical immutable authoritative ledgers; wall-clock execution time may appear only in append-only persistence journals, not in the hashed authoritative finding ledger itself.
+- The immutable authoritative ledger MUST persist outside any per-run `artifacts/loop_runtime/by_key/<run_key>/...` tree; only append-only journal rows may remain run-key-scoped.
+- Supersession records are only valid when the superseding round is actually newer than the superseded round.
+- Terminal closeout MUST consume that authoritative finding ledger rather than recomputing review supersession from raw advisory rounds during closeout.
 - Only workflows that actually start superseding reviewer rounds may require `review_supersession_reconciliation` evidence at terminal closeout; surfaces that do not yet materialize supersession records must not claim that evidence exists.
 
 Review principles for AI auditor:

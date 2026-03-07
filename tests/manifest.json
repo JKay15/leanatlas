@@ -2085,6 +2085,28 @@
     {
       "area": [
         "loop",
+        "review",
+        "reconciliation"
+      ],
+      "goal": "Ensure staged review supersession and authoritative finding reconciliation runtime settle advisory findings deterministically.",
+      "id": "loop_review_reconciliation_runtime",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_review_reconciliation_runtime.py",
+      "tags": [
+        "loop",
+        "review",
+        "reconciliation",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
         "policy",
         "stress"
       ],

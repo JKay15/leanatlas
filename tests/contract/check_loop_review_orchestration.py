@@ -306,13 +306,28 @@ def _assert_compiled_graph_shape() -> None:
             "bundle must expose finding_dedupe as the reconciliation producer",
         )
         _assert(
+            reconciliation.get("artifact_schema_ref") == "docs/schemas/ReviewSupersessionReconciliation.schema.json",
+            "bundle must pin the authoritative reconciliation artifact schema",
+        )
+        _assert(
+            reconciliation.get("authoritative_closeout_stage_id") == "final_integrated_closeout",
+            "bundle must pin the authoritative closeout stage for later reconciliation runtime consumers",
+        )
+        _assert(
             reconciliation.get("finding_disposition_enum") == ["CONFIRMED", "DISMISSED", "SUPERSEDED"],
             "bundle must expose deterministic reconciliation dispositions",
+        )
+        _assert(
+            reconciliation.get("late_output_disposition_enum")
+            == ["APPLIED", "NOOP_ALREADY_COVERED", "REJECTED_WITH_RATIONALE"],
+            "bundle must expose deterministic late-output ingestion dispositions",
         )
         _assert(
             reconciliation.get("required_fields")
             == [
                 "finding_key",
+                "finding_group_key",
+                "scope_lineage_key",
                 "source_stage_id",
                 "source_partition_id",
                 "disposition",
