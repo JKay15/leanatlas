@@ -1640,6 +1640,50 @@
     },
     {
       "area": [
+        "docs",
+        "execplan",
+        "loop"
+      ],
+      "goal": "Guardrail: the LOOP productization/mainline wave must stay LOOP-first rather than drift into a generic project-wide docs sweep.",
+      "id": "loop_mainline_productization_scope",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_loop_mainline_productization_scope.py",
+      "tags": [
+        "docs",
+        "contract",
+        "execplan",
+        "loop"
+      ]
+    },
+    {
+      "area": [
+        "docs",
+        "skills",
+        "loop"
+      ],
+      "goal": "Guardrail: LOOP mainline productization must expose a canonical mainline doc plus project-level entrypoint and skill routing.",
+      "id": "loop_mainline_docs",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_loop_mainline_docs_integration.py",
+      "tags": [
+        "docs",
+        "skills",
+        "contract",
+        "loop"
+      ]
+    },
+    {
+      "area": [
         "loop",
         "contracts"
       ],

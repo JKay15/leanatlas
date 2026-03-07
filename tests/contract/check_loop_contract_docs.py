@@ -206,6 +206,7 @@ REQUIRED_SNIPPETS = {
         "`strategy_plan.effective_scope_source` MUST match `final_integrated_closeout.scope_source`",
         "MUST use a canonical helper-authored provenance label",
         "`FULL_SCOPE_AFTER_EMPTY_FOLLOWUP` is only valid when `deep_partition_followup.partition_ids=[]`",
+        "the empty `effective_scope_paths=[]` input is shorthand for \"keep the canonical full fast-scan scope\"",
         "final_integrated_closeout.scope_paths` MUST also stay within that same selected partition lineage",
         "MUST NOT repeat the same repo file path more than once",
         "narrows inside a selected multi-file partition",

@@ -1,7 +1,7 @@
 ---
 title: Add a stable maintainer closeout ref so ExecPlans can cite settled-state LOOP closeout without run-key recursion
 owner: Codex (local workspace)
-status: active
+status: done
 created: 2026-03-07
 parent_execplan: docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md
 ---
@@ -109,6 +109,29 @@ Minimum payload expectation:
 
 ## Outcomes & retrospective (fill when done)
 - Completed:
+  - added stable execplan-addressable maintainer closeout aliases under `artifacts/loop_runtime/by_execplan/<stable_execplan_id>/MaintainerCloseoutRef.json`
+  - updated maintainer session closeout/load behavior so the stable alias survives replay/backfill and protects against stale or older-session overwrite
+  - documented settled-state closeout citation guidance in `docs/agents/PLANS.md` and `docs/contracts/LOOP_PYTHON_SDK_CONTRACT.md`
+  - updated `docs/agents/execplans/20260307_review_orchestration_automation_v0.md` to cite the stable settled-state closeout alias instead of a run-key-specific `GraphSummary.jsonl`
 - Verification:
+  - targeted checks:
+    - `uv run --locked python tests/contract/check_loop_maintainer_session.py`
+    - `uv run --locked python tests/contract/check_loop_contract_docs.py`
+    - `uv run --locked python tests/contract/check_loop_python_sdk_contract_surface.py`
+  - full verification:
+    - `uv run --locked python tests/run.py --profile core`
+    - `uv run --locked python tests/run.py --profile nightly`
+    - `lake build`
+    - `git diff --check`
+  - verify artifact:
+    - [round10](/Users/xiongjiangkai/xjk_papers/leanatlas/artifacts/verify/20260307_maintainer_closeout_ref_v0_verify_round10.md)
+  - latest FAST follow-up review:
+    - [prompt](/Users/xiongjiangkai/xjk_papers/leanatlas/artifacts/reviews/20260307_maintainer_closeout_ref_review_round11_fast_docs_fix_v2_prompt.md)
+    - [response](/Users/xiongjiangkai/xjk_papers/leanatlas/artifacts/reviews/20260307_maintainer_closeout_ref_review_round11_fast_docs_fix_v2_response.md)
+    - [summary](/Users/xiongjiangkai/xjk_papers/leanatlas/artifacts/reviews/20260307_maintainer_closeout_ref_review_round11_fast_docs_fix_v2_summary.json)
 - Residual risks:
+  - this plan solved settled-state closeout recursion for ExecPlans, but it did not turn review orchestration into the default automated execution path
+  - stable closeout aliases now exist for maintainer sessions, but wider batch-level reconciliation and autopilot remain follow-on batch work
 - Follow-on recommendation:
+  - proceed to `docs/agents/execplans/20260307_loop_mainline_productization_integration_v0.md`
+  - keep future non-trivial plan closeouts citing the stable `MaintainerCloseoutRef.json` alias rather than embedding run-key-specific summary paths

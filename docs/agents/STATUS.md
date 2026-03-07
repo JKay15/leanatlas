@@ -5,6 +5,15 @@
 
 ## Where are we now (as of 2026-02-24)
 
+### LOOP mainline (project-level update, 2026-03-07)
+- LOOP is now a committed mainline system in LeanAtlas rather than a `.cache`-only experiment.
+- Canonical entry: `docs/agents/LOOP_MAINLINE.md`
+- That page is the authoritative matrix for:
+  - implemented vs partial vs planned LOOP capabilities
+  - `LOOP core` vs `LeanAtlas adapters`
+  - how `.cache/leanatlas/tmp/**` experimental assets relate to mainline
+- Project-level workflow/status docs must now stay aligned with that page.
+
 ### Phase 1 (completed and frozen): Reporting + Schemas + Determinism
 - Schema and contract constraints of `RunReport.json / RetrievalTrace.json / AttemptLog.jsonl` have been frozen
 - Established core gate: schema fixtures, referential integrity (refs), directory layout, canonical JSON, AGENTS size
@@ -20,6 +29,7 @@
 ### Codex document system (main skeleton has been implemented)
 - OPERATOR:`docs/agents/OPERATOR_WORKFLOW.md`
 - MAINTAINER:`docs/agents/MAINTAINER_WORKFLOW.md`
+- LOOP mainline entry: `docs/agents/LOOP_MAINLINE.md`
 - Lake standard entry: `lake test` / `lake lint` bound to workflow tests
 - Automations: specifications + TDD into core gate (registry + contracts + tests)
 - MCP: access contract skeleton (`docs/contracts/MCP_*`) + healthcheck stub (`tools/mcp/healthcheck.py`)

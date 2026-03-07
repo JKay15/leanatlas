@@ -4,6 +4,11 @@ This is the **use-phase** manual: after someone clones LeanAtlas, Codex should f
 
 Default mode is OPERATOR. Mode is controlled by the local file `.cache/leanatlas/mode.json` (gitignored).
 
+Current LOOP mainline entry and boundary reference:
+- `docs/agents/LOOP_MAINLINE.md`
+- `.agents/skills/leanatlas-loop-mainline/SKILL.md`
+- Use these to understand the current mainline system surface, but stay inside OPERATOR patch boundaries unless a human explicitly enables MAINTAINER mode.
+
 ## Environment setup (one-time)
 This is not theory. It exists so Codex knows where dependencies live and how to verify them.
 
