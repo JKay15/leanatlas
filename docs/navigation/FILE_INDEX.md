@@ -102,6 +102,9 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260307_maintainer_closeout_ref_v0.md`
 - `docs/agents/execplans/20260307_review_orchestration_automation_v0.md`
 - `docs/agents/execplans/20260308_formalization_enrichment_absorption_v0.md`
+- `docs/agents/execplans/20260308_loop_python_library_decoupling_packaging_v0.md`
+- `docs/agents/execplans/20260308_loop_skills_decoupling_and_project_skills_governance_v0.md`
+- `docs/agents/execplans/20260308_loop_user_preferences_and_onboarding_defaults_v0.md`
 - `docs/agents/execplans/README.md`
 - `docs/agents/execplans/phase3_dedup_gate_v0.md`
 - `docs/agents/execplans/phase3_gc_gate_v0.md`
@@ -209,6 +212,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/schemas/DedupReport.schema.json`
 - `docs/schemas/E2ECase.schema.json`
 - `docs/schemas/E2EScenario.schema.json`
+- `docs/schemas/ExternalSourcePack.schema.json`
 - `docs/schemas/FeedbackDigest.schema.json`
 - `docs/schemas/FeedbackLedgerLine.schema.json`
 - `docs/schemas/FormalizationGateReport.schema.json`
@@ -428,6 +432,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_file_index_ignores_untracked.py`
 - `tests/contract/check_file_index_reachability.py`
 - `tests/contract/check_force_deposit_policy.py`
+- `tests/contract/check_formalization_frontier_absorption.py`
 - `tests/contract/check_formalization_governor_policy_contract.py`
 - `tests/contract/check_formalization_schema_policy.py`
 - `tests/contract/check_formalization_toolchain_runtime.py`
@@ -459,6 +464,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_loop_sdk_error_envelope_runtime.py`
 - `tests/contract/check_loop_state_machine_policy.py`
 - `tests/contract/check_loop_state_machine_sequences.py`
+- `tests/contract/check_loop_user_preferences_policy.py`
 - `tests/contract/check_loop_wave_blocking_gate.py`
 - `tests/contract/check_loop_wave_execution_policy.py`
 - `tests/contract/check_loop_wave_execution_runtime.py`
@@ -736,6 +742,10 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tools/formalization/anti_cheat.py`
 - `tools/formalization/apply_decisions.py`
 - `tools/formalization/build_worklist.py`
+- `tools/formalization/external_source_pack.py`
+- `tools/formalization/resync_reverse_links.py`
+- `tools/formalization/review_todo.py`
+- `tools/formalization/source_enrichment.py`
 - `tools/formalization/strong_validation.py`
 - `tools/gc/README.md`
 - `tools/gc/gc.py`
@@ -767,6 +777,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tools/loop/runtime.py`
 - `tools/loop/sdk.py`
 - `tools/loop/store.py`
+- `tools/loop/user_preferences.py`
 - `tools/loop/wave_gate.py`
 - `tools/mcp/README.md`
 - `tools/mcp/healthcheck.py`

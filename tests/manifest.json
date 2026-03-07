@@ -1684,6 +1684,30 @@
     },
     {
       "area": [
+        "docs",
+        "skills",
+        "loop",
+        "onboarding"
+      ],
+      "goal": "Guardrail: LOOP post-onboarding user preference presets stay aligned across module surface, onboarding docs, and mainline/review skills.",
+      "id": "loop_user_preferences_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_loop_user_preferences_policy.py",
+      "tags": [
+        "docs",
+        "skills",
+        "loop",
+        "onboarding",
+        "contract"
+      ]
+    },
+    {
+      "area": [
         "loop",
         "contracts"
       ],
@@ -2335,6 +2359,29 @@
         "deps",
         "policy",
         "commands"
+      ]
+    },
+    {
+      "area": [
+        "formalization",
+        "frontier",
+        "ingress",
+        "mapping"
+      ],
+      "goal": "Productize committed formalization front-end helpers: ExternalSourcePack/human ingress, source enrichment, review todo, and reverse-link resync.",
+      "id": "formalization_frontier_absorption",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_formalization_frontier_absorption.py",
+      "tags": [
+        "formalization",
+        "frontier",
+        "contract",
+        "determinism"
       ]
     },
     {

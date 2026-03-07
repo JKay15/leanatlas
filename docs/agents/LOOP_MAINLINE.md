@@ -20,6 +20,11 @@ Use this page when you need to answer any of these questions:
   - `tools/loop/review_strategy.py`
   - `tools/loop/review_orchestration.py`
   - `.agents/skills/leanatlas-loop-review-acceleration/SKILL.md`
+- Formalization front-end helpers:
+  - `tools/formalization/external_source_pack.py`
+  - `tools/formalization/source_enrichment.py`
+  - `tools/formalization/review_todo.py`
+  - `tools/formalization/resync_reverse_links.py`
 - Core contracts:
   - `docs/contracts/LOOP_RUNTIME_CONTRACT.md`
   - `docs/contracts/LOOP_GRAPH_CONTRACT.md`
@@ -37,13 +42,16 @@ Use this page when you need to answer any of these questions:
 | Maintainer LOOP session + stable closeout ref | Implemented | `tools/loop/maintainer.py`, `artifacts/loop_runtime/by_execplan/**/MaintainerCloseoutRef.json` | ExecPlans can cite settled-state maintainer closeout without run-key recursion. |
 | Review strategy helpers (partitioning / narrowing / pyramid planning) | Implemented | `tools/loop/review_strategy.py`, `.agents/skills/leanatlas-loop-review-acceleration/SKILL.md` | Deterministic planning aids are committed and tested. |
 | Review orchestration graph/bundle compilation | Implemented | `tools/loop/review_orchestration.py`, `docs/agents/execplans/20260307_review_orchestration_automation_v0.md` | The compiler/bundle layer exists in mainline. |
+| User preference presets | Partial | `tools/loop/user_preferences.py`, `docs/agents/ONBOARDING.md`, `docs/setup/QUICKSTART.md` | The preset surface and local artifact format are committed, but onboarding/runtime do not yet auto-stage or consume the defaults by themselves. |
 | Default automated review execution | Partial | `tools/loop/review_runner.py`, `tools/loop/review_orchestration.py` | Single-review execution is implemented; default staged `FAST -> DEEP -> STRICT` execution is not yet the automatic path. |
 | LOOP core vs LeanAtlas adapter layering | Implemented | `docs/contracts/LOOP_RUNTIME_CONTRACT.md`, `docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md` | Core is role-neutral; host/workflow semantics stay in adapters. |
 | Batch supervisor / autopilot | Planned | `docs/agents/execplans/20260307_batch_supervisor_autopilot_and_human_ingress_v0.md` | Parent-loop automation across child waves is not landed yet. |
+| Independent LOOP Python library extraction / packaging | Planned | `docs/agents/execplans/20260308_loop_python_library_decoupling_packaging_v0.md` | Current mainline documents core-vs-adapter boundaries, but cross-project packaging and standalone usage docs are still follow-on work. |
 | Review supersession / reconciliation runtime | Planned | `docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md` | Contract direction exists; runtime/evidence engine is still follow-on work. |
 | Capability publish + context refresh | Planned | `docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md` | Future loops must adopt new capabilities through explicit publish/rematerialize steps. |
 | LeanAtlas worktree orchestration | Planned | `docs/coordination/WORKSTREAMS.md`, `docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md` | Worktree coordination is documented, but not yet a LOOP-native execution layer. |
 | OPERATOR / MAINTAINER workflow integration on the new core | Partial | `docs/agents/OPERATOR_WORKFLOW.md`, `docs/agents/MAINTAINER_WORKFLOW.md` | Workflows reference LOOP surfaces, but full adapter integration is still staged. |
+| Formalization front-end helpers | Implemented | `tools/formalization/external_source_pack.py`, `tools/formalization/source_enrichment.py`, `tools/formalization/review_todo.py`, `tools/formalization/resync_reverse_links.py` | Committed ingress/enrichment helpers absorb high-value paper-workflow capabilities from `.cache` experiments. |
 
 ## LOOP core vs LeanAtlas adapters
 
@@ -74,6 +82,18 @@ The rule is:
 - `MAINTAINER`, `OPERATOR`, and `worktree` semantics must stay in LeanAtlas adapter/workflow docs
 
 ## How to use the current mainline
+
+## User preference presets
+
+The committed local artifact path for post-onboarding LOOP defaults is:
+- `.cache/leanatlas/onboarding/loop_preferences.json`
+
+Supported presets:
+- `Balanced`
+- `Budget Saver`
+- `Auditable`
+
+These presets are post-onboarding defaults, not bootstrap blockers. Today the committed mainline surface provides the preset names, artifact shape, and override semantics through `tools/loop/user_preferences.py`; automatic onboarding-time persistence and default application are still follow-on wiring. Later runs may still override any chosen defaults without mutating the stored preference artifact.
 
 ### Maintainer path
 

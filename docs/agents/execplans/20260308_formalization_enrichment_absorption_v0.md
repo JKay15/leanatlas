@@ -1,7 +1,7 @@
 ---
 title: Productize formalization ingress and enrichment helpers from experimental paper workflows into LeanAtlas mainline
 owner: Codex (local workspace)
-status: active
+status: done
 created: 2026-03-08
 ---
 
@@ -176,6 +176,25 @@ Contamination control:
 
 ## Outcomes & retrospective (fill when done)
 - Completed:
+  - absorbed ExternalSourcePack + explicit human ingress into committed mainline tools/contracts/schema
+  - absorbed deterministic LaTeX/Bib source enrichment for equation/citation augmentation
+  - absorbed deterministic mapping triage / review todo generation
+  - absorbed deterministic annotation reverse-link resync from `.lean` annotations
+  - updated mainline docs/skills/indexes so maintainers can find these helpers without treating `.cache` scripts as the default path
 - Verification:
+  - `uv run --locked python tests/contract/check_formalization_frontier_absorption.py`
+  - `uv run --locked python tests/contract/check_formalization_schema_policy.py`
+  - `uv run --locked python tests/contract/check_formalization_toolchain_runtime.py`
+  - `uv run --locked python tests/contract/check_formalization_governor_policy_contract.py`
+  - `uv run --locked python tests/contract/check_loop_mainline_docs_integration.py`
+  - `uv run --locked python tests/contract/check_skills_standard_headers.py`
+  - `uv run --locked python tests/determinism/check_canonical_json.py`
+  - `uv run --locked python tests/run.py --profile core` (one profile run hit an existing `check_problem_state_reconcile.py` tmp-path race; isolated rerun passed)
+  - `uv run --locked python tests/run.py --profile nightly` (one profile run hit an existing `check_scenario_tool_reuse_scoring.py` tmp-cleanup race; isolated rerun passed)
+  - `lake build`
+  - `git diff --check`
 - Residual risks:
+  - ExternalSourcePack committed MVP is intentionally local/user-ingress first; network retrieval providers are not yet productized
+  - source enrichment currently focuses on deterministic LaTeX/Bib augmentation and does not replace heavier paper-specific extractors
 - Follow-on recommendation:
+  - continue with `P5` bounded autofill/seed extraction and later a fuller front-end orchestrator only after review reconciliation and broader LOOP automation mature

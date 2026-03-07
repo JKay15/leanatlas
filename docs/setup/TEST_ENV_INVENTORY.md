@@ -23,7 +23,7 @@
 | Module | Role | Evidence (files) |
 |---|---|---|
 | `drain3` | Telemetry/log pattern mining checks. | `tools/bench/mine_kb_suggestions.py` |
-| `jsonschema` | Schema validation for contracts and fixtures. | `tests/agent_eval/validate_scenarios.py`, `tests/agent_eval/validate_tasks.py`, `tests/contract/check_attemptlog_jsonl.py`, `tests/contract/check_capability_manifests.py`, `tests/contract/check_formalization_toolchain_runtime.py`, `tests/contract/check_loop_composition_presets.py`, `tests/contract/check_loop_python_sdk_contract_surface.py`, `tests/contract/check_loop_review_orchestration.py`, ... |
+| `jsonschema` | Schema validation for contracts and fixtures. | `tests/agent_eval/validate_scenarios.py`, `tests/agent_eval/validate_tasks.py`, `tests/contract/check_attemptlog_jsonl.py`, `tests/contract/check_capability_manifests.py`, `tests/contract/check_formalization_frontier_absorption.py`, `tests/contract/check_formalization_toolchain_runtime.py`, `tests/contract/check_loop_composition_presets.py`, `tests/contract/check_loop_python_sdk_contract_surface.py`, ... |
 | `yaml` | YAML parsing for test manifests/scenarios/tasks. | `tests/agent_eval/check_fixtures_exist.py`, `tests/agent_eval/check_pack_keyword_coverage.py`, `tests/agent_eval/check_scenario_class_coverage.py`, `tests/agent_eval/check_task_references_integrity.py`, `tests/agent_eval/validate_scenarios.py`, `tests/agent_eval/validate_tasks.py`, `tests/contract/check_capability_manifests.py`, `tests/contract/check_execplan_closeout_hygiene.py`, ... |
 
 ## LEANATLAS Environment Variables Observed
