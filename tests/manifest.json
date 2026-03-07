@@ -1620,6 +1620,26 @@
     },
     {
       "area": [
+        "docs",
+        "execplan"
+      ],
+      "goal": "Guardrail: execplan README must stay a non-authoritative index and must not present a hand-maintained current-plan source.",
+      "id": "execplan_readme_authority",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_execplan_readme_authority.py",
+      "tags": [
+        "docs",
+        "contract",
+        "execplan"
+      ]
+    },
+    {
+      "area": [
         "loop",
         "contracts"
       ],
@@ -1815,6 +1835,28 @@
     {
       "area": [
         "loop",
+        "graph",
+        "parallel_nested_runtime"
+      ],
+      "goal": "Distinguish real parallel execution from graph-only semantics and require nested lineage evidence in LOOP graph runtime.",
+      "id": "loop_graph_parallel_nested_runtime",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_graph_parallel_nested_runtime.py",
+      "tags": [
+        "loop",
+        "graph",
+        "parallel",
+        "nested"
+      ]
+    },
+    {
+      "area": [
+        "loop",
         "assurance",
         "policy"
       ],
@@ -1927,6 +1969,50 @@
       "profile": "core",
       "runtime_budget_sec": 10,
       "script": "tests/contract/check_loop_review_history_runtime.py"
+    },
+    {
+      "area": [
+        "loop",
+        "review",
+        "strategy"
+      ],
+      "goal": "Ensure staged narrowing and pyramid-review planning helpers remain deterministic and keep integrated closeout authority.",
+      "id": "loop_review_strategy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_review_strategy.py",
+      "tags": [
+        "loop",
+        "review",
+        "strategy"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "review",
+        "orchestration"
+      ],
+      "goal": "Compile staged review strategies into executable LOOP review-orchestration graphs with parallel fast scans and nested deep follow-up evidence.",
+      "id": "loop_review_orchestration",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_review_orchestration.py",
+      "tags": [
+        "loop",
+        "review",
+        "orchestration",
+        "nested",
+        "parallel"
+      ]
     },
     {
       "area": [
