@@ -118,9 +118,13 @@ On first prompt (any content, including a simple `hi`), Codex should:
      - after the environment is operational-ready, explain the bounded post-onboarding LOOP presets and the reserved local artifact path
        `.cache/leanatlas/onboarding/loop_preferences.json`
        using the bounded presets:
-     - `Balanced`
      - `Budget Saver`
+       - current default: `FAST + low`
+       - use this unless there is a reason to spend more review budget
+     - `Balanced`
      - `Auditable`
+     - `medium` is a bounded escalation only for small-scope high-risk core logic
+     - `STRICT / xhigh` is exceptional, not the default
      - do not imply that onboarding already auto-writes or auto-applies this preference artifact unless that wiring has landed
 
 ### Required operational gate: install active automations in Codex App

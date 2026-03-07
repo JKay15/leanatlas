@@ -89,11 +89,19 @@ The committed local artifact path for post-onboarding LOOP defaults is:
 - `.cache/leanatlas/onboarding/loop_preferences.json`
 
 Supported presets:
-- `Balanced`
 - `Budget Saver`
+  - current default reviewer path: `FAST + low`
+  - keep this unless the task justifies more review cost
+- `Balanced`
 - `Auditable`
 
 These presets are post-onboarding defaults, not bootstrap blockers. Today the committed mainline surface provides the preset names, artifact shape, and override semantics through `tools/loop/user_preferences.py`; automatic onboarding-time persistence and default application are still follow-on wiring. Later runs may still override any chosen defaults without mutating the stored preference artifact.
+
+Current default policy:
+- `Budget Saver` is the committed default preset.
+- `FAST + low` is the default reviewer path.
+- `medium` is a bounded escalation only for small-scope high-risk core logic.
+- `STRICT / xhigh` remains available for exceptional audit-heavy closeout, but it is not the default path.
 
 ### Maintainer path
 

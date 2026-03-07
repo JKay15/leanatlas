@@ -59,6 +59,11 @@ def main() -> int:
         "review_history",
         "instruction_scope_refs",
         "resolved_invocation_signature",
+        "build_default_review_policy(...)",
+        "`Budget Saver` is the committed default preset",
+        "`FAST + low` is the default reviewer path",
+        "`medium` is a bounded escalation for small-scope high-risk core logic",
+        "`STRICT / xhigh` is exceptional",
         "partition_review_scope_paths(...)",
         "merge_partition_scope_paths(...)",
         "build_pyramid_review_plan(...)",
@@ -258,6 +263,9 @@ def main() -> int:
         errs = list(validator.iter_errors(run_default))
         if errs:
             return _fail(f"default run() output must satisfy LoopSDKCallContract; got {errs[0].message}")
+        default_spec = run_default.get("request", {}).get("spec", {})
+        if default_spec.get("assurance_level") != "FAST":
+            return _fail("default loop()/run() path must materialize FAST assurance_level")
 
         run_with_empty_history = run(
             spec=spec,

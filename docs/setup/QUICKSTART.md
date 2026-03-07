@@ -127,8 +127,12 @@ After the environment is ready, the bounded LOOP preference presets use this res
 - `.cache/leanatlas/onboarding/loop_preferences.json`
 
 Recommended presets:
-- `Balanced`
 - `Budget Saver`
+  - default reviewer path: `FAST + low`
+  - use `medium` only for small-scope high-risk core logic
+- `Balanced`
 - `Auditable`
+
+`STRICT / xhigh` remains available for exceptional audit-heavy cases, but it is not the default operating mode.
 
 These are post-onboarding operating defaults, not bootstrap requirements. The current mainline commits the preset surface and artifact format, but not automatic onboarding-time persistence. Per-run LOOP settings may still override any staged defaults without mutating the committed preference artifact.

@@ -105,6 +105,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260308_loop_python_library_decoupling_packaging_v0.md`
 - `docs/agents/execplans/20260308_loop_skills_decoupling_and_project_skills_governance_v0.md`
 - `docs/agents/execplans/20260308_loop_user_preferences_and_onboarding_defaults_v0.md`
+- `docs/agents/execplans/20260308_review_default_profile_policy_v0.md`
 - `docs/agents/execplans/README.md`
 - `docs/agents/execplans/phase3_dedup_gate_v0.md`
 - `docs/agents/execplans/phase3_gc_gate_v0.md`
