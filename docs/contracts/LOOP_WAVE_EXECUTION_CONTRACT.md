@@ -131,6 +131,47 @@ Hard rule:
 - reviewer attempts and their command evidence MUST be persisted under `artifacts/reviews/`.
 - bounded failed attempts may terminate as `TRIAGED_TOOLING`, but only with append-only attempt evidence showing why no valid `response_ref` was accepted.
 
+Review acceleration strategies (allowed, but constrained):
+- staged narrowing is allowed: intermediate review rounds may partition a large scope into smaller auditable review partitions to reduce latency and context burden.
+- pyramid reviewer is allowed: faster/lower-cost reviewer tiers may run before slower/higher-thinking tiers.
+- low-tier findings are provisional and MUST be treated as `ADVISORY_CONFIRM_REQUIRED` until confirmed by deterministic verification or a later higher-tier review.
+- explicit empty follow-up selection is allowed: `followup_partition_ids=[]` may record that the fast scan found nothing worth escalating.
+- callers may pair that explicit no-escalation outcome with `effective_scope_paths=[]`; runners must interpret it as the same no-escalation state, not as an invalid narrowing request.
+- that no-escalation outcome may leave the deep follow-up stage empty, but it must NOT erase the final integrated closeout review.
+- replaying helper-derived merged scope into a later staged review round must preserve the same narrowing provenance and fingerprint as the original partition selection; semantically identical narrowed plans must not fork audit metadata.
+- strategy replay must also reject duplicate partition routing ids or empty partition scopes before executable review nodes are materialized; authoritative review graphs must not launch reviewer nodes with an empty file list.
+- duplicate staged-review scope paths must be rejected on canonical repo-relative identity, not raw caller spellings; alias forms such as `foo.py` and `./foo.py` still represent the same file and must not survive authoritative compilation.
+- replayed or hand-authored partition metadata must form an exact disjoint cover of the frozen fast-stage scope; authoritative staged review graphs must reject overlapping partition files, repeated files inside one partition, or omitted full-scope files that would leave part of the lineage unreviewed.
+- partition-local intermediate rounds are not closeout-authoritative by themselves.
+- final `AI_REVIEW_CLOSEOUT` must come from a final integrated closeout review over the effective main scope after partition merge/dedupe, not solely from partition-local intermediate rounds.
+- when follow-up partitions are non-empty, the deep-stage narrowed scope and the final integrated closeout scope must remain exactly aligned; replayed strategies must not widen authoritative closeout back beyond the narrowed deep-stage lineage.
+- deep/effective/final authoritative scope lists must also be multiplicity-stable: replayed strategies must reject duplicated file paths inside `deep_partition_followup.scope_paths`, `effective_scope_paths`, or `final_integrated_closeout.scope_paths`.
+- replayed or hand-authored staged-review strategies must also reject stale fingerprint metadata: authoritative compilation must validate full/effective/partition/deep/final scope fingerprints against the actual repo bytes for their `scope_paths`, and must reject stale `strategy_fingerprint` values that no longer match the canonical strategy content.
+- that `strategy_fingerprint` must cover the full top-level provenance surface later consumed by authoritative closeout artifacts, including `strategy_id`, `selected_partition_ids`, `effective_scope_paths`, `effective_scope_fingerprint`, and `effective_scope_source`; replayed plans must not be able to forge those top-level fields without invalidating the fingerprint.
+- replayed or hand-authored staged-review strategies must reject duplicate or unknown `stage_id` entries; the compiled graph may not silently ignore fingerprinted stage payloads that have no executable meaning.
+- when the fast stage itself is replayed with a narrowed partition subset, the `finding_dedupe` reconciliation stage must freeze that narrowed fast-stage lineage in its `scope_paths` / `scope_fingerprint`; reconciliation artifacts must not silently widen back to the original full scope.
+- staged narrowing requires a machine-readable `finding_dedupe` lineage record for every advisory finding with at least:
+  - `finding_key`
+  - `source_stage_id`
+  - `source_partition_id`
+  - `disposition` (`CONFIRMED | DISMISSED | SUPERSEDED`)
+  - `selected_partition_ids`
+  - `effective_scope_paths`
+  - `effective_scope_fingerprint`
+- `finding_key` MUST bind back to a stable source-finding identifier from the upstream advisory review output; implementations MUST NOT invent dedupe-local opaque keys.
+- Preferred binding order:
+  - if the upstream review emitted a stable `finding_id`, `finding_key` MUST equal that `finding_id`
+  - otherwise `finding_key` MUST equal the stable advisory `finding_fingerprint`
+- that reconciliation record is required before STRICT closeout may claim that advisory findings were narrowed away or merged.
+- staged narrowing is valuable even without real runtime concurrency; it must not be described as proof that LOOP runtime already executes review nodes concurrently.
+- review orchestration graphs may execute fast partition scans in parallel when runtime concurrency is available, but that does not change closeout authority.
+- deep follow-up rounds may be materialized as nested child-review nodes to preserve lineage between narrowed follow-up review and its parent dedupe/reconciliation stage.
+- final integrated closeout remains the only closeout-authoritative review stage.
+- in an executable review-orchestration graph, the final integrated closeout sink may run after post-dedupe advisory stages (for example deep follow-up nodes) reach terminal non-pass states; authoritative closeout must not be skipped merely because a post-dedupe advisory stage failed.
+- in explicit no-followup runs, `finding_dedupe` still remains a hard gate; if reconciliation itself ends `FAILED` or `TRIAGED`, authoritative closeout must stay blocked until that reconciliation failure is repaired or rerun.
+- fast partition scans still gate `finding_dedupe`; if a fast-stage node ends `FAILED` or `TRIAGED`, reconciliation and authoritative closeout remain blocked until that fast-stage failure is repaired or rerun.
+- in explicit no-followup runs, the authoritative final integrated closeout scope must still match the frozen fast-stage lineage exactly; a replayed or hand-authored strategy must not silently narrow, widen, or replace the closeout scope when no follow-up partitions were selected.
+
 Reviewer-memory consistency evidence (required for every Wave run):
 - `review_history_consistency` summary with:
   - `contradiction_count`
@@ -141,7 +182,7 @@ Reviewer-memory consistency evidence (required for every Wave run):
 Hard rule:
 - if contradiction/nitpick flags exist, those refs must be persisted and passed into later review rounds through `history_context_refs`.
 
-Reviewer concurrency and supersession policy (hard rule):
+Reviewer concurrency and supersession policy (when a workflow explicitly enables superseding reviewer rounds):
 - For the same `review_scope_key`, at most one reviewer invocation may be `RUNNING` at any time.
 - Preemptive dynamic composition is allowed only via explicit supersession record:
   - `superseded_review_round_id`
@@ -152,7 +193,7 @@ Reviewer concurrency and supersession policy (hard rule):
   - `APPLIED`
   - `NOOP_ALREADY_COVERED`
   - `REJECTED_WITH_RATIONALE`
-- Terminal closeout (`PASSED|FAILED|TRIAGED`) requires `review_supersession_reconciliation` evidence that every started reviewer round is reconciled (no orphan reviewer outputs).
+- Only workflows that actually start superseding reviewer rounds may require `review_supersession_reconciliation` evidence at terminal closeout; surfaces that do not yet materialize supersession records must not claim that evidence exists.
 
 Review principles for AI auditor:
 - Evidence-first: every finding must cite `file:line` and evidence refs.

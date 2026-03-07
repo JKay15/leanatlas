@@ -92,13 +92,30 @@ Provider-invoked review runs MUST additionally persist:
 Hard rule:
 - provider routing is deterministic and replayable from persisted selection inputs (`agent_cmd` / `agent_profile` / `agent_provider` precedence).
 
-## 5) Required artifacts (runtime layer)
+## 5) Native parallel and nested execution
+
+Core runtime semantics are role-neutral:
+- `OPERATOR`
+- `MAINTAINER`
+- `worktree`
+
+The terms above are host/workflow adapter concepts and MUST NOT define LOOP core graph/runtime semantics.
+
+Runtime concurrency rule:
+- graph-level `PARALLEL`/`NESTED` express composition semantics, not proof of concurrent execution by themselves
+- true concurrent execution is controlled by `graph_spec.scheduler.max_parallel_branches`
+- `max_parallel_branches=1` is a valid serial fallback
+- when `max_parallel_branches > 1`, dependency-free nodes in the same topological batch may execute concurrently up to that bound
+- runtime MUST persist scheduler evidence showing whether each batch actually ran in serial or parallel mode
+- when `NESTED` edges are present, runtime MUST persist nested lineage evidence linking the child node to its nested parent predecessors
+
+## 6) Required artifacts (runtime layer)
 
 Runtime artifacts SHOULD follow:
 - `.cache/leanatlas/loop_runtime/by_key/<run_key>/...` (rebuildable)
 - `artifacts/loop_runtime/by_key/<run_key>/...` (append-only audit)
 
-## 6) Relationship to other contracts
+## 7) Relationship to other contracts
 
 - Graph composition: `docs/contracts/LOOP_GRAPH_CONTRACT.md`
 - Resource arbitration: `docs/contracts/LOOP_RESOURCE_ARBITER_CONTRACT.md`

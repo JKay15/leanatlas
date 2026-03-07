@@ -27,6 +27,11 @@ Routing/evidence field emission rule:
 
 The SDK is a facade over LOOP runtime contracts; it must not redefine semantics.
 
+Layering rule:
+- `serial(...)`, `parallel(...)`, and `nested(...)` are LOOP core composition helpers.
+- `OPERATOR`, `MAINTAINER`, and `worktree` policies are host/workflow adapters layered on top of that core.
+- SDK/contracts must not redefine native parallelism or nested execution in LeanAtlas role-specific terms.
+
 Maintainer orchestration requirement:
 - Non-trivial maintainer work MUST materialize a maintainer LOOP graph before implementation and close through the same execution system.
 - Required maintainer sequence: `ExecPlan -> graph_spec -> test node -> implement node -> verify node -> AI review node -> LOOP closeout`
@@ -38,6 +43,24 @@ Maintainer orchestration requirement:
 - Re-materializing the same maintainer session inputs MUST reuse the same run identity/session artifacts rather than failing on volatile fields such as timestamps.
 - post-hoc `GraphSummary` alone is insufficient evidence that maintainer work actually executed through LOOP; session and node-journal artifacts must exist before closeout.
 - Maintainer session helpers SHOULD publish a deterministic derived progress sidecar (`MaintainerProgress.json`) so humans can see completed, pending, and current nodes without manually parsing append-only journals.
+- `MaintainerProgress.json` SHOULD distinguish ordinary runnable work from bookkeeping-only closeout by exposing:
+  - `bookkeeping_pending_node_ids`
+  - `current_node_mode` (`RUNNABLE | BOOKKEEPING_CLOSEOUT`)
+- Maintainer closeout MUST also publish a stable execplan-addressable closeout alias:
+  - `artifacts/loop_runtime/by_execplan/<stable_execplan_id>/MaintainerCloseoutRef.json`
+- That stable closeout alias MUST preserve at least:
+  - `execplan_ref`
+  - `run_key`
+  - `summary_ref`
+  - `final_status`
+  - `updated_at_utc`
+  - `session_created_at_utc`
+  - `session_created_at_epoch_ns`
+- `MaintainerSession.json`, `MaintainerProgress.json`, and `close_maintainer_session(...)` return summaries MUST expose `closeout_ref_ref` so ExecPlans can cite settled-state LOOP closeout without embedding a run-key-specific `GraphSummary.jsonl` path in the plan body and perturbing `execplan_hash`.
+- Maintainer closeout must reject stale frozen inputs before settled-state closeout. At minimum, it must reject stale execplan bytes before settled-state closeout, refuse to rewrite the stable closeout alias from an out-of-date session, and refuse to let an older same-plan session overwrite a newer stable closeout ref.
+- legacy sessions missing `required_context_hash` or `instruction_chain_hash` must be rematerialized before closeout.
+- Maintainer `ai_review_node` evidence MUST also freeze the reviewed scope using `scope_fingerprint` plus `scope_observed_stamp`.
+- Maintainer closeout must reject mutate-and-restore scope drift after `ai_review_node`; the current reviewed scope must still match the `scope_observed_stamp` captured when `ai_review_node` was recorded.
 - SDK-facing helpers may return host-local bundle sidecars, but the embedded `graph_spec` must remain a canonical `LoopGraphSpec`.
 - Maintainer closeout helpers MUST use a deterministic reviewer runner for provider-invoked AI review.
 - That reviewer runner MUST require a non-empty review scope file list and emit append-only attempt evidence.
@@ -47,12 +70,115 @@ Maintainer orchestration requirement:
 - The canonical review payload MUST validate against `CanonicalReviewResult.schema.json`.
 - raw provider stdout/stderr are audit evidence only; maintainer LOOP closeout MUST consume the canonical review payload rather than matching provider event shapes directly.
 - That reviewer runner MUST enforce a semantic-idle gate in addition to transport idle; non-semantic stderr chatter must not keep the closeout attempt alive.
+- Maintainer helper surfaces MUST expose deterministic review-acceleration planners such as:
+  - `partition_review_scope_paths(...)`
+  - `merge_partition_scope_paths(...)`
+  - `build_pyramid_review_plan(...)`
+  - `build_review_orchestration_graph(...)`
+  - `build_review_orchestration_bundle(...)`
+- `partition_review_scope_paths(...)`, `merge_partition_scope_paths(...)`, and `build_pyramid_review_plan(...)` are planning aids only. They do not by themselves produce terminal closeout evidence.
+- `build_review_orchestration_graph(...)` compiles the schema-valid executable LOOP review graph payload only.
+- `build_review_orchestration_bundle(...)` compiles the executable LOOP review graph plus deterministic sidecar routing metadata and is the authoritative artifact for per-node reviewer-routing/audit metadata.
+- `graph_spec` may still persist coarse orchestration metadata needed for graph identity or merge policy (for example strategy/reconciliation summaries under `merge_policy.review_orchestration`), but it MUST NOT replace the bundle sidecar as the authoritative source for per-node reviewer routing.
+- `build_review_orchestration_bundle(...)` MUST return a machine-readable `stage_manifest` containing one entry per executable orchestration node, including non-review orchestration nodes such as `review_intake` and `finding_dedupe`; if callers later materialize bundle artifacts, that returned `stage_manifest` becomes the authoritative persisted routing sidecar. Consumers MUST be able to join each entry back to `graph_spec.nodes` via its stable `node_id`. Each entry MUST include at least:
+  - `node_id`
+  - `stage_id`
+  - `review_tier`
+  - `agent_provider_id`
+  - `scope_paths`
+  - `scope_fingerprint`
+  - `partition_id` when the node is partition-scoped
+- `stage_manifest.scope_paths` duplicate checks MUST be evaluated on canonical repo-relative file identities, not raw caller spellings; alias forms such as `foo.py` and `./foo.py` MUST be rejected as duplicates when they resolve to the same repo file.
+- Reviewer-launching nodes MUST include `agent_profile` when provider/profile routing selected a concrete profile for that node.
+- Non-review orchestration nodes that do not launch a reviewer MUST omit `agent_profile` rather than emit `null` placeholders.
+- Authoritative orchestration bundles MUST reject blank routing or scope metadata. At minimum, compilation MUST fail when any of the following are blank:
+  - top-level `agent_provider_id`
+  - top-level `full_scope_fingerprint`
+  - top-level `effective_scope_fingerprint`
+  - any reviewer-launching stage `agent_profile`
+  - any partition `scope_fingerprint`
+  - `final_integrated_closeout.scope_fingerprint`
+- `build_review_orchestration_graph(...)` and `build_review_orchestration_bundle(...)` MUST validate authoritative scope fingerprints against the live repository bytes under the supplied `repo_root`; compilation MUST NOT trust caller-supplied fingerprint strings for:
+  - top-level `full_scope_fingerprint`
+  - top-level `effective_scope_fingerprint`
+  - any partition `scope_fingerprint`
+  - `deep_partition_followup.scope_fingerprint` when `deep_partition_followup.partition_ids` is non-empty
+  - `final_integrated_closeout.scope_fingerprint`
+- Authoritative replay/bundle compilation must also reject stale fingerprint metadata rather than trusting caller-supplied strings that no longer match the selected scope.
+- `strategy_plan.strategy_fingerprint` MUST match the canonical hash of the authoritative strategy-plan content that executable orchestration artifacts actually consume; replayed or hand-authored narrowing metadata MUST be rejected if it carries a stale `strategy_fingerprint`.
+- `strategy_plan.strategy_fingerprint` MUST cover the complete top-level provenance surface consumed by authoritative closeout artifacts, including `strategy_id`, `selected_partition_ids`, `effective_scope_paths`, `effective_scope_fingerprint`, and `effective_scope_source`; replayed plans must not be able to forge those top-level fields without invalidating the fingerprint.
+- `strategy_plan.strategy_fingerprint` MUST NOT fork only because replayed plans mutate ignored metadata that the executable bundle does not consume, such as `strategy_plan.partitions[*].partition_group`, `deep_partition_followup.scope_source`, or no-followup-only inert deep-stage fields like `deep_partition_followup.agent_profile` / `deep_partition_followup.scope_fingerprint` when `deep_partition_followup.partition_ids=[]`.
+- Authoritative replay/bundle compilation must reject stale `strategy_fingerprint` values before graph/bundle materialization.
+- For the compiled pyramid-review helper surface, `strategy_plan.strategy_id` MUST remain `review.pyramid_partition.v1`; authoritative bundle compilation must reject replayed or hand-authored plans that relabel the strategy while still using the same compiler.
+- In the compiled orchestration graph, the deep follow-up stage is materialized via nested child-review nodes and the final integrated closeout sink is the only closeout-authoritative stage.
+- That final integrated closeout sink MUST remain executable after post-dedupe advisory stages (for example deep follow-up nodes) reach terminal non-pass states; later STRICT closeout auditing must not be skipped merely because a post-dedupe advisory stage failed.
+- In explicit no-followup runs, `finding_dedupe` is still a hard gate; authoritative closeout must remain blocked when reconciliation itself ends `FAILED` or `TRIAGED`.
+- Fast partition scan nodes still gate `finding_dedupe`; a terminal non-pass fast scan blocks reconciliation and therefore blocks authoritative closeout until that fast-stage failure is repaired or rerun.
+- `build_pyramid_review_plan(...)` SHOULD accept a narrowed follow-up partition set and/or merged `effective_scope_paths` so later stages can reflect real staged narrowing instead of forcing a full-scope re-review.
+- `fast_partition_scan.partition_ids` MUST preserve the canonical `strategy_plan.partitions` order exactly for the chosen subset; replayed or hand-authored plans must not redefine the frozen fast-stage order, even if downstream deep/effective/final metadata is reordered consistently to match.
+- `strategy_plan.full_scope_paths` MUST preserve canonical repo-relative file order; replayed or hand-authored plans must not fork `strategy_fingerprint` or intake-stage provenance by permuting an otherwise identical full-scope file set.
+- `strategy_plan.partitions` itself MUST preserve the canonical helper-derived partition order; replayed or hand-authored plans must not permute the partition list and then rewrite fast/deep/effective/final lineage to match.
+- `strategy_plan.partitioning_policy` MUST preserve the helper-authored partitioning policy shape exactly. In authoritative replay plans, `group_by` MUST remain `TOP_LEVEL_SCOPE_PREFIX` and `max_files_per_partition` MUST remain the helper-authored integer chunk size; string/bool lookalikes such as `"2"` or `true` are not authoritative replays.
+- `strategy_plan.partitions.*.scope_paths` MUST preserve canonical repo-relative file order within each partition; replayed or hand-authored no-followup plans must not reverse files inside a partition and then mirror that reordered lineage into `finding_dedupe` / STRICT closeout scope.
+- If callers replay or hand-author a narrower fast stage, `deep_partition_followup.partition_ids` MUST stay within the frozen `fast_partition_scan.partition_ids` subset; deep follow-up nodes must not be materialized for partitions that were never scanned in the current fast stage.
+- `strategy_plan.partitions` entries MUST carry unique `partition_id` values and non-empty `scope_paths`; authoritative bundle compilation must reject duplicate routing ids or empty fast-stage reviewer scopes before graph/bundle materialization.
+- `strategy_plan.stages` MUST contain exactly one each of `fast_partition_scan`, `deep_partition_followup`, and `final_integrated_closeout`; authoritative bundle compilation must reject duplicate or unknown `stage_id` entries that the compiler would otherwise ignore.
+- `strategy_plan.stages` MUST preserve the canonical helper-authored stage order exactly; replayed or hand-authored plans must not permute otherwise equivalent stage descriptors and fork `strategy_fingerprint`/STRICT closeout provenance.
+- Each authoritative stage descriptor MUST preserve the helper-authored stage descriptor shape exactly; replayed or hand-authored plans must not change ignored static policy metadata such as `review_tier`, `finding_policy`, `selection_policy`, or `closeout_eligible` and still expect bundle compilation to accept them.
+- `strategy_plan.partitions.*.scope_paths` MUST form an exact disjoint cover of `full_scope_paths`; authoritative bundle compilation must reject overlapping partition files, repeated files inside a partition, or omitted full-scope files that would leave part of the frozen fast-stage lineage unreviewed.
+- When a narrowed follow-up selection is known, the deep follow-up stage and the final integrated closeout stage MUST reflect that narrowed effective scope deterministically.
+- `strategy_plan.selected_partition_ids` MUST match `deep_partition_followup.partition_ids` exactly; replayed or hand-authored plans must not be able to forge a conflicting top-level selected-partition summary.
+- When explicit `followup_partition_ids` are supplied to `build_pyramid_review_plan(...)`, the resulting `selected_partition_ids` / `deep_partition_followup.partition_ids` MUST preserve the frozen `fast_partition_scan.partition_ids` order exactly; helper output must not lexicographically reorder `part_100+` partition ids.
+- `strategy_plan.partitions[*].partition_id` numeric prefix MUST remain zero-padded so lexical node ordering stays aligned with the frozen helper partition order even after `part_100+`.
+- `strategy_plan.partitions[*].partition_id` values MUST preserve the canonical helper-derived routing ids exactly, including zero-padded numeric prefixes and helper slug formatting; replayed or hand-authored plans must not relabel partitions to malformed ids such as `part_1_*` or ids containing characters outside the helper-safe slug alphabet.
+- `strategy_plan.partitions` MUST also match the helper-generated partition boundaries exactly for the declared `partitioning_policy`; replayed or hand-authored plans must not repartition a top-level group under canonical-looking ids and still expect authoritative replay to accept the graph/bundle lineage.
+- When `deep_partition_followup.partition_ids` is non-empty, both `strategy_plan.selected_partition_ids` and `deep_partition_followup.partition_ids` MUST preserve the frozen `fast_partition_scan.partition_ids` order exactly; replayed or hand-authored plans must not reorder the selected partitions, even if the narrowed deep/effective/final `scope_paths` are reordered consistently to match.
+- When `deep_partition_followup.partition_ids` is non-empty, `deep_partition_followup.scope_paths` MUST stay within the selected partition lineage and MUST include at least one file from every selected partition; bundle compilation MUST reject silent widening or silent partition drop.
+- When `deep_partition_followup.partition_ids` is non-empty, `deep_partition_followup.scope_paths` MUST also match the canonical selected partition lineage exactly; replayed or hand-authored plans must not reorder the narrowed deep/effective/final scope together away from the frozen partition-derived order.
+- When `deep_partition_followup.partition_ids` is non-empty, `deep_partition_followup.scope_paths`, `effective_scope_paths`, and `final_integrated_closeout.scope_paths` MUST match exactly; replayed or hand-authored strategies MUST NOT widen the authoritative STRICT closeout back to the full selected-partition union after the deep stage has narrowed scope.
+- For every authoritative "`scope_paths` must match exactly" rule above, exactness is sequence-sensitive, not set-sensitive; replayed or hand-authored plans that reorder the same file set MUST be rejected because they fork deterministic lineage and `strategy_fingerprint`/bundle provenance.
+- `strategy_plan.effective_scope_source` MUST match `final_integrated_closeout.scope_source`; replayed or hand-authored plans must not be able to forge a different top-level narrowing provenance string than the one the authoritative STRICT stage actually uses.
+- `strategy_plan.effective_scope_source` / `final_integrated_closeout.scope_source` MUST use a canonical helper-authored provenance label:
+  - `MERGED_SELECTED_PARTITIONS`
+  - `FULL_SCOPE_AFTER_EMPTY_FOLLOWUP`
+  - `INFERRED_FROM_EFFECTIVE_SCOPE`
+  - `MANUAL_EFFECTIVE_SCOPE_OVERRIDE`
+- `FULL_SCOPE_AFTER_EMPTY_FOLLOWUP` is only valid when `deep_partition_followup.partition_ids=[]`; replayed or hand-authored plans must not claim the empty-followup full-scope closeout label for any narrowed deep-stage lineage.
+- When `deep_partition_followup.partition_ids` is non-empty, `final_integrated_closeout.scope_paths` MUST also stay within that same selected partition lineage; authoritative STRICT closeout must not widen beyond what the staged narrowing actually selected.
+- `effective_scope_paths`, `deep_partition_followup.scope_paths`, and `final_integrated_closeout.scope_paths` MUST NOT repeat the same repo file path more than once; authoritative lineage metadata must stay multiplicity-stable with the repository-byte fingerprints later consumed by review runners.
+- If `effective_scope_paths` narrows inside a selected multi-file partition, the compiled deep follow-up node manifest MUST preserve that narrowed file subset in `scope_paths` while also retaining the original partition scope in dedicated audit fields:
+  - `partition_scope_paths`
+  - `partition_scope_fingerprint`
+  - `scope_fingerprint_basis`
+- `scope_fingerprint_basis` is required whenever the deep follow-up stage may replay a narrowed scope. Its allowed values and meanings are:
+  - `REPO_FILE_BYTES`: `scope_fingerprint` is the repository-byte fingerprint of the exact file set listed in `scope_paths`
+  - `PATH_SET`: `scope_fingerprint` is the deterministic hash of the narrowed `scope_paths` set itself, used when manual narrowing picks a subset of files inside a larger partition
+- `PATH_SET` fingerprints MUST be order-insensitive across replayed or hand-authored partition serialization, and compiled deep-stage `scope_paths` for the same narrowed file set MUST stay canonically ordered in the authoritative stage manifest.
+- Replaying helper-derived merged scope back into `build_pyramid_review_plan(...)` alongside the same `followup_partition_ids` MUST preserve the same provenance metadata and `strategy_fingerprint`; helper output replay must not fork semantically identical plans.
+- If callers replay or hand-author a narrower fast stage, `build_review_orchestration_bundle(...)` sidecar metadata (for example `composition_notes.fast_partition_node_ids`) MUST stay aligned with the frozen `fast_partition_scan.partition_ids`; the bundle MUST NOT advertise fast-scan nodes that do not exist in the compiled `graph_spec`.
+- In replayed or hand-authored fast-stage subsets, the `finding_dedupe` stage-manifest `scope_paths` / `scope_fingerprint` MUST freeze the actual `fast_partition_scan.partition_ids` lineage rather than the original full frozen scope; reconciliation metadata must not overstate which partitions were scanned in the current run.
+- `build_pyramid_review_plan(..., followup_partition_ids=[])` MUST be valid and represent the clean-fast-scan/no-escalation path explicitly; callers must not be forced to omit the parameter to encode "nothing to escalate".
+- `build_pyramid_review_plan(..., followup_partition_ids=[], effective_scope_paths=[])` MUST also be valid and represent the same explicit no-escalation path.
+- In that explicit no-escalation path, the deep follow-up stage may have empty `partition_ids` / `scope_paths`, but the final integrated closeout stage MUST remain present and must stay integrated over the effective main scope.
+- When `deep_partition_followup.partition_ids=[]`, `effective_scope_paths` and `final_integrated_closeout.scope_paths` MUST match the frozen `fast_partition_scan.partition_ids` lineage exactly; replayed or hand-authored no-followup bundles MUST reject silent narrowing, silent widening, or scope replacement in the authoritative STRICT closeout stage.
+- Regardless of whether follow-up partitions are empty, `final_integrated_closeout.scope_paths` MUST match `effective_scope_paths` exactly and `final_integrated_closeout.scope_fingerprint` MUST match `effective_scope_fingerprint`; authoritative closeout must reject empty or widened scopes rather than compiling them.
+- `strategy_plan.closeout_policy` MUST preserve the helper-authored closeout policy shape exactly; replayed or hand-authored plans must not inject extra policy keys or fork authoritative closeout provenance through ignored closeout metadata.
+- `strategy_plan.closeout_policy.intermediate_rounds_are_advisory` and `strategy_plan.closeout_policy.requires_integrated_scope_closeout` MUST remain `true` in authoritative replay plans; bundle compilation must reject contradictory policy flags even when the compiled graph/bundle payload would otherwise stay unchanged.
+- `build_review_orchestration_bundle(...)` MUST also return a machine-readable reconciliation contract for the `finding_dedupe` stage so later runners/auditors know which lineage record is required before STRICT closeout.
+- That reconciliation contract MUST include a stable `resource_id` locator for the reconciliation state, so later runners/auditors know where `finding_dedupe` lineage records live.
+- Partitioned or low-tier intermediate review rounds are acceleration aids; final `AI_REVIEW_CLOSEOUT` still requires an integrated closeout review over the effective main scope.
 - `instruction_scope_refs` MUST cover the active `AGENTS.md` chain induced by the review scope and `required_context_refs`.
 - Maintainer session materialization MUST validate `instruction_scope_refs` against the active `AGENTS.md` chain induced by `execplan_ref` as well as `scope_paths` and `required_context_refs`; callers must not be able to freeze an incomplete chain.
 - Maintainer session materialization MUST canonicalize `instruction_scope_refs` to the active `AGENTS.md` chain; unrelated extra `AGENTS.md` refs must not fork `run_key`.
 - `required_context_refs` MUST be non-empty for maintainer AI review nodes.
 - `required_context_refs` MUST stay disjoint from `scope_paths` because maintainer run identity must be anchored in immutable context evidence, not the mutable bytes of files being edited.
 - Maintainer session run identity MUST include the frozen `graph_spec` contents, not just `change_id` and mutable artifact paths.
+- Maintainer `loop_closeout` remains a bookkeeping sink: it may record a terminal `FAILED` or `TRIAGED` closeout after upstream failure blocks `ai_review_node`, but it MUST preserve the resolved upstream terminal class and MUST NOT imply that AI review executed successfully.
+- In blocked maintainer closeout paths, `reason_code="REVIEW_PASS"` (or any other success-implying AI review reason) MUST be rejected as misleading evidence.
+- When `loop_closeout` is the only remaining bookkeeping sink after upstream failure/triage, `MaintainerProgress.json` MAY still expose it as the current/pending node, but it MUST simultaneously mark that state as bookkeeping closeout rather than ordinary runnable work.
+- Recorded-graph replay that accepts legacy `GraphSummary.jsonl` rows missing `node_decisions[].executed` MUST rewrite the persisted summary to the current evidence shape before returning `summary_ref`.
+- Maintainer recorded-graph replay MUST also preserve a journaled blocked `loop_closeout` as executed bookkeeping evidence rather than downgrading it back to synthesized `UPSTREAM_BLOCKED` in `GraphSummary.jsonl` / `NodeResults.json`.
+- Legacy blocked-closeout replay compatibility is not limited to the summary row: if older persisted maintainer evidence still carries synthesized `UPSTREAM_BLOCKED` loop-closeout state, replay MUST upgrade `GraphSummary.jsonl`, `NodeResults.json`, and `graph/arbitration.jsonl` to the current bookkeeping-closeout evidence shape before returning success.
 - The stale-input guard MUST reject both content drift and observed-scope drift across review execution, including mutate-and-restore scope rewrites that end with the original bytes.
 
 ## 2) Idempotency and retry behavior
