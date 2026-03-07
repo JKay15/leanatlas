@@ -19,6 +19,7 @@ Use this page when you need to answer any of these questions:
   - `tools/loop/review_runner.py`
   - `tools/loop/review_strategy.py`
   - `tools/loop/review_orchestration.py`
+  - `tools/loop/review_reconciliation.py`
   - `.agents/skills/leanatlas-loop-review-acceleration/SKILL.md`
 - Formalization front-end helpers:
   - `tools/formalization/external_source_pack.py`
@@ -47,7 +48,7 @@ Use this page when you need to answer any of these questions:
 | LOOP core vs LeanAtlas adapter layering | Implemented | `docs/contracts/LOOP_RUNTIME_CONTRACT.md`, `docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md` | Core is role-neutral; host/workflow semantics stay in adapters. |
 | Batch supervisor / autopilot | Planned | `docs/agents/execplans/20260307_batch_supervisor_autopilot_and_human_ingress_v0.md` | Parent-loop automation across child waves is not landed yet. |
 | Independent LOOP Python library extraction / packaging | Planned | `docs/agents/execplans/20260308_loop_python_library_decoupling_packaging_v0.md` | Current mainline documents core-vs-adapter boundaries, but cross-project packaging and standalone usage docs are still follow-on work. |
-| Review supersession / reconciliation runtime | Planned | `docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md` | Contract direction exists; runtime/evidence engine is still follow-on work. |
+| Review supersession / reconciliation runtime | Implemented | `tools/loop/review_reconciliation.py`, `tests/contract/check_loop_review_reconciliation_runtime.py`, `docs/agents/execplans/20260308_review_supersession_reconciliation_runtime_v0.md` | Deterministic authoritative reconciliation artifacts and persistence are landed, including run-key-independent immutable ledgers, authoritative finding settlement, and medium-reviewed closeout evidence. |
 | Capability publish + context refresh | Planned | `docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md` | Future loops must adopt new capabilities through explicit publish/rematerialize steps. |
 | LeanAtlas worktree orchestration | Planned | `docs/coordination/WORKSTREAMS.md`, `docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md` | Worktree coordination is documented, but not yet a LOOP-native execution layer. |
 | OPERATOR / MAINTAINER workflow integration on the new core | Partial | `docs/agents/OPERATOR_WORKFLOW.md`, `docs/agents/MAINTAINER_WORKFLOW.md` | Workflows reference LOOP surfaces, but full adapter integration is still staged. |

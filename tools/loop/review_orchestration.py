@@ -1245,9 +1245,18 @@ def build_review_orchestration_bundle(
         reconciliation_contract={
             "resource_id": "review.reconciliation_state",
             "producer_node_id": "finding_dedupe",
+            "artifact_schema_ref": "docs/schemas/ReviewSupersessionReconciliation.schema.json",
+            "authoritative_closeout_stage_id": "final_integrated_closeout",
             "finding_disposition_enum": ["CONFIRMED", "DISMISSED", "SUPERSEDED"],
+            "late_output_disposition_enum": [
+                "APPLIED",
+                "NOOP_ALREADY_COVERED",
+                "REJECTED_WITH_RATIONALE",
+            ],
             "required_fields": [
                 "finding_key",
+                "finding_group_key",
+                "scope_lineage_key",
                 "source_stage_id",
                 "source_partition_id",
                 "disposition",

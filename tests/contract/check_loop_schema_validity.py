@@ -33,6 +33,7 @@ SCHEMA_FILES = {
     "instructionresolution": "InstructionResolutionReport.schema.json",
     "auditflagged": "AuditFlaggedEvent.schema.json",
     "canonicalreviewresult": "CanonicalReviewResult.schema.json",
+    "reviewsupersessionreconciliation": "ReviewSupersessionReconciliation.schema.json",
     "loopsdkcall": "LoopSDKCallContract.schema.json",
     "waveexecutionlooprun": "WaveExecutionLoopRun.schema.json",
 }
@@ -145,6 +146,44 @@ def main() -> int:
     for req in ("response_file", "provider_event_jsonl"):
         if req not in flattened_source_values:
             print(f"[loop-schema][FAIL] CanonicalReviewResult semantic_response_source missing `{req}`", file=sys.stderr)
+            bad += 1
+
+    reconciliation_required = set(raw["reviewsupersessionreconciliation"].get("required") or [])
+    for req in (
+        "review_id",
+        "resource_id",
+        "authoritative_closeout_review_round_id",
+        "closeout_ready",
+        "review_rounds",
+        "finding_records",
+        "authoritative_findings",
+    ):
+        if req not in reconciliation_required:
+            print(
+                f"[loop-schema][FAIL] ReviewSupersessionReconciliation missing required field `{req}`",
+                file=sys.stderr,
+            )
+            bad += 1
+    reconciliation_defs = raw["reviewsupersessionreconciliation"].get("$defs", {})
+    ingestion_enum = (
+        reconciliation_defs.get("ingestionDisposition", {}).get("enum") or []
+    )
+    for req in ("APPLIED", "NOOP_ALREADY_COVERED", "REJECTED_WITH_RATIONALE"):
+        if req not in ingestion_enum:
+            print(
+                f"[loop-schema][FAIL] ReviewSupersessionReconciliation ingestionDisposition missing `{req}`",
+                file=sys.stderr,
+            )
+            bad += 1
+    finding_enum = (
+        reconciliation_defs.get("findingDisposition", {}).get("enum") or []
+    )
+    for req in ("CONFIRMED", "DISMISSED", "SUPERSEDED"):
+        if req not in finding_enum:
+            print(
+                f"[loop-schema][FAIL] ReviewSupersessionReconciliation findingDisposition missing `{req}`",
+                file=sys.stderr,
+            )
             bad += 1
 
     sdk_required = set(raw["loopsdkcall"]["required"])
