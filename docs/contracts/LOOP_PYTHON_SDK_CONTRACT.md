@@ -27,6 +27,20 @@ Routing/evidence field emission rule:
 
 The SDK is a facade over LOOP runtime contracts; it must not redefine semantics.
 
+Post-onboarding default preference requirement:
+- bounded user-facing LOOP defaults MAY be persisted at `.cache/leanatlas/onboarding/loop_preferences.json`
+- committed helper surface for those defaults:
+  - `build_preference_record(...)`
+  - `default_preference_artifact_path(...)`
+  - `load_preference_record(...)`
+  - `write_preference_record(...)`
+  - `resolve_effective_preferences(...)`
+- supported user-facing assurance presets:
+  - `Balanced`
+  - `Budget Saver`
+  - `Auditable`
+- preset storage is advisory and post-onboarding only; later runs may override the stored defaults without mutating the persisted preference artifact
+
 Layering rule:
 - `serial(...)`, `parallel(...)`, and `nested(...)` are LOOP core composition helpers.
 - `OPERATOR`, `MAINTAINER`, and `worktree` policies are host/workflow adapters layered on top of that core.

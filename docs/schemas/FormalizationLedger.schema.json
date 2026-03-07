@@ -59,6 +59,10 @@
           "additionalProperties": true,
           "type": "object"
         },
+        "latex_enrichment": {
+          "additionalProperties": true,
+          "type": "object"
+        },
         "notes": {
           "items": {
             "type": "string"
@@ -236,6 +240,55 @@
     "externalResult": {
       "additionalProperties": false,
       "properties": {
+        "bib_source_files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "bibliography_entry_candidates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "citation_authors": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "citation_key_usage_counts": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "count": {
+                "type": "integer"
+              },
+              "key": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "key",
+              "count"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "citation_keys_detected": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "citation_label": {
+          "type": "string"
+        },
+        "citation_year": {
+          "type": "integer"
+        },
         "dependency_status": {
           "type": "string"
         },
@@ -244,6 +297,12 @@
         },
         "name": {
           "type": "string"
+        },
+        "retrieval_queries": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "review": {
           "$ref": "#/$defs/review"

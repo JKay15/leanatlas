@@ -11,6 +11,8 @@ This contract defines deterministic gate/governance artifacts for formalization 
   - schema: `docs/schemas/FormalizationGateReport.schema.json`
 - Agent fidelity review report:
   - schema: `docs/schemas/AgentFidelityReview.schema.json`
+- ExternalSourcePack:
+  - schema: `docs/schemas/ExternalSourcePack.schema.json`
 
 ## 2) Proof completion state model
 Canonical completion states (claim/proof unit):
@@ -29,6 +31,12 @@ Hard rules:
 Formalization gate and mapping gate are independent but composable:
 - Formalization gate: proof completeness + anti-cheat + dependency resolution policy.
 - Mapping gate: declaration/object to clause/atom alignment completeness/correctness.
+
+Committed front-end governance helpers that feed those gates include:
+- human ingress through `ExternalSourcePack`
+- source enrichment from LaTeX/PDF evidence
+- review todo generation for mapping triage
+- reverse-link resync for annotation-backed alignment refresh
 
 Decision rule (deterministic):
 - final pass requires both gates pass,

@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "generated_at_utc": {
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "citation_keys_detected": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "citation_label": {
+            "type": "string"
+          },
+          "discovery": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "external_result_id": {
+            "type": "string"
+          },
+          "materials": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "retrieval_queries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "selected_material": {
+            "additionalProperties": false,
+            "properties": {
+              "confidence": {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "mode": {
+                "enum": [
+                  "LATEX_USER",
+                  "LATEX_DOWNLOADED",
+                  "LATEX_URL",
+                  "PDF_USER",
+                  "PDF_DOWNLOADED",
+                  "PDF_URL",
+                  "METADATA_ONLY",
+                  "NONE"
+                ],
+                "type": "string"
+              },
+              "path_or_url": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "mode",
+              "path_or_url",
+              "reason",
+              "confidence"
+            ],
+            "type": "object"
+          },
+          "source_kind": {
+            "type": "string"
+          },
+          "used_by_claim_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "user_inputs": {
+            "additionalProperties": false,
+            "properties": {
+              "entry_count": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "existing_asset_count": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "existing_entry_count": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "notes": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "valid_path_entry_count": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "entry_count",
+              "valid_path_entry_count",
+              "existing_entry_count",
+              "existing_asset_count",
+              "notes"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "external_result_id",
+          "retrieval_queries",
+          "discovery",
+          "materials",
+          "selected_material"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "ledger_path": {
+      "type": "string"
+    },
+    "schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "settings": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_dir": {
+          "type": "string"
+        },
+        "download_latex": {
+          "type": "boolean"
+        },
+        "download_pdf": {
+          "type": "boolean"
+        },
+        "max_queries_per_item": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_results_per_provider": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "min_arxiv_relevance": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "min_generic_relevance": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        "network_enabled": {
+          "type": "boolean"
+        },
+        "openalex_enabled": {
+          "type": "boolean"
+        },
+        "semanticscholar_enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "max_queries_per_item",
+        "max_results_per_provider",
+        "min_arxiv_relevance",
+        "min_generic_relevance",
+        "network_enabled",
+        "openalex_enabled",
+        "semanticscholar_enabled",
+        "download_latex",
+        "download_pdf",
+        "cache_dir"
+      ],
+      "type": "object"
+    },
+    "summary": {
+      "additionalProperties": false,
+      "properties": {
+        "external_results_total": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "unresolved_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "with_latex_material": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "with_pdf_material": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "with_user_assets": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "with_user_declared_entries": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "external_results_total",
+        "with_user_declared_entries",
+        "with_user_assets",
+        "with_latex_material",
+        "with_pdf_material",
+        "unresolved_count"
+      ],
+      "type": "object"
+    },
+    "user_inputs_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "generated_at_utc",
+    "ledger_path",
+    "settings",
+    "summary",
+    "items"
+  ],
+  "title": "ExternalSourcePack",
+  "type": "object"
+}

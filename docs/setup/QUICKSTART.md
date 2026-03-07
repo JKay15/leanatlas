@@ -119,3 +119,16 @@ After creating them in Codex App:
   `export LEANATLAS_REAL_AGENT_CMD='codex exec - < "$LEANATLAS_EVAL_PROMPT"'`.
 - `uv run --locked` fails with TLS/network handshake: if `./.venv/bin/python` already works, use local `.venv` commands and skip redundant sync; then fix proxy/network before forced resync.
 - Network-restricted environment: configure terminal proxy first, then retry `uv sync --locked`.
+
+## 6) Post-onboarding LOOP defaults
+
+After the environment is ready, the bounded LOOP preference presets use this reserved local path when they are explicitly staged:
+
+- `.cache/leanatlas/onboarding/loop_preferences.json`
+
+Recommended presets:
+- `Balanced`
+- `Budget Saver`
+- `Auditable`
+
+These are post-onboarding operating defaults, not bootstrap requirements. The current mainline commits the preset surface and artifact format, but not automatic onboarding-time persistence. Per-run LOOP settings may still override any staged defaults without mutating the committed preference artifact.

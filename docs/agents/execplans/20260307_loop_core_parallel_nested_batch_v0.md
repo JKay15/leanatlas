@@ -39,8 +39,11 @@ In scope:
 Follow-on items staged by this plan but not all implemented in the first wave:
 - batch supervisor/autopilot (parent-loop orchestration across child waves)
 - review orchestration automation (pyramid reviewer + staged narrowing + supersession/reconciliation)
+- user-configurable LOOP defaults and post-onboarding preference presets
 - capability publish + context refresh
 - human external input ingress + rematerialization
+- independent LOOP Python library extraction, packaging, and non-LeanAtlas usage docs
+- LOOP skills decoupling plus LeanAtlas project-level skills governance/completeness
 - LeanAtlas worktree orchestration
 - OPERATOR/MAINTAINER workflow integration
 - graph/dataflow/live smoke expansion
@@ -155,14 +158,20 @@ Deliverables:
 - Record the ordered follow-on themes in this plan:
   - batch supervisor/autopilot
   - review orchestration automation
+  - user-configurable LOOP defaults and post-onboarding preference presets
   - capability publish + context refresh
   - human external input ingress + rematerialization
+  - independent LOOP Python library extraction, packaging, and non-LeanAtlas usage docs
+  - LOOP skills decoupling plus LeanAtlas project-level skills governance/completeness
   - LeanAtlas worktree orchestration
   - OPERATOR/MAINTAINER workflow integration
   - graph/dataflow/live smoke expansion
   - LOOP mainline productization + LeanAtlas project-level integration + bounded decoupling
 - Point the final theme at an explicit child plan so later implementation cannot drift into a generic project-wide documentation cleanup.
   - child plan: `docs/agents/execplans/20260307_loop_mainline_productization_integration_v0.md`
+  - child plan: `docs/agents/execplans/20260308_loop_user_preferences_and_onboarding_defaults_v0.md`
+  - child plan: `docs/agents/execplans/20260308_loop_python_library_decoupling_packaging_v0.md`
+  - child plan: `docs/agents/execplans/20260308_loop_skills_decoupling_and_project_skills_governance_v0.md`
 
 Commands:
 - `sed -n '1,260p' docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md`
@@ -217,6 +226,8 @@ Contamination control:
 - Full-batch automation is not considered delivered until a parent-loop supervisor/autopilot can materialize child waves, reconcile their evidence, and close out on the latest integrated state.
 - Human-provided external information must enter through explicit ingress/publish/rematerialize/adopt flow; implicit mid-run chat-state drift is forbidden.
 - The docs/skills/mainline-integration theme is defined as `LOOP-as-mainline` productization first, with project-level integration updates only insofar as they make LOOP usable as a LeanAtlas mainline system.
+- Bounded decoupling inside LeanAtlas docs is not sufficient by itself; if LOOP is expected to become reusable across Codex projects, that extraction/packaging path must remain a first-class follow-on theme in this master batch.
+- The same applies to skills: reusable LOOP capabilities cannot remain discoverable only through `leanatlas-*` skills, and project-level skills completeness cannot stay an implicit side effect of code/docs work.
 
 ## Rollback plan
 - Revert the new core-parallel/nested runtime changes and first-wave tests/docs:
@@ -230,6 +241,9 @@ Contamination control:
 
 ## Outcomes & retrospective (fill when done)
 - Completed:
+  - first-wave core runtime parallel+nested execution landed earlier in this batch
+  - follow-on child plans for LOOP mainline productization, user preferences, Python-library decoupling, and skills governance are now all materialized
+  - LOOP mainline productization and user-preference staging are now completed child waves
 - Verification:
 - Residual risks:
 - Follow-on recommendation:
