@@ -101,6 +101,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260307_loop_mainline_productization_scope_clarity_v0.md`
 - `docs/agents/execplans/20260307_maintainer_closeout_ref_v0.md`
 - `docs/agents/execplans/20260307_review_orchestration_automation_v0.md`
+- `docs/agents/execplans/20260308_formalization_enrichment_absorption_v0.md`
 - `docs/agents/execplans/README.md`
 - `docs/agents/execplans/phase3_dedup_gate_v0.md`
 - `docs/agents/execplans/phase3_gc_gate_v0.md`
