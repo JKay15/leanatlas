@@ -1687,6 +1687,30 @@
         "docs",
         "skills",
         "loop",
+        "reconciliation"
+      ],
+      "goal": "Guardrail: review reconciliation must expose a generic LOOP skill plus LeanAtlas routing/docs wiring.",
+      "id": "loop_review_reconciliation_skill_integration",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_loop_review_reconciliation_skill_integration.py",
+      "tags": [
+        "docs",
+        "skills",
+        "loop",
+        "reconciliation",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "docs",
+        "skills",
+        "loop",
         "onboarding"
       ],
       "goal": "Guardrail: LOOP post-onboarding user preference presets stay aligned across module surface, onboarding docs, and mainline/review skills.",
