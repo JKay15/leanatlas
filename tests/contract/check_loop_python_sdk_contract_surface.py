@@ -22,6 +22,10 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools.loop import (
+    BASELINE_REVIEW_PROMPT_PROTOCOL_ID,
+    EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+    build_controlled_review_prompt_experiment,
+    build_review_prompt,
     build_default_tiered_review_policy,
     build_pyramid_review_plan,
     build_review_orchestration_bundle,
@@ -62,6 +66,19 @@ def main() -> int:
         "resolved_invocation_signature",
         "build_default_review_policy(...)",
         "build_default_tiered_review_policy(...)",
+        "build_review_prompt(...)",
+        "build_controlled_review_prompt_experiment(...)",
+        "review.prompt.baseline.v1",
+        "review.prompt.exhaustive.v1",
+        "LOOP_REVIEW_PROMPT_SHA256",
+        "anti-dribble",
+        "omission self-check",
+        "controlled prompt experiment",
+        "runner MAY require a canonical prompt protocol before provider launch",
+        "normalize line endings before exact prompt comparison",
+        "persist `prompt_protocol_id` only for canonical prompts",
+        "`declared_prompt_protocol_id`",
+        "allow_legacy_prompt_protocol_backfill=True",
         "`Budget Saver` is the committed default preset",
         "`FAST + low` is the default reviewer path",
         "`LOW_PLUS_MEDIUM` is the committed default reviewer tier policy",
@@ -199,11 +216,15 @@ def main() -> int:
         "ordinary runnable work",
         "`serial(...)`, `parallel(...)`, and `nested(...)` are LOOP core composition helpers",
         "`OPERATOR`, `MAINTAINER`, and `worktree` policies are host/workflow adapters",
+        "authoritative staged review bundles MUST keep reviewer-launching stages on `review.prompt.exhaustive.v1`",
+        "canonical prompt frozen inputs must match the run",
     ):
         if s not in sdk_doc:
             return _fail(f"LOOP_PYTHON_SDK_CONTRACT missing `{s}`")
 
     for helper_name, helper in (
+        ("build_review_prompt", build_review_prompt),
+        ("build_controlled_review_prompt_experiment", build_controlled_review_prompt_experiment),
         ("build_default_tiered_review_policy", build_default_tiered_review_policy),
         ("partition_review_scope_paths", partition_review_scope_paths),
         ("merge_partition_scope_paths", merge_partition_scope_paths),
@@ -213,6 +234,10 @@ def main() -> int:
     ):
         if not callable(helper):
             return _fail(f"tools.loop must export callable helper `{helper_name}`")
+    if BASELINE_REVIEW_PROMPT_PROTOCOL_ID != "review.prompt.baseline.v1":
+        return _fail("tools.loop must export the canonical baseline review prompt protocol id")
+    if EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID != "review.prompt.exhaustive.v1":
+        return _fail("tools.loop must export the canonical exhaustive review prompt protocol id")
 
     node_a = {"node_id": "a"}
     node_b = {"node_id": "b"}

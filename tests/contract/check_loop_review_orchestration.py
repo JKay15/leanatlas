@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
 import tools.loop.review_orchestration as review_orchestration  # noqa: E402
 
 from tools.loop import (  # noqa: E402
+    EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
     LoopGraphRuntime,
     build_pyramid_review_plan,
     build_review_orchestration_bundle,
@@ -77,13 +78,14 @@ def _canonical_partitioning_policy_for_fingerprint(plan: dict) -> dict:
 def _strategy_fingerprint_payload(plan: dict) -> dict:
     partition_keys = ("partition_id", "scope_paths", "scope_fingerprint")
     stage_keys = {
-        "fast_partition_scan": ("stage_id", "agent_profile", "partition_ids"),
+        "fast_partition_scan": ("stage_id", "agent_profile", "prompt_protocol_id", "partition_ids"),
         "deep_partition_followup": (
             "stage_id",
             "agent_profile",
             "partition_ids",
             "scope_paths",
             "scope_fingerprint",
+            "prompt_protocol_id",
         ),
         "final_integrated_closeout": (
             "stage_id",
@@ -92,6 +94,7 @@ def _strategy_fingerprint_payload(plan: dict) -> dict:
             "scope_paths",
             "scope_fingerprint",
             "scope_source",
+            "prompt_protocol_id",
         ),
     }
     authoritative_stages: list[dict] = []
@@ -106,6 +109,7 @@ def _strategy_fingerprint_payload(plan: dict) -> dict:
                 "stage_id",
                 "partition_ids",
                 "scope_paths",
+                "prompt_protocol_id",
             )
         authoritative_stages.append({key: stage.get(key) for key in keys})
     return {
@@ -128,6 +132,15 @@ def _strategy_fingerprint_payload(plan: dict) -> dict:
         "stages": authoritative_stages,
         "closeout_policy": dict(plan.get("closeout_policy") or {}),
     }
+
+
+def _legacy_strategy_fingerprint_payload(plan: dict, *, omitted_stage_ids: set[str]) -> dict:
+    payload = _strategy_fingerprint_payload(plan)
+    for stage in payload.get("stages") or []:
+        stage_id = str(stage.get("stage_id") or "")
+        if stage_id in omitted_stage_ids:
+            stage.pop("prompt_protocol_id", None)
+    return payload
 
 
 def _legacy_uncanonicalized_strategy_fingerprint_payload(plan: dict) -> dict:
@@ -325,8 +338,17 @@ def _assert_compiled_graph_shape() -> None:
             "reviewer-launching stage manifest entries must preserve their concrete agent_profile",
         )
         _assert(
+            stage_manifest["fast_partition_scan__part_01_docs"]["prompt_protocol_id"]
+            == EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+            "fast reviewer-launching stage manifest entries must preserve prompt_protocol_id",
+        )
+        _assert(
             "agent_profile" not in stage_manifest["review_intake"],
             "non-review orchestration nodes must omit null agent_profile placeholders",
+        )
+        _assert(
+            "prompt_protocol_id" not in stage_manifest["review_intake"],
+            "non-review orchestration nodes must omit prompt_protocol_id placeholders",
         )
         _assert(
             stage_manifest["finding_dedupe"]["node_id"] == "finding_dedupe",
@@ -335,6 +357,10 @@ def _assert_compiled_graph_shape() -> None:
         _assert(
             "agent_profile" not in stage_manifest["finding_dedupe"],
             "finding_dedupe must omit agent_profile because it does not launch a reviewer",
+        )
+        _assert(
+            "prompt_protocol_id" not in stage_manifest["finding_dedupe"],
+            "finding_dedupe must omit prompt_protocol_id because it does not launch a reviewer",
         )
         _assert(
             stage_manifest["fast_partition_scan__part_01_docs"]["scope_paths"]
@@ -350,6 +376,11 @@ def _assert_compiled_graph_shape() -> None:
             "deep stage manifest must preserve per-partition routing identity",
         )
         _assert(
+            stage_manifest["deep_partition_followup__part_02_tests"]["prompt_protocol_id"]
+            == EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+            "deep stage manifest must preserve prompt_protocol_id",
+        )
+        _assert(
             stage_manifest["deep_partition_followup__part_02_tests"]["scope_fingerprint_basis"] == "REPO_FILE_BYTES",
             "deep stage manifest must record repository-byte fingerprint semantics when a full partition is replayed unchanged",
         )
@@ -361,6 +392,95 @@ def _assert_compiled_graph_shape() -> None:
             stage_manifest["final_integrated_closeout"]["review_tier"] == "MEDIUM",
             "final integrated closeout manifest must align with the default medium closeout tier",
         )
+        _assert(
+            stage_manifest["final_integrated_closeout"]["prompt_protocol_id"]
+            == EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+            "final integrated closeout manifest must preserve prompt_protocol_id",
+        )
+        legacy_strategy = json.loads(json.dumps(strategy))
+        omitted_stage_ids = {
+            str(stage.get("stage_id") or "")
+            for stage in legacy_strategy.get("stages") or []
+        }
+        for stage in legacy_strategy.get("stages") or []:
+            stage.pop("prompt_protocol_id", None)
+        legacy_strategy["strategy_fingerprint"] = _canonical_hash(
+            _legacy_strategy_fingerprint_payload(legacy_strategy, omitted_stage_ids=omitted_stage_ids)
+        )
+        legacy_bundle = build_review_orchestration_bundle(
+            repo_root=repo,
+            review_id="review_orchestration_legacy_prompt_protocol_replay",
+            strategy_plan=legacy_strategy,
+            max_parallel_branches=3,
+            allow_legacy_prompt_protocol_backfill=True,
+        )
+        legacy_stage_manifest = _stage_manifest_map(legacy_bundle)
+        _assert(
+            legacy_stage_manifest["fast_partition_scan__part_01_docs"]["prompt_protocol_id"]
+            == EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+            "legacy replay plans that predate prompt_protocol_id must backfill the canonical exhaustive protocol",
+        )
+        _assert(
+            legacy_bundle["composition_notes"]["strategy_fingerprint"] == _canonical_hash(_strategy_fingerprint_payload(strategy)),
+            "legacy replay plans should be upgraded to the canonical prompt-aware strategy fingerprint after validation",
+        )
+        downgraded_strategy = json.loads(json.dumps(strategy))
+        for stage in downgraded_strategy.get("stages") or []:
+            if str(stage.get("stage_id") or "") in {
+                "fast_partition_scan",
+                "deep_partition_followup",
+                "final_integrated_closeout",
+            }:
+                stage["prompt_protocol_id"] = "review.prompt.baseline.v1"
+        downgraded_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(downgraded_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_baseline_prompt_downgrade",
+                strategy_plan=downgraded_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "review.prompt.exhaustive.v1" in str(exc),
+                "authoritative replay plans should reject downgraded baseline prompt protocols",
+            )
+        else:
+            raise AssertionError(
+                "authoritative replay plans must reject reviewer-launching stages downgraded to the baseline prompt protocol"
+            )
+        missing_protocol_strategy = json.loads(json.dumps(strategy))
+        for stage in missing_protocol_strategy.get("stages") or []:
+            if str(stage.get("stage_id") or "") in {
+                "fast_partition_scan",
+                "deep_partition_followup",
+                "final_integrated_closeout",
+            }:
+                stage.pop("prompt_protocol_id", None)
+        missing_protocol_strategy["strategy_fingerprint"] = _canonical_hash(
+            _legacy_strategy_fingerprint_payload(
+                missing_protocol_strategy,
+                omitted_stage_ids={"fast_partition_scan", "deep_partition_followup", "final_integrated_closeout"},
+            )
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_missing_prompt_protocol_current",
+                strategy_plan=missing_protocol_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "allow_legacy_prompt_protocol_backfill=True" in str(exc),
+                "current replay plans missing prompt_protocol_id should require explicit legacy backfill opt-in",
+            )
+        else:
+            raise AssertionError(
+                "authoritative replay plans must reject missing prompt_protocol_id by default"
+            )
         reconciliation = dict(bundle.get("reconciliation_contract") or {})
         _assert(
             reconciliation.get("resource_id") == "review.reconciliation_state",

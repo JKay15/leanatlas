@@ -45,3 +45,4 @@ This means a hand-maintained list here must not be treated as the source of trut
   - `20260308_loop_skills_decoupling_and_project_skills_governance_v0.md`
   - `20260308_loop_review_reconciliation_generic_skill_v0.md`
   - `20260308_formalization_enrichment_absorption_v0.md`
+  - `20260308_reviewer_exhaustiveness_prompt_engineering_v0.md`

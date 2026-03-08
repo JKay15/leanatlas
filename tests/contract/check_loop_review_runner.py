@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import tempfile
@@ -13,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools.loop.review_canonical import load_canonical_review_result
+from tools.loop.review_prompting import EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID, build_review_prompt
 from tools.loop.review_runner import compute_review_scope_fingerprint, run_review_closure
 
 FIXTURES = ROOT / "tests" / "contract" / "fixtures" / "review_runner"
@@ -45,9 +47,44 @@ def main() -> int:
         _write(contract, "# contract\n")
         verify_report = repo / "artifacts" / "verify" / "verify_report.json"
         _write(verify_report, "{\"ok\": true}\n")
+        base_kwargs = {
+            "instruction_scope_refs": ["AGENTS.md", "tools/AGENTS.md"],
+            "required_context_refs": [
+                "docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md",
+                "artifacts/verify/verify_report.json",
+            ],
+        }
 
         prompt = repo / "artifacts" / "reviews" / "prompt.md"
         _write(prompt, "# review prompt\n")
+        canonical_prompt = repo / "artifacts" / "reviews" / "canonical_prompt.md"
+        _write(
+            canonical_prompt,
+            build_review_prompt(
+                review_id="canonical_prompt_case",
+                prompt_protocol_id=EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+                review_tier="MEDIUM",
+                agent_provider_id="codex_cli",
+                agent_profile="medium",
+                scope_paths=["tools/loop/target.py"],
+                instruction_scope_refs=["AGENTS.md", "tools/AGENTS.md"],
+                required_context_refs=base_kwargs["required_context_refs"],
+            ),
+        )
+        required_protocol_prompt = repo / "artifacts" / "reviews" / "required_protocol_prompt.md"
+        _write(
+            required_protocol_prompt,
+            build_review_prompt(
+                review_id="required_protocol_success_case",
+                prompt_protocol_id=EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+                review_tier="MEDIUM",
+                agent_provider_id="codex_cli",
+                agent_profile="medium",
+                scope_paths=["tools/loop/target.py"],
+                instruction_scope_refs=["AGENTS.md", "tools/AGENTS.md"],
+                required_context_refs=base_kwargs["required_context_refs"],
+            ),
+        )
 
         helper = repo / "helper.py"
         _write(
@@ -133,14 +170,6 @@ def main() -> int:
                 "raise SystemExit(9)\n"
             ),
         )
-        base_kwargs = {
-            "instruction_scope_refs": ["AGENTS.md", "tools/AGENTS.md"],
-            "required_context_refs": [
-                "docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md",
-                "artifacts/verify/verify_report.json",
-            ],
-        }
-
         # Case 1: empty scope is forbidden.
         try:
             run_review_closure(
@@ -257,6 +286,131 @@ def main() -> int:
             return _fail("successful review canonical payload must preserve response_file source")
         if success_canonical.get("terminal") is not True:
             return _fail("successful review canonical payload must be terminal")
+
+        # Case 5b: canonical exhaustive prompts may be required before provider launch.
+        required_protocol_success = run_review_closure(
+            repo_root=repo,
+            review_id="required_protocol_success_case",
+            prompt_path=required_protocol_prompt,
+            response_path=repo / "artifacts" / "reviews" / "required_protocol_success_response.md",
+            scope_paths=["tools/loop/target.py"],
+            command=[sys.executable, str(helper)],
+            env={"REVIEW_TEST_MODE": "success"},
+            required_prompt_protocol_id=EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+            **base_kwargs,
+        )
+        if required_protocol_success["review_closeout"]["mode"] != "REVIEW_RUN":
+            return _fail("canonical exhaustive prompts must satisfy required_prompt_protocol_id enforcement")
+
+        # Case 5c: canonical prompts must match the frozen run inputs exactly.
+        mismatched_prompt = repo / "artifacts" / "reviews" / "mismatched_canonical_prompt.md"
+        _write(
+            mismatched_prompt,
+            build_review_prompt(
+                review_id="required_protocol_success_case",
+                prompt_protocol_id=EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+                review_tier="MEDIUM",
+                agent_provider_id="codex_cli",
+                agent_profile="medium",
+                scope_paths=["docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md"],
+                instruction_scope_refs=["AGENTS.md", "tools/AGENTS.md"],
+                required_context_refs=base_kwargs["required_context_refs"],
+            ),
+        )
+        try:
+            run_review_closure(
+                repo_root=repo,
+                review_id="required_protocol_success_case",
+                prompt_path=mismatched_prompt,
+                response_path=repo / "artifacts" / "reviews" / "required_protocol_mismatch_response.md",
+                scope_paths=["tools/loop/target.py"],
+                command=[sys.executable, str(helper)],
+                env={"REVIEW_TEST_MODE": "success"},
+                required_prompt_protocol_id=EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+                **base_kwargs,
+            )
+        except ValueError as exc:
+            if "frozen inputs" not in str(exc):
+                return _fail("canonical prompt/input mismatch rejection must mention frozen inputs")
+        else:
+            return _fail("run_review_closure must reject canonical prompts whose frozen inputs differ from the run")
+
+        # Case 5d: generic prompts must be rejected when exhaustive protocol is required.
+        try:
+            run_review_closure(
+                repo_root=repo,
+                review_id="required_protocol_failure_case",
+                prompt_path=prompt,
+                response_path=repo / "artifacts" / "reviews" / "required_protocol_failure_response.md",
+                scope_paths=["tools/loop/target.py"],
+                command=[sys.executable, str(helper)],
+                required_prompt_protocol_id=EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+                **base_kwargs,
+            )
+        except ValueError as exc:
+            if "required_prompt_protocol_id" not in str(exc):
+                return _fail("required prompt protocol rejection must mention required_prompt_protocol_id")
+        else:
+            return _fail("run_review_closure must reject non-canonical prompts when exhaustive protocol is required")
+
+        # Case 5e: canonical-looking but tampered prompts must also be rejected.
+        spoofed_prompt = repo / "artifacts" / "reviews" / "spoofed_prompt.md"
+        spoofed_text = canonical_prompt.read_text(encoding="utf-8").replace(
+            "- If one category looks clean, keep scanning the other categories before finalizing.",
+            "- Stop after the first plausible issue.",
+        )
+        spoofed_lines = spoofed_text.splitlines()
+        spoofed_body = "\n".join(spoofed_lines[2:])
+        if spoofed_text.endswith("\n"):
+            spoofed_body += "\n"
+        spoofed_sha = hashlib.sha256(
+            json.dumps(
+                {
+                    "protocol_id": EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+                    "body_text": spoofed_body,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        ).hexdigest()
+        spoofed_lines[1] = f"<!-- LOOP_REVIEW_PROMPT_SHA256: {spoofed_sha} -->"
+        spoofed_text = "\n".join(spoofed_lines) + "\n"
+        _write(spoofed_prompt, spoofed_text)
+        try:
+            run_review_closure(
+                repo_root=repo,
+                review_id="required_protocol_spoofed_case",
+                prompt_path=spoofed_prompt,
+                response_path=repo / "artifacts" / "reviews" / "required_protocol_spoofed_response.md",
+                scope_paths=["tools/loop/target.py"],
+                command=[sys.executable, str(helper)],
+                required_prompt_protocol_id=EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
+                **base_kwargs,
+            )
+        except ValueError as exc:
+            if "required_prompt_protocol_id" not in str(exc):
+                return _fail("tampered prompt rejection must mention required_prompt_protocol_id")
+        else:
+            return _fail("run_review_closure must reject tampered prompts when exhaustive protocol is required")
+
+        # Case 5f: non-canonical prompts must not claim canonical protocol ids in persisted context.
+        spoofed_success = run_review_closure(
+            repo_root=repo,
+            review_id="spoofed_success_case",
+            prompt_path=spoofed_prompt,
+            response_path=repo / "artifacts" / "reviews" / "spoofed_success_response.md",
+            scope_paths=["tools/loop/target.py"],
+            command=[sys.executable, str(helper)],
+            env={"REVIEW_TEST_MODE": "success"},
+            instruction_scope_refs=base_kwargs["instruction_scope_refs"],
+            required_context_refs=base_kwargs["required_context_refs"],
+        )
+        spoofed_context = json.loads(Path(spoofed_success["context_pack_ref"]).read_text(encoding="utf-8"))
+        if spoofed_context.get("prompt_protocol_id") is not None:
+            return _fail("non-canonical prompts must not persist canonical prompt_protocol_id in context packs")
+        if spoofed_context.get("declared_prompt_protocol_id") != EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID:
+            return _fail("context packs should preserve the declared prompt protocol id for tampered prompts")
 
         # Case 6: stale input fingerprint must block invocation before accepting a review.
         original_fingerprint = compute_review_scope_fingerprint(repo_root=repo, scope_paths=["tools/loop/target.py"])

@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools.loop import (
+    EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
     build_default_tiered_review_policy,
     build_pyramid_review_plan,
     merge_partition_scope_paths,
@@ -127,6 +128,8 @@ def main() -> int:
             return _fail("first stage must be FAST")
         if stages[0].get("closeout_eligible") is not False:
             return _fail("fast partition stage must not be closeout-eligible")
+        if stages[0].get("prompt_protocol_id") != EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID:
+            return _fail("fast partition stage must freeze the exhaustive reviewer prompt protocol")
         if stages[0].get("finding_policy") != "ADVISORY_CONFIRM_REQUIRED":
             return _fail("fast partition stage must require confirmation for findings")
         expected_effective_scope = ["tests/contract/a.py", "tools/loop/a.py", "tools/loop/b.py"]
@@ -138,6 +141,8 @@ def main() -> int:
             return _fail("deep followup stage must preserve the narrowed effective scope")
         if stages[1].get("selection_policy") != "PARTITIONS_WITH_FINDINGS_OR_MANUAL_SELECTION":
             return _fail("deep followup stage must advertise finding-driven narrowing")
+        if stages[1].get("prompt_protocol_id") != EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID:
+            return _fail("deep followup stage must freeze the exhaustive reviewer prompt protocol")
         if stages[2].get("closeout_eligible") is not True:
             return _fail("final integrated stage must be closeout-eligible")
         if stages[2].get("scope_paths") != expected_effective_scope:
@@ -146,6 +151,8 @@ def main() -> int:
             return _fail("final integrated stage must default to MEDIUM")
         if stages[2].get("agent_profile") != "gpt-5.4-medium":
             return _fail("final integrated stage must default to the deep/medium reviewer profile")
+        if stages[2].get("prompt_protocol_id") != EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID:
+            return _fail("final integrated stage must freeze the exhaustive reviewer prompt protocol")
         if stages[2].get("scope_source") != "MERGED_SELECTED_PARTITIONS":
             return _fail("final integrated stage must record that it comes from merged selected partitions")
         if plan.get("effective_scope_paths") != expected_effective_scope:

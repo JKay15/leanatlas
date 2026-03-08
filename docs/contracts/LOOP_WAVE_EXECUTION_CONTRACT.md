@@ -84,6 +84,16 @@ Hard rule:
 - provider-invoked reviewers MUST be launched with repo-root context and instruction scope visibility (`instruction_scope_refs` must include active `AGENTS.md` chain references).
 - maintainer AI review nodes MUST execute through a deterministic reviewer runner rather than ad-hoc shell closeout.
 - review scope MUST be a non-empty file list rooted under the repository.
+- provider-launched review rounds SHOULD use canonical prompt protocols rather than ad-hoc free-form prompts.
+- supported canonical prompt protocols:
+  - `review.prompt.baseline.v1`
+  - `review.prompt.exhaustive.v1`
+- `review.prompt.exhaustive.v1` is the exhaustive reviewer protocol and MUST add:
+  - coverage axes
+  - anti-dribble requirements
+  - omission self-check
+  - finalization checklist
+  - a canonical `LOOP_REVIEW_PROMPT_SHA256` marker that lets runners reject tampered prompt bodies
 - raw provider capture and LOOP closeout MUST be separate stages: `stdout/stderr/response artifacts -> CanonicalReviewResult -> REVIEW_RUN|REVIEW_SKIPPED`.
 - reviewer launch MUST freeze a visibility/context pack before invocation. That pack MUST include:
   - normalized `scope_paths`
@@ -130,8 +140,13 @@ Hard rule:
 - scope observed stamp mismatch also makes the attempt stale, including mutate-and-restore rewrites that restore the original content before process exit.
 - reviewer attempts and their command evidence MUST be persisted under `artifacts/reviews/`.
 - bounded failed attempts may terminate as `TRIAGED_TOOLING`, but only with append-only attempt evidence showing why no valid `response_ref` was accepted.
+- runner MAY require the exhaustive protocol before provider launch. When `required_prompt_protocol_id = review.prompt.exhaustive.v1`, launch MUST fail fast unless the prompt is canonical, untampered, and declares that protocol id.
+- canonical prompt frozen inputs must match the run; the runner MUST reject canonical prompts whose declared `review_id`, scope, instruction scope, required context, provider, or explicit profile do not equal the actual frozen run inputs.
+- canonical prompt validation MUST normalize line endings before exact prompt comparison so CRLF-vs-LF checkout differences do not spuriously fail exhaustive-protocol enforcement.
+- context evidence MUST persist `prompt_protocol_id` only for canonical prompts. Non-canonical prompts MAY preserve a `declared_prompt_protocol_id`, but they MUST NOT claim that a canonical protocol was actually used.
 
 Review acceleration strategies (allowed, but constrained):
+- authoritative staged review bundles MUST keep reviewer-launching stages on `review.prompt.exhaustive.v1`.
 - `LOW_PLUS_MEDIUM` is the committed default reviewer tier policy.
 - `FAST + low` remains the baseline reviewer path.
 - `medium` is the standard bounded escalation tier.
@@ -139,6 +154,7 @@ Review acceleration strategies (allowed, but constrained):
 - `STRICT / xhigh` remains exceptional.
 - staged narrowing is allowed: intermediate review rounds may partition a large scope into smaller auditable review partitions to reduce latency and context burden.
 - pyramid reviewer is allowed: faster/lower-cost reviewer tiers may run before slower/higher-thinking tiers.
+- controlled prompt experiment is allowed: canonical baseline vs exhaustive prompt variants may be compared under `PROMPT_PROTOCOL_ONLY`, provided they reuse the same frozen scope/context/provider settings.
 - low-tier findings are provisional and MUST be treated as `ADVISORY_CONFIRM_REQUIRED` until confirmed by deterministic verification or a later higher-tier review.
 - explicit empty follow-up selection is allowed: `followup_partition_ids=[]` may record that the fast scan found nothing worth escalating.
 - callers may pair that explicit no-escalation outcome with `effective_scope_paths=[]`; runners must interpret it as the same no-escalation state, not as an invalid narrowing request.
@@ -168,6 +184,8 @@ Review acceleration strategies (allowed, but constrained):
 - `finding_key` MUST bind back to a stable source-finding identifier from the upstream advisory review output; implementations MUST NOT invent dedupe-local opaque keys.
 - `finding_group_key` MUST be deterministic across identical inputs and MUST distinguish unrelated occurrences that happen to reuse the same upstream `finding_key`.
 - `scope_lineage_key` MUST be derived from the active scope path-set lineage for the source review round; reconciliation MUST NOT merge unrelated occurrences solely because they share the same upstream `finding_key`.
+- authoritative replay plans created before `prompt_protocol_id` existed MAY omit that field; validation/runtime MUST backfill `review.prompt.exhaustive.v1` for those legacy plans and accept the matching pre-protocol `strategy_fingerprint` once during replay normalization.
+- current replay plans that omit `prompt_protocol_id` on reviewer-launching stages MUST fail by default; only explicit legacy normalization paths may set `allow_legacy_prompt_protocol_backfill=True` to upgrade pre-protocol plans.
 - Preferred binding order:
   - if the upstream review emitted a stable `finding_id`, `finding_key` MUST equal that `finding_id`
   - otherwise `finding_key` MUST equal the stable advisory `finding_fingerprint`

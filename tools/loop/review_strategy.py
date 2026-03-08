@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 from typing import Any, Sequence
 
+from .review_prompting import EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID
 from .review_runner import compute_review_scope_fingerprint
 from .user_preferences import (
     DEFAULT_ASSURANCE_PRESET,
@@ -117,13 +118,14 @@ def _canonical_partitioning_policy_for_strategy_fingerprint(strategy: dict[str, 
 def _strategy_fingerprint_payload(strategy: dict[str, Any]) -> dict[str, Any]:
     partition_keys = ("partition_id", "scope_paths", "scope_fingerprint")
     stage_keys = {
-        "fast_partition_scan": ("stage_id", "agent_profile", "partition_ids"),
+        "fast_partition_scan": ("stage_id", "agent_profile", "prompt_protocol_id", "partition_ids"),
         "deep_partition_followup": (
             "stage_id",
             "agent_profile",
             "partition_ids",
             "scope_paths",
             "scope_fingerprint",
+            "prompt_protocol_id",
         ),
         "final_integrated_closeout": (
             "stage_id",
@@ -132,6 +134,7 @@ def _strategy_fingerprint_payload(strategy: dict[str, Any]) -> dict[str, Any]:
             "scope_paths",
             "scope_fingerprint",
             "scope_source",
+            "prompt_protocol_id",
         ),
     }
     authoritative_stages: list[dict[str, Any]] = []
@@ -146,6 +149,7 @@ def _strategy_fingerprint_payload(strategy: dict[str, Any]) -> dict[str, Any]:
                 "stage_id",
                 "partition_ids",
                 "scope_paths",
+                "prompt_protocol_id",
             )
         authoritative_stages.append({key: stage.get(key) for key in keys})
     return {
@@ -404,6 +408,7 @@ def build_pyramid_review_plan(
                 "stage_id": "fast_partition_scan",
                 "review_tier": "FAST",
                 "agent_profile": fast_profile,
+                "prompt_protocol_id": EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
                 "partition_ids": partition_ids,
                 "closeout_eligible": False,
                 "finding_policy": "ADVISORY_CONFIRM_REQUIRED",
@@ -413,6 +418,7 @@ def build_pyramid_review_plan(
                 "stage_id": "deep_partition_followup",
                 "review_tier": "DEEP",
                 "agent_profile": deep_profile,
+                "prompt_protocol_id": EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
                 "candidate_partition_ids": partition_ids,
                 "partition_ids": selected_partition_ids,
                 "scope_paths": deep_stage_scope,
@@ -426,6 +432,7 @@ def build_pyramid_review_plan(
                 "stage_id": "final_integrated_closeout",
                 "review_tier": final_closeout_tier,
                 "agent_profile": final_closeout_agent_profile,
+                "prompt_protocol_id": EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID,
                 "scope_paths": effective_scope,
                 "scope_fingerprint": _scope_fingerprint(repo_root=repo_root, scope_paths=effective_scope),
                 "closeout_eligible": True,

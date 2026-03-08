@@ -110,6 +110,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260308_review_default_profile_policy_v0.md`
 - `docs/agents/execplans/20260308_review_supersession_reconciliation_runtime_v0.md`
 - `docs/agents/execplans/20260308_review_tiered_default_policy_v0.md`
+- `docs/agents/execplans/20260308_reviewer_exhaustiveness_prompt_engineering_v0.md`
 - `docs/agents/execplans/20260308_xhigh_revalidation_matrix_v0.md`
 - `docs/agents/execplans/20260308_xhigh_revalidation_repair_wave_v0.md`
 - `docs/agents/execplans/README.md`
@@ -465,6 +466,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_loop_resume_recovery.py`
 - `tests/contract/check_loop_review_history_runtime.py`
 - `tests/contract/check_loop_review_orchestration.py`
+- `tests/contract/check_loop_review_prompting.py`
 - `tests/contract/check_loop_review_reconciliation_runtime.py`
 - `tests/contract/check_loop_review_reconciliation_skill_integration.py`
 - `tests/contract/check_loop_review_runner.py`
@@ -781,6 +783,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tools/loop/review_canonical.py`
 - `tools/loop/review_history.py`
 - `tools/loop/review_orchestration.py`
+- `tools/loop/review_prompting.py`
 - `tools/loop/review_reconciliation.py`
 - `tools/loop/review_runner.py`
 - `tools/loop/review_strategy.py`

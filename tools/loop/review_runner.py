@@ -15,6 +15,7 @@ from tools.loop.review_canonical import (
     extract_canonical_response,
     provider_adapter,
 )
+from tools.loop.review_prompting import inspect_review_prompt_protocol
 from tools.workflow.run_cmd import run_cmd
 
 
@@ -235,6 +236,7 @@ def run_review_closure(
     resolved_invocation_signature: str = "codex exec review",
     instruction_scope_refs: Sequence[str] | None = None,
     required_context_refs: Sequence[str] | None = None,
+    required_prompt_protocol_id: str | None = None,
     allow_timebox_override: bool = False,
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
@@ -246,8 +248,22 @@ def run_review_closure(
     prompt = _resolve_repo_path(repo_root, prompt_path)
     if not prompt.exists() or not prompt.is_file():
         raise ValueError("prompt_path must exist and be a file")
-    if not prompt.read_text(encoding="utf-8").strip():
+    prompt_text = prompt.read_text(encoding="utf-8")
+    if not prompt_text.strip():
         raise ValueError("prompt_path must be non-empty")
+    prompt_protocol = inspect_review_prompt_protocol(prompt_text)
+    if required_prompt_protocol_id is not None:
+        required_prompt_protocol_id = str(required_prompt_protocol_id).strip()
+        if (
+            prompt_protocol.get("protocol_id") != required_prompt_protocol_id
+            or prompt_protocol.get("is_canonical") is not True
+        ):
+            raise ValueError(
+                "required_prompt_protocol_id was not satisfied by prompt_path; "
+                f"required_prompt_protocol_id={required_prompt_protocol_id}, "
+                f"actual_protocol_id={prompt_protocol.get('protocol_id')}, "
+                f"missing_sections={prompt_protocol.get('missing_sections')}"
+            )
 
     response = _resolve_repo_path(repo_root, response_path)
     response.parent.mkdir(parents=True, exist_ok=True)
@@ -264,6 +280,25 @@ def run_review_closure(
     )
     current_scope_fingerprint = compute_review_scope_fingerprint(repo_root=repo_root, scope_paths=normalized_scope)
     frozen_scope_fingerprint = expected_scope_fingerprint or current_scope_fingerprint
+    if prompt_protocol.get("is_canonical") is True:
+        mismatches: list[str] = []
+        if str(prompt_protocol.get("review_id") or "") != str(review_id):
+            mismatches.append("review_id")
+        if str(prompt_protocol.get("agent_provider_id") or "") != str(agent_provider_id):
+            mismatches.append("agent_provider_id")
+        if agent_profile is not None and str(prompt_protocol.get("agent_profile") or "") != str(agent_profile):
+            mismatches.append("agent_profile")
+        if [str(path) for path in prompt_protocol.get("scope_paths") or []] != normalized_scope:
+            mismatches.append("scope_paths")
+        if [str(ref) for ref in prompt_protocol.get("instruction_scope_refs") or []] != normalized_instruction_scope:
+            mismatches.append("instruction_scope_refs")
+        if [str(ref) for ref in prompt_protocol.get("required_context_refs") or []] != normalized_required_context:
+            mismatches.append("required_context_refs")
+        if mismatches:
+            raise ValueError(
+                "canonical prompt frozen inputs must match run_review_closure arguments exactly; mismatched fields: "
+                + ", ".join(mismatches)
+            )
     adapter = provider_adapter(agent_provider_id)
     effective_timeout_s = int(adapter["default_timeout_s"] if timeout_s is None else timeout_s)
     effective_idle_timeout_s = int(adapter["default_idle_timeout_s"] if idle_timeout_s is None else idle_timeout_s)
@@ -324,6 +359,11 @@ def run_review_closure(
         "scope_fingerprint": frozen_scope_fingerprint,
         "instruction_scope_refs": normalized_instruction_scope,
         "required_context_refs": normalized_required_context,
+        "prompt_protocol_id": (
+            prompt_protocol.get("protocol_id") if prompt_protocol.get("is_canonical") is True else None
+        ),
+        "declared_prompt_protocol_id": prompt_protocol.get("protocol_id"),
+        "required_prompt_protocol_id": required_prompt_protocol_id,
         "expected_semantic_sources": list(adapter["semantic_sources"]),
         "observation_policy": {
             "minimum_observation_window_s": minimum_observation_window_s,

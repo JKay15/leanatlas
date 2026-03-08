@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from .review_prompting import EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID
 from .review_runner import compute_review_scope_fingerprint
 from .review_strategy import _canonical_partitioning_policy_for_strategy_fingerprint, partition_review_scope_paths
 
@@ -41,6 +42,7 @@ _STAGE_ALLOWED_KEYS = {
             "stage_id",
             "review_tier",
             "agent_profile",
+            "prompt_protocol_id",
             "partition_ids",
             "closeout_eligible",
             "finding_policy",
@@ -52,6 +54,7 @@ _STAGE_ALLOWED_KEYS = {
             "stage_id",
             "review_tier",
             "agent_profile",
+            "prompt_protocol_id",
             "candidate_partition_ids",
             "partition_ids",
             "scope_paths",
@@ -67,6 +70,7 @@ _STAGE_ALLOWED_KEYS = {
             "stage_id",
             "review_tier",
             "agent_profile",
+            "prompt_protocol_id",
             "scope_paths",
             "scope_fingerprint",
             "closeout_eligible",
@@ -114,6 +118,7 @@ _FINGERPRINT_STAGE_KEYS = {
     "fast_partition_scan": (
         "stage_id",
         "agent_profile",
+        "prompt_protocol_id",
         "partition_ids",
     ),
     "deep_partition_followup": (
@@ -122,6 +127,7 @@ _FINGERPRINT_STAGE_KEYS = {
         "partition_ids",
         "scope_paths",
         "scope_fingerprint",
+        "prompt_protocol_id",
     ),
     "final_integrated_closeout": (
         "stage_id",
@@ -130,6 +136,7 @@ _FINGERPRINT_STAGE_KEYS = {
         "scope_paths",
         "scope_fingerprint",
         "scope_source",
+        "prompt_protocol_id",
     ),
 }
 _EFFECTIVE_SCOPE_SOURCE_VALUES = frozenset(
@@ -146,20 +153,27 @@ def _fingerprint_stage_payload(
     stage: Mapping[str, Any],
     *,
     omit_final_stage_review_tier: bool = False,
+    omit_prompt_protocol_id: bool = False,
 ) -> dict[str, Any]:
     stage_id = str(stage.get("stage_id") or "")
     keys = _FINGERPRINT_STAGE_KEYS.get(stage_id)
     if keys is None:
-        return dict(stage)
+        payload = dict(stage)
+        if omit_prompt_protocol_id:
+            payload.pop("prompt_protocol_id", None)
+        return payload
     if stage_id == "deep_partition_followup" and not [str(pid) for pid in stage.get("partition_ids") or []]:
         keys = (
             "stage_id",
             "partition_ids",
             "scope_paths",
+            "prompt_protocol_id",
         )
     payload = {key: stage.get(key) for key in keys}
     if stage_id == "final_integrated_closeout" and omit_final_stage_review_tier:
         payload.pop("review_tier", None)
+    if omit_prompt_protocol_id:
+        payload.pop("prompt_protocol_id", None)
     return payload
 
 
@@ -220,6 +234,7 @@ def _expected_strategy_fingerprint(
     omit_top_level_keys: Sequence[str] = (),
     canonicalize_partitioning_policy: bool = True,
     omit_final_stage_review_tier: bool = False,
+    omit_prompt_protocol_stage_ids: frozenset[str] = frozenset(),
 ) -> str:
     authoritative_partitions = [
         {key: part.get(key) for key in _FINGERPRINT_PARTITION_KEYS}
@@ -229,6 +244,7 @@ def _expected_strategy_fingerprint(
         _fingerprint_stage_payload(
             dict(stage),
             omit_final_stage_review_tier=omit_final_stage_review_tier,
+            omit_prompt_protocol_id=str(stage.get("stage_id") or "") in omit_prompt_protocol_stage_ids,
         )
         for stage in plan.get("stages") or []
     ]
@@ -256,6 +272,30 @@ def _expected_strategy_fingerprint(
     for key in omit_top_level_keys:
         payload.pop(str(key), None)
     return _canonical_hash(payload)
+
+
+def _required_prompt_protocol_stage_ids(plan: dict[str, Any]) -> frozenset[str]:
+    missing_stage_ids: set[str] = set()
+    for raw_stage in plan.get("stages") or []:
+        stage = dict(raw_stage)
+        stage_id = str(stage.get("stage_id") or "")
+        if stage_id in _REQUIRED_STAGE_IDS and "prompt_protocol_id" not in stage:
+            missing_stage_ids.add(stage_id)
+    return frozenset(missing_stage_ids)
+
+
+def _backfill_legacy_prompt_protocol_ids(plan: dict[str, Any]) -> frozenset[str]:
+    backfilled_stage_ids: set[str] = set()
+    normalized_stages: list[dict[str, Any]] = []
+    for raw_stage in plan.get("stages") or []:
+        stage = dict(raw_stage)
+        stage_id = str(stage.get("stage_id") or "")
+        if stage_id in _REQUIRED_STAGE_IDS and "prompt_protocol_id" not in stage:
+            stage["prompt_protocol_id"] = EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID
+            backfilled_stage_ids.add(stage_id)
+        normalized_stages.append(stage)
+    plan["stages"] = normalized_stages
+    return frozenset(backfilled_stage_ids)
 
 
 def _matching_legacy_fingerprint_omit_keys(
@@ -542,6 +582,11 @@ def _validate_stage_descriptor(stage_id: str, stage: dict[str, Any]) -> None:
             raise ValueError(
                 "strategy_plan.final_integrated_closeout.review_tier must be `LOW`, `MEDIUM`, or `STRICT`"
             )
+    prompt_protocol_id = str(stage.get("prompt_protocol_id") or "")
+    if prompt_protocol_id != EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID:
+        raise ValueError(
+            f"strategy_plan.{stage_id}.prompt_protocol_id must remain `{EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID}` in authoritative replay plans"
+        )
 
 
 def _set_stage(strategy_plan: dict[str, Any], stage: dict[str, Any]) -> None:
@@ -723,6 +768,7 @@ def _validate_strategy_plan(
     repo_root: str | Path,
     strategy_plan: dict[str, Any],
     allow_historical_strategy_replay: bool = False,
+    allow_legacy_prompt_protocol_backfill: bool = False,
 ) -> dict[str, Any]:
     repo_root = _normalize_repo_root(repo_root)
     raw_plan = dict(strategy_plan)
@@ -736,6 +782,14 @@ def _validate_strategy_plan(
     current_policy_provenance_present = bool(str(raw_closeout_policy.get("review_tier_policy") or "").strip())
     plan["partitions"] = [dict(part) for part in plan.get("partitions") or []]
     plan["stages"] = [dict(stage) for stage in plan.get("stages") or []]
+    legacy_backfilled_prompt_protocol_stage_ids = _required_prompt_protocol_stage_ids(plan)
+    if legacy_backfilled_prompt_protocol_stage_ids:
+        if not allow_legacy_prompt_protocol_backfill:
+            raise ValueError(
+                "strategy_plan reviewer-launching stages must preserve `prompt_protocol_id`; "
+                "use allow_legacy_prompt_protocol_backfill=True only for pre-protocol legacy replay plans"
+            )
+        _backfill_legacy_prompt_protocol_ids(plan)
     legacy_fingerprint_omit_keys: list[str] = []
     eligible_legacy_omit_keys: list[str] = []
     for key in _LEGACY_FINGERPRINT_OMITTABLE_TOP_LEVEL_KEYS:
@@ -1307,7 +1361,15 @@ def _validate_strategy_plan(
         canonicalize_partitioning_policy=False,
     )
     if strategy_fingerprint != expected_strategy_fingerprint:
-        if (
+        legacy_prompt_protocol_strategy_fingerprint = None
+        if legacy_backfilled_prompt_protocol_stage_ids:
+            legacy_prompt_protocol_strategy_fingerprint = _expected_strategy_fingerprint(
+                plan,
+                omit_prompt_protocol_stage_ids=legacy_backfilled_prompt_protocol_stage_ids,
+            )
+        if strategy_fingerprint == legacy_prompt_protocol_strategy_fingerprint:
+            plan["strategy_fingerprint"] = expected_strategy_fingerprint
+        elif (
             strategy_fingerprint == legacy_boundary_equivalent_strategy_fingerprint
             and legacy_boundary_equivalent_strategy_fingerprint != expected_strategy_fingerprint
             and dict(plan.get("partitioning_policy") or {})
@@ -1412,6 +1474,7 @@ def _stage_manifest(*, repo_root: Path, plan: dict[str, Any]) -> list[dict[str, 
                 "review_tier": "FAST",
                 "agent_provider_id": agent_provider_id,
                 "agent_profile": str(fast_stage.get("agent_profile") or ""),
+                "prompt_protocol_id": str(fast_stage.get("prompt_protocol_id") or ""),
                 "partition_id": partition_id,
                 "scope_paths": [str(path) for path in part.get("scope_paths") or []],
                 "scope_fingerprint": str(part.get("scope_fingerprint") or ""),
@@ -1465,6 +1528,7 @@ def _stage_manifest(*, repo_root: Path, plan: dict[str, Any]) -> list[dict[str, 
                 "review_tier": "DEEP",
                 "agent_provider_id": agent_provider_id,
                 "agent_profile": str(deep_stage.get("agent_profile") or ""),
+                "prompt_protocol_id": str(deep_stage.get("prompt_protocol_id") or ""),
                 "partition_id": partition_id,
                 "scope_paths": narrowed_scope_paths,
                 "scope_fingerprint": narrowed_scope_fingerprint,
@@ -1483,6 +1547,7 @@ def _stage_manifest(*, repo_root: Path, plan: dict[str, Any]) -> list[dict[str, 
         "review_tier": str(final_stage.get("review_tier") or ""),
         "agent_provider_id": agent_provider_id,
         "agent_profile": str(final_stage.get("agent_profile") or ""),
+        "prompt_protocol_id": str(final_stage.get("prompt_protocol_id") or ""),
         "scope_paths": [str(path) for path in final_stage.get("scope_paths") or []],
         "scope_fingerprint": str(final_stage.get("scope_fingerprint") or ""),
         "closeout_authority": "TERMINAL_DECISION_AUTHORITY",
@@ -1500,12 +1565,14 @@ def build_review_orchestration_graph(
     strategy_plan: dict[str, Any],
     max_parallel_branches: int = 4,
     allow_historical_strategy_replay: bool = False,
+    allow_legacy_prompt_protocol_backfill: bool = False,
 ) -> dict[str, Any]:
     repo_root = _normalize_repo_root(repo_root)
     plan = _validate_strategy_plan(
         repo_root=repo_root,
         strategy_plan=strategy_plan,
         allow_historical_strategy_replay=allow_historical_strategy_replay,
+        allow_legacy_prompt_protocol_backfill=allow_legacy_prompt_protocol_backfill,
     )
     if int(max_parallel_branches) <= 0:
         raise ValueError("max_parallel_branches must be >= 1")
@@ -1595,12 +1662,14 @@ def build_review_orchestration_bundle(
     strategy_plan: dict[str, Any],
     max_parallel_branches: int = 4,
     allow_historical_strategy_replay: bool = False,
+    allow_legacy_prompt_protocol_backfill: bool = False,
 ) -> dict[str, Any]:
     repo_root = _normalize_repo_root(repo_root)
     plan = _validate_strategy_plan(
         repo_root=repo_root,
         strategy_plan=strategy_plan,
         allow_historical_strategy_replay=allow_historical_strategy_replay,
+        allow_legacy_prompt_protocol_backfill=allow_legacy_prompt_protocol_backfill,
     )
     graph = build_review_orchestration_graph(
         repo_root=repo_root,
@@ -1608,6 +1677,7 @@ def build_review_orchestration_bundle(
         strategy_plan=plan,
         max_parallel_branches=max_parallel_branches,
         allow_historical_strategy_replay=allow_historical_strategy_replay,
+        allow_legacy_prompt_protocol_backfill=allow_legacy_prompt_protocol_backfill,
     )
     fast_stage = _required_stage(plan, "fast_partition_scan")
     deep_stage = _required_stage(plan, "deep_partition_followup")

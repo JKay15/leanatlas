@@ -32,6 +32,8 @@ Post-onboarding default preference requirement:
 - committed helper surface for those defaults:
   - `build_default_review_policy(...)`
   - `build_default_tiered_review_policy(...)`
+  - `build_review_prompt(...)`
+  - `build_controlled_review_prompt_experiment(...)`
   - `build_preference_record(...)`
   - `default_preference_artifact_path(...)`
   - `load_preference_record(...)`
@@ -51,6 +53,11 @@ Post-onboarding default preference requirement:
 - `medium` is a bounded escalation for small-scope high-risk core logic.
 - `STRICT / xhigh` is exceptional and must not be treated as the normal default path.
 - preset storage is advisory and post-onboarding only; later runs may override the stored defaults without mutating the persisted preference artifact
+- canonical review prompt protocol ids:
+  - `review.prompt.baseline.v1`
+  - `review.prompt.exhaustive.v1`
+- canonical review prompts MUST include stable provenance markers such as `LOOP_REVIEW_PROMPT_SHA256`.
+- the exhaustive prompt protocol is the anti-dribble path: it requires omission self-check before final findings emission and supports controlled prompt experiment comparisons against the baseline prompt.
 
 Layering rule:
 - `serial(...)`, `parallel(...)`, and `nested(...)` are LOOP core composition helpers.
@@ -192,6 +199,11 @@ Maintainer orchestration requirement:
 - `strategy_plan.closeout_policy` MUST preserve the helper-authored closeout policy shape exactly; replayed or hand-authored plans must not inject extra policy keys or fork authoritative closeout provenance through ignored closeout metadata.
 - `strategy_plan.closeout_policy.intermediate_rounds_are_advisory` and `strategy_plan.closeout_policy.requires_integrated_scope_closeout` MUST remain `true` in authoritative replay plans; bundle compilation must reject contradictory policy flags even when the compiled graph/bundle payload would otherwise stay unchanged.
 - `build_review_orchestration_bundle(...)` MUST also return a machine-readable reconciliation contract for the `finding_dedupe` stage so later runners/auditors know which lineage record is required before authoritative integrated closeout.
+- runner MAY require a canonical prompt protocol before provider launch. If a caller supplies `required_prompt_protocol_id`, the runner MUST reject non-canonical prompts, tampered prompts, or canonical prompts whose declared protocol does not match the required protocol.
+- canonical prompt validation MUST normalize line endings before exact prompt comparison so CRLF-vs-LF checkout differences do not make otherwise identical canonical prompts fail exhaustive-protocol enforcement.
+- runner context packs MUST persist `prompt_protocol_id` only for canonical prompts. If a prompt declares a protocol marker but fails canonical validation, context evidence MUST record that value separately as `declared_prompt_protocol_id` rather than claiming a canonical protocol was used.
+- authoritative staged review bundles MUST keep reviewer-launching stages on `review.prompt.exhaustive.v1`.
+- canonical prompt frozen inputs must match the run; prompt protocol, canonical prompt bytes, and checksum evidence cannot silently drift between planning, execution, and replay.
 - In helper-authored default staged-review strategies, `final_integrated_closeout.review_tier` defaults to `MEDIUM` and `final_integrated_closeout.agent_profile` MUST reuse the bounded medium escalation profile.
 - `LOW_ONLY` staged-review policies MAY set `final_integrated_closeout.review_tier = LOW` only on the explicit no-escalation path where `deep_partition_followup.partition_ids=[]`; when they do, `final_integrated_closeout.agent_profile` MUST reuse `fast_partition_scan.agent_profile` exactly.
 - LOW closeout provenance MUST remain explicit in helper-authored/current strategies via `strategy_plan.closeout_policy.review_tier_policy = LOW_ONLY`; authoritative replay/bundle compilation MUST reject helper-authored/current LOW-closeout plans that omit that field or relabel it as `LOW_PLUS_MEDIUM`.
@@ -200,6 +212,7 @@ Maintainer orchestration requirement:
 - `strategy_plan.strict_exception_profile` MUST be non-empty in helper-authored/current strategies and MUST be included in the authoritative `strategy_fingerprint` top-level provenance surface.
 - Helper-authored/current `MEDIUM` and `STRICT` strategies MUST preserve `strategy_plan.closeout_policy.review_tier_policy`; missing `strategy_plan.closeout_policy.review_tier_policy` is rejected on the default authoritative replay path.
 - Explicit historical replay mode MAY deterministically backfill `strategy_plan.strict_exception_profile` for supported legacy MEDIUM/STRICT-closeout plans that match one of the supported historical omit sets (for example omitting `strict_exception_profile` alongside `bounded_medium_profile` and/or `partitioning_policy`). LOW-closeout legacy plans without the field are still rejected.
+- Current replay plans missing reviewer-launching stage `prompt_protocol_id` MUST be rejected on the default authoritative replay path; explicit legacy replay MAY backfill them only when the caller sets `allow_legacy_prompt_protocol_backfill=True`.
 - Explicit exception plans MAY set `final_integrated_closeout.review_tier = STRICT`; when they do, `final_integrated_closeout.agent_profile` MUST reuse the explicit strict/xhigh exception profile instead of silently downgrading to medium.
 - In authoritative replay, `final_integrated_closeout.agent_profile` MUST match `strategy_plan.strict_exception_profile` exactly when `final_integrated_closeout.review_tier = STRICT`.
 - `STRICT / xhigh` remains an explicit exception path rather than the default integrated closeout tier.

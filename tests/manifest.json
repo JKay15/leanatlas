@@ -1911,6 +1911,28 @@
     {
       "area": [
         "loop",
+        "review",
+        "prompting"
+      ],
+      "goal": "Enforce canonical baseline vs exhaustive review prompt protocols and controlled prompt experiments for exhaustive reviewer evaluation.",
+      "id": "loop_review_prompting",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_review_prompting.py",
+      "tags": [
+        "loop",
+        "review",
+        "prompting",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
         "graph",
         "merge_semantics"
       ],
