@@ -28,6 +28,9 @@ def main() -> int:
         "non-authoritative",
         "`status:` front matter",
         "maintainer LOOP",
+        "artifacts/loop_runtime/by_execplan/<stable_execplan_id>/MaintainerCloseoutRef.json",
+        "if no stable closeout alias exists yet",
+        "artifacts/loop_runtime/by_key/**",
     ]
     for snippet in required_snippets:
         if snippet not in text:

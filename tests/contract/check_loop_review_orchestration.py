@@ -19,12 +19,15 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import tools.loop.review_orchestration as review_orchestration  # noqa: E402
+
 from tools.loop import (  # noqa: E402
     LoopGraphRuntime,
     build_pyramid_review_plan,
     build_review_orchestration_bundle,
     build_review_orchestration_graph,
     compute_review_scope_fingerprint,
+    partition_review_scope_paths,
 )
 
 SCHEMA = json.loads((ROOT / "docs" / "schemas" / "LoopGraphSpec.schema.json").read_text(encoding="utf-8"))
@@ -43,6 +46,32 @@ def _canonical_hash(obj: object) -> str:
     return hashlib.sha256(
         json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     ).hexdigest()
+
+
+def _canonical_partitioning_policy_for_fingerprint(plan: dict) -> dict:
+    policy = dict(plan.get("partitioning_policy") or {})
+    if not policy or str(policy.get("group_by") or "") != "TOP_LEVEL_SCOPE_PREFIX":
+        return policy
+    full_scope_paths = [str(path) for path in plan.get("full_scope_paths") or []]
+    partitions = [dict(part) for part in plan.get("partitions") or []]
+    if not full_scope_paths or not partitions:
+        return policy
+    expected_chunks = [[str(path) for path in part.get("scope_paths") or []] for part in partitions]
+    grouped_scope_paths: dict[str, list[str]] = {}
+    for rel in full_scope_paths:
+        grouped_scope_paths.setdefault(str(rel).split("/", 1)[0], []).append(str(rel))
+    for max_files_per_partition in range(1, len(full_scope_paths) + 1):
+        candidate_chunks: list[list[str]] = []
+        for group in sorted(grouped_scope_paths):
+            files = grouped_scope_paths[group]
+            for start in range(0, len(files), max_files_per_partition):
+                candidate_chunks.append(files[start : start + max_files_per_partition])
+        if candidate_chunks == expected_chunks:
+            return {
+                "group_by": "TOP_LEVEL_SCOPE_PREFIX",
+                "max_files_per_partition": max_files_per_partition,
+            }
+    return policy
 
 
 def _strategy_fingerprint_payload(plan: dict) -> dict:
@@ -85,7 +114,7 @@ def _strategy_fingerprint_payload(plan: dict) -> dict:
         "agent_provider_id": str(plan.get("agent_provider_id") or ""),
         "bounded_medium_profile": str(plan.get("bounded_medium_profile") or ""),
         "strict_exception_profile": str(plan.get("strict_exception_profile") or ""),
-        "partitioning_policy": dict(plan.get("partitioning_policy") or {}),
+        "partitioning_policy": _canonical_partitioning_policy_for_fingerprint(plan),
         "full_scope_paths": [str(path) for path in plan.get("full_scope_paths") or []],
         "full_scope_fingerprint": str(plan.get("full_scope_fingerprint") or ""),
         "partitions": [
@@ -99,6 +128,28 @@ def _strategy_fingerprint_payload(plan: dict) -> dict:
         "stages": authoritative_stages,
         "closeout_policy": dict(plan.get("closeout_policy") or {}),
     }
+
+
+def _legacy_uncanonicalized_strategy_fingerprint_payload(plan: dict) -> dict:
+    payload = _strategy_fingerprint_payload(plan)
+    payload["partitioning_policy"] = dict(plan.get("partitioning_policy") or {})
+    return payload
+
+
+def _legacy_pre_tier_provenance_strategy_fingerprint_payload(plan: dict) -> dict:
+    payload = _strategy_fingerprint_payload(plan)
+    payload["stages"] = [
+        {
+            key: value
+            for key, value in stage.items()
+            if not (
+                str(stage.get("stage_id") or "") == "final_integrated_closeout"
+                and key == "review_tier"
+            )
+        }
+        for stage in payload.get("stages") or []
+    ]
+    return payload
 
 
 def _write(path: Path) -> None:
@@ -142,7 +193,13 @@ def _pass_executor(node: dict) -> dict:
     return {"state": "PASSED", "reason_code": f"NODE_{node['node_id']}_PASS"}
 
 
-def _strategy(repo: Path, *, followup_partition_ids: list[str], effective_scope_paths: list[str] | None = None) -> dict:
+def _strategy(
+    repo: Path,
+    *,
+    followup_partition_ids: list[str],
+    effective_scope_paths: list[str] | None = None,
+    **overrides: object,
+) -> dict:
     kwargs: dict[str, object] = {
         "repo_root": repo,
         "scope_paths": [
@@ -161,6 +218,7 @@ def _strategy(repo: Path, *, followup_partition_ids: list[str], effective_scope_
     }
     if effective_scope_paths is not None:
         kwargs["effective_scope_paths"] = effective_scope_paths
+    kwargs.update(overrides)
     return build_pyramid_review_plan(**kwargs)
 
 
@@ -382,6 +440,99 @@ def _assert_compiled_graph_shape() -> None:
             "explicit strict exception bundles must preserve the strict/xhigh closeout profile",
         )
 
+        low_strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=[
+                "docs/contracts/alpha.md",
+                "docs/contracts/beta.md",
+                "tests/contract/test_alpha.py",
+                "tools/loop/review_a.py",
+                "tools/loop/review_b.py",
+                "tools/loop/review_c.py",
+            ],
+            fast_profile="gpt-5.4-low",
+            deep_profile="gpt-5.4-medium",
+            strict_profile="gpt-5.4-xhigh",
+            final_closeout_tier="LOW",
+            review_tier_policy="LOW_ONLY",
+            max_files_per_partition=2,
+            followup_partition_ids=[],
+        )
+        low_bundle = build_review_orchestration_bundle(
+            repo_root=repo,
+            review_id="review_orchestration_low_closeout",
+            strategy_plan=low_strategy,
+            max_parallel_branches=3,
+        )
+        low_manifest = _stage_manifest_map(low_bundle)
+        _assert(
+            low_manifest["final_integrated_closeout"]["review_tier"] == "LOW",
+            "explicit LOW closeout bundles must preserve a LOW integrated closeout tier",
+        )
+        _assert(
+            low_manifest["final_integrated_closeout"]["agent_profile"] == "gpt-5.4-low",
+            "explicit LOW closeout bundles must preserve the baseline fast reviewer profile",
+        )
+        invalid_low_policy_strategy = json.loads(json.dumps(low_strategy))
+        invalid_low_policy_strategy["closeout_policy"]["review_tier_policy"] = "LOW_PLUS_MEDIUM"
+        invalid_low_policy_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(invalid_low_policy_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_invalid_low_policy_provenance",
+                strategy_plan=invalid_low_policy_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "LOW closeout strategies require closeout_policy.review_tier_policy=`LOW_ONLY`" in str(exc),
+                "LOW closeout bundles must reject strategies that downgrade closeout tier without LOW_ONLY provenance",
+            )
+        else:
+            raise AssertionError("LOW closeout bundles must reject non-LOW_ONLY provenance")
+        invalid_low_only_medium_strategy = json.loads(json.dumps(strategy))
+        invalid_low_only_medium_strategy["closeout_policy"]["review_tier_policy"] = "LOW_ONLY"
+        invalid_low_only_medium_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(invalid_low_only_medium_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_invalid_low_only_medium_closeout",
+                strategy_plan=invalid_low_only_medium_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "LOW_ONLY closeout policy requires strategy_plan.final_integrated_closeout.review_tier=`LOW`" in str(exc),
+                "authoritative bundles must reject LOW_ONLY policy plans that still compile a MEDIUM closeout",
+            )
+        else:
+            raise AssertionError("LOW_ONLY policy plans must reject non-LOW final closeout tiers")
+        invalid_low_escalated_strategy = json.loads(json.dumps(strategy))
+        invalid_low_escalated_strategy["stages"][2]["review_tier"] = "LOW"
+        invalid_low_escalated_strategy["stages"][2]["agent_profile"] = "gpt-5.4-low"
+        invalid_low_escalated_strategy["closeout_policy"]["review_tier_policy"] = "LOW_ONLY"
+        invalid_low_escalated_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(invalid_low_escalated_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_invalid_low_escalated_closeout",
+                strategy_plan=invalid_low_escalated_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "LOW authoritative closeout requires deep_partition_followup.partition_ids to be empty" in str(exc),
+                "authoritative bundle compilation must reject LOW closeout plans that still keep escalated deep follow-up partitions",
+            )
+        else:
+            raise AssertionError("review orchestration bundle must reject LOW closeout plans with escalated deep follow-up partitions")
+
         manually_narrowed_strategy = build_pyramid_review_plan(
             repo_root=repo,
             scope_paths=[
@@ -501,6 +652,7 @@ def _assert_compiled_graph_shape() -> None:
         replay_strategy = json.loads(json.dumps(strategy))
         replay_strategy["stages"][0]["partition_ids"] = ["part_01_docs", "part_03_tools_01"]
         replay_strategy["stages"][1]["partition_ids"] = ["part_03_tools_01"]
+        replay_strategy["stages"][1]["candidate_partition_ids"] = ["part_01_docs", "part_03_tools_01"]
         replay_strategy["stages"][1]["scope_paths"] = ["tools/loop/review_a.py", "tools/loop/review_b.py"]
         replay_strategy["stages"][1]["scope_fingerprint"] = strategy["partitions"][2]["scope_fingerprint"]
         replay_strategy["stages"][2]["scope_paths"] = ["tools/loop/review_a.py", "tools/loop/review_b.py"]
@@ -571,6 +723,52 @@ def _assert_compiled_graph_shape() -> None:
         else:
             raise AssertionError(
                 "replay/subset execution must reject deep follow-up partitions that were omitted from the frozen fast stage"
+            )
+        invalid_replay_candidate_strategy = json.loads(json.dumps(replay_strategy))
+        invalid_replay_candidate_strategy["stages"][1]["candidate_partition_ids"] = [
+            "part_01_docs",
+            "part_02_tests",
+            "part_03_tools_01",
+        ]
+        invalid_replay_candidate_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(invalid_replay_candidate_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_invalid_replay_candidate_subset",
+                strategy_plan=invalid_replay_candidate_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "candidate_partition_ids must stay within the frozen fast_partition_scan.partition_ids subset" in str(exc),
+                "replay/subset execution must reject deep candidate partitions that were never scanned in the frozen fast stage",
+            )
+        else:
+            raise AssertionError(
+                "replay/subset execution must reject deep candidate partitions outside the frozen fast-stage subset"
+            )
+        invalid_replay_missing_selected_candidate_strategy = json.loads(json.dumps(replay_strategy))
+        invalid_replay_missing_selected_candidate_strategy["stages"][1]["candidate_partition_ids"] = ["part_01_docs"]
+        invalid_replay_missing_selected_candidate_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(invalid_replay_missing_selected_candidate_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_invalid_replay_missing_selected_candidate",
+                strategy_plan=invalid_replay_missing_selected_candidate_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "candidate_partition_ids must cover every selected deep partition id" in str(exc),
+                "replay/subset execution must reject candidate metadata that omits the actually selected deep partition",
+            )
+        else:
+            raise AssertionError(
+                "replay/subset execution must reject candidate metadata that omits the selected deep partition"
             )
 
         invalid_final_scope_strategy = json.loads(json.dumps(strategy))
@@ -665,7 +863,7 @@ def _assert_compiled_graph_shape() -> None:
             )
         except ValueError as exc:
             _assert(
-                "final_integrated_closeout.review_tier must be `MEDIUM` by default or `STRICT`" in str(exc),
+                "final_integrated_closeout.review_tier must be `LOW`, `MEDIUM`, or `STRICT`" in str(exc),
                 "authoritative bundle compilation must reject unsupported final closeout tiers",
             )
         else:
@@ -691,6 +889,26 @@ def _assert_compiled_graph_shape() -> None:
         else:
             raise AssertionError("review orchestration bundle must reject medium closeout plans that bypass the bounded medium profile")
 
+        invalid_low_medium_profile_strategy = json.loads(json.dumps(low_strategy))
+        invalid_low_medium_profile_strategy["stages"][2]["review_tier"] = "LOW"
+        invalid_low_medium_profile_strategy["stages"][2]["agent_profile"] = invalid_low_medium_profile_strategy["stages"][1]["agent_profile"]
+        invalid_low_medium_profile_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(invalid_low_medium_profile_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_invalid_low_medium_profile",
+                strategy_plan=invalid_low_medium_profile_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "final_integrated_closeout.agent_profile must match strategy_plan.fast_partition_scan.agent_profile exactly" in str(exc),
+                "authoritative bundle compilation must reject LOW closeout plans that swap in a non-baseline profile",
+            )
+        else:
+            raise AssertionError("review orchestration bundle must reject LOW closeout plans that bypass the baseline fast profile")
         invalid_strict_medium_profile_strategy = json.loads(json.dumps(strategy))
         invalid_strict_medium_profile_strategy["stages"][2]["review_tier"] = "STRICT"
         invalid_strict_medium_profile_strategy["stages"][2]["agent_profile"] = invalid_strict_medium_profile_strategy["stages"][1]["agent_profile"]
@@ -889,6 +1107,10 @@ def _assert_compiled_graph_shape() -> None:
             followup_partition_ids=[],
         )
         invalid_no_followup_lineage_strategy["stages"][0]["partition_ids"] = [
+            "part_01_docs",
+            "part_03_tools_01",
+        ]
+        invalid_no_followup_lineage_strategy["stages"][1]["candidate_partition_ids"] = [
             "part_01_docs",
             "part_03_tools_01",
         ]
@@ -1700,7 +1922,7 @@ def _assert_compiled_graph_shape() -> None:
             )
         except ValueError as exc:
             _assert(
-                "strategy_plan.partitioning_policy.max_files_per_partition must remain the helper-authored integer chunk size"
+                "strategy_plan.partitioning_policy.max_files_per_partition must remain a positive integer policy field"
                 in str(exc),
                 "authoritative bundle compilation should reject replayed partitioning policies that coerce a non-integer chunk size into a no-op fingerprint fork",
             )
@@ -1708,6 +1930,77 @@ def _assert_compiled_graph_shape() -> None:
             raise AssertionError(
                 "review orchestration bundle must reject replayed partitioning policies that encode chunk size as a string"
             )
+
+        boundary_equivalent_root = repo / "boundary_equivalent"
+        for rel in (
+            "docs/contracts/alpha.md",
+            "docs/contracts/beta.md",
+            "tests/contract/test_alpha.py",
+            "tools/loop/review_a.py",
+            "tools/loop/review_b.py",
+        ):
+            _write(boundary_equivalent_root / rel)
+        boundary_equivalent_strategy = build_pyramid_review_plan(
+            repo_root=boundary_equivalent_root,
+            scope_paths=[
+                "docs/contracts/alpha.md",
+                "docs/contracts/beta.md",
+                "tests/contract/test_alpha.py",
+                "tools/loop/review_a.py",
+                "tools/loop/review_b.py",
+            ],
+            fast_profile="gpt-5.4-low",
+            deep_profile="gpt-5.4-medium",
+            strict_profile="gpt-5.4-xhigh",
+            max_files_per_partition=2,
+            followup_partition_ids=["part_03_tools"],
+        )
+        boundary_equivalent_replay = json.loads(json.dumps(boundary_equivalent_strategy))
+        boundary_equivalent_replay["partitioning_policy"]["max_files_per_partition"] = 3
+        boundary_equivalent_replay["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(boundary_equivalent_replay)
+        )
+        _assert(
+            boundary_equivalent_replay["strategy_fingerprint"] == boundary_equivalent_strategy["strategy_fingerprint"],
+            "boundary-equivalent max_files_per_partition replays must preserve the canonical strategy_fingerprint",
+        )
+        boundary_equivalent_bundle = build_review_orchestration_bundle(
+            repo_root=boundary_equivalent_root,
+            review_id="review_orchestration_boundary_equivalent_partitioning_policy",
+            strategy_plan=boundary_equivalent_replay,
+            max_parallel_branches=3,
+        )
+        boundary_equivalent_manifest = _stage_manifest_map(boundary_equivalent_bundle)
+        _assert(
+            boundary_equivalent_manifest["deep_partition_followup__part_03_tools"]["scope_paths"]
+            == ["tools/loop/review_a.py", "tools/loop/review_b.py"],
+            "authoritative replay should accept boundary-equivalent max_files_per_partition drift when the frozen helper-derived partition boundaries remain identical",
+        )
+        _assert(
+            boundary_equivalent_bundle["composition_notes"]["strategy_fingerprint"]
+            == boundary_equivalent_strategy["strategy_fingerprint"],
+            "accepted boundary-equivalent authoritative replays must preserve the original strategy_fingerprint lineage",
+        )
+
+        legacy_boundary_equivalent_replay = json.loads(json.dumps(boundary_equivalent_replay))
+        legacy_boundary_equivalent_replay["strategy_fingerprint"] = _canonical_hash(
+            _legacy_uncanonicalized_strategy_fingerprint_payload(legacy_boundary_equivalent_replay)
+        )
+        _assert(
+            legacy_boundary_equivalent_replay["strategy_fingerprint"] != boundary_equivalent_strategy["strategy_fingerprint"],
+            "pre-canonical boundary-equivalent strategy fingerprints must differ from the current canonical hash in this replay regression fixture",
+        )
+        legacy_boundary_equivalent_bundle = build_review_orchestration_bundle(
+            repo_root=boundary_equivalent_root,
+            review_id="review_orchestration_boundary_equivalent_partitioning_policy_legacy_fingerprint",
+            strategy_plan=legacy_boundary_equivalent_replay,
+            max_parallel_branches=3,
+        )
+        _assert(
+            legacy_boundary_equivalent_bundle["composition_notes"]["strategy_fingerprint"]
+            == legacy_boundary_equivalent_replay["strategy_fingerprint"],
+            "authoritative replay must continue accepting pre-canonical boundary-equivalent strategy fingerprints for historical plans",
+        )
 
         invalid_narrowed_empty_followup_label_strategy = _strategy(
             repo,
@@ -2161,6 +2454,38 @@ def _assert_empty_followup_shape() -> None:
             ignored_no_followup_bundle["composition_notes"]["strategy_fingerprint"] == original_no_followup_fingerprint,
             "explicit no-followup bundle provenance must stay stable when inert deep-stage metadata changes",
         )
+        try:
+            _strategy(
+                repo,
+                followup_partition_ids=[],
+                effective_scope_paths=strategy["effective_scope_paths"],
+            )
+        except ValueError as exc:
+            _assert(
+                "effective_scope_paths must stay within the merged selected partitions" in str(exc),
+                "literal full-scope replay for empty followup should remain unsupported until the helper contract widens explicitly",
+            )
+        else:
+            raise AssertionError("explicit no-followup helper replay must not claim literal full-scope effective_scope_paths support")
+        blank_no_followup_deep_profile = json.loads(json.dumps(strategy))
+        blank_no_followup_deep_profile["stages"][1]["agent_profile"] = ""
+        blank_no_followup_deep_profile["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(blank_no_followup_deep_profile)
+        )
+        _assert(
+            blank_no_followup_deep_profile["strategy_fingerprint"] == original_no_followup_fingerprint,
+            "explicit no-followup replay plans must ignore a blank deep-stage agent profile when the deep stage is inert",
+        )
+        blank_no_followup_bundle = build_review_orchestration_bundle(
+            repo_root=repo,
+            review_id="review_orchestration_empty_followup_blank_deep_profile",
+            strategy_plan=blank_no_followup_deep_profile,
+            max_parallel_branches=3,
+        )
+        _assert(
+            blank_no_followup_bundle["composition_notes"]["strategy_fingerprint"] == original_no_followup_fingerprint,
+            "explicit no-followup bundle provenance must stay stable when inert deep-stage agent_profile is blank",
+        )
 
         invalid_empty_closeout_strategy = json.loads(json.dumps(strategy))
         invalid_empty_closeout_strategy["stages"][2]["scope_paths"] = []
@@ -2365,6 +2690,664 @@ def _assert_large_partition_runtime_order_stays_lexically_stable() -> None:
         )
 
 
+def _assert_historical_strategy_plan_replay_stays_compatible() -> None:
+    with tempfile.TemporaryDirectory(prefix="loop_review_orchestration_legacy_strategy_") as td:
+        repo = Path(td)
+        scope_paths = [
+            "docs/contracts/alpha.md",
+            "docs/contracts/beta.md",
+            "tests/contract/test_alpha.py",
+            "tools/loop/review_a.py",
+            "tools/loop/review_b.py",
+            "tools/loop/review_c.py",
+        ]
+        for rel in (
+            *scope_paths,
+        ):
+            _write(repo / rel)
+        partitions = partition_review_scope_paths(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            max_files_per_partition=3,
+        )
+
+        current_strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            fast_profile="FAST_DEFAULT_PROVIDER",
+            deep_profile="DEEP_DEFAULT_PROVIDER",
+            strict_profile="STRICT_DEFAULT_PROVIDER",
+            final_closeout_tier="STRICT",
+            max_files_per_partition=3,
+            followup_partition_ids=[str(part["partition_id"]) for part in partitions],
+        )
+        legacy_strategy = json.loads(json.dumps(current_strategy))
+        legacy_strategy.pop("bounded_medium_profile", None)
+        legacy_strategy.pop("strict_exception_profile", None)
+        legacy_strategy.pop("partitioning_policy", None)
+        legacy_strategy["closeout_policy"].pop("review_tier_policy", None)
+        legacy_payload = _strategy_fingerprint_payload(legacy_strategy)
+        legacy_payload.pop("bounded_medium_profile", None)
+        legacy_payload.pop("strict_exception_profile", None)
+        legacy_payload.pop("partitioning_policy", None)
+        legacy_strategy["strategy_fingerprint"] = _canonical_hash(legacy_payload)
+
+        bundle = build_review_orchestration_bundle(
+            repo_root=repo,
+            review_id="review_orchestration_historical_replay",
+            strategy_plan=legacy_strategy,
+            max_parallel_branches=4,
+            allow_historical_strategy_replay=True,
+        )
+        stage_manifest = _stage_manifest_map(bundle)
+        final_stage = stage_manifest["final_integrated_closeout"]
+        _assert(
+            final_stage["review_tier"] == "STRICT",
+            "historical strict strategy plans must still replay with their preserved strict closeout tier",
+        )
+        _assert(
+            final_stage["agent_profile"] == "STRICT_DEFAULT_PROVIDER",
+            "historical strategy replay must recover the preserved strict closeout profile from the staged plan",
+        )
+        _assert(
+            bundle["composition_notes"]["strategy_fingerprint"] == legacy_strategy["strategy_fingerprint"],
+            "historical strategy replay must preserve the accepted legacy strategy fingerprint",
+        )
+        validated_legacy = review_orchestration._validate_strategy_plan(
+            repo_root=repo,
+            strategy_plan=legacy_strategy,
+            allow_historical_strategy_replay=True,
+        )
+        replay_bundle = build_review_orchestration_bundle(
+            repo_root=repo,
+            review_id="review_orchestration_historical_replay_second_pass",
+            strategy_plan=validated_legacy,
+            max_parallel_branches=4,
+            allow_historical_strategy_replay=True,
+        )
+        _assert(
+            replay_bundle["composition_notes"]["strategy_fingerprint"] == legacy_strategy["strategy_fingerprint"],
+            "validated legacy strategy plans must stay replayable without trusting caller-supplied omit keys",
+        )
+
+
+def _assert_pre_tier_provenance_strict_strategy_replay_stays_compatible() -> None:
+    with tempfile.TemporaryDirectory(prefix="loop_review_orchestration_legacy_strict_tierless_replay_") as td:
+        repo = Path(td)
+        scope_paths = [
+            "docs/contracts/alpha.md",
+            "docs/contracts/beta.md",
+            "tests/contract/test_alpha.py",
+            "tools/loop/review_a.py",
+            "tools/loop/review_b.py",
+            "tools/loop/review_c.py",
+        ]
+        for rel in scope_paths:
+            _write(repo / rel)
+        partitions = partition_review_scope_paths(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            max_files_per_partition=3,
+        )
+
+        current_strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            fast_profile="FAST_DEFAULT_PROVIDER",
+            deep_profile="DEEP_DEFAULT_PROVIDER",
+            strict_profile="STRICT_DEFAULT_PROVIDER",
+            final_closeout_tier="STRICT",
+            max_files_per_partition=3,
+            followup_partition_ids=[str(part["partition_id"]) for part in partitions],
+        )
+        legacy_strategy = json.loads(json.dumps(current_strategy))
+        legacy_strategy.pop("bounded_medium_profile", None)
+        legacy_strategy.pop("strict_exception_profile", None)
+        legacy_strategy.pop("partitioning_policy", None)
+        legacy_strategy["closeout_policy"].pop("review_tier_policy", None)
+        legacy_payload = _legacy_pre_tier_provenance_strategy_fingerprint_payload(legacy_strategy)
+        legacy_payload.pop("bounded_medium_profile", None)
+        legacy_payload.pop("strict_exception_profile", None)
+        legacy_payload.pop("partitioning_policy", None)
+        legacy_strategy["strategy_fingerprint"] = _canonical_hash(legacy_payload)
+
+        bundle = build_review_orchestration_bundle(
+            repo_root=repo,
+            review_id="review_orchestration_historical_strict_tierless_replay",
+            strategy_plan=legacy_strategy,
+            max_parallel_branches=4,
+            allow_historical_strategy_replay=True,
+        )
+        final_stage = _stage_manifest_map(bundle)["final_integrated_closeout"]
+        _assert(
+            final_stage["review_tier"] == "STRICT",
+            "pre-tier-provenance historical strict strategy plans must still replay with their preserved strict closeout tier",
+        )
+        _assert(
+            final_stage["agent_profile"] == "STRICT_DEFAULT_PROVIDER",
+            "pre-tier-provenance historical strict strategy plans must still replay with their preserved strict closeout profile",
+        )
+        _assert(
+            bundle["composition_notes"]["strategy_fingerprint"] == legacy_strategy["strategy_fingerprint"],
+            "pre-tier-provenance historical strict strategy plans must preserve the accepted legacy strategy fingerprint",
+        )
+
+
+def _assert_legacy_non_strict_strategy_replay_recovers_strict_profile() -> None:
+    with tempfile.TemporaryDirectory(prefix="loop_review_orchestration_legacy_medium_replay_") as td:
+        repo = Path(td)
+        scope_paths = [
+            "docs/contracts/alpha.md",
+            "docs/contracts/beta.md",
+            "tests/contract/test_alpha.py",
+            "tools/loop/review_a.py",
+            "tools/loop/review_b.py",
+            "tools/loop/review_c.py",
+        ]
+        for rel in scope_paths:
+            _write(repo / rel)
+        partitions = partition_review_scope_paths(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            max_files_per_partition=3,
+        )
+
+        current_strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            fast_profile="FAST_DEFAULT_PROVIDER",
+            deep_profile="DEEP_DEFAULT_PROVIDER",
+            strict_profile="STRICT_DEFAULT_PROVIDER",
+            final_closeout_tier="MEDIUM",
+            max_files_per_partition=3,
+            followup_partition_ids=[str(part["partition_id"]) for part in partitions],
+        )
+        legacy_strategy = json.loads(json.dumps(current_strategy))
+        legacy_strategy.pop("strict_exception_profile", None)
+        legacy_strategy.pop("partitioning_policy", None)
+        legacy_strategy["closeout_policy"].pop("review_tier_policy", None)
+        legacy_payload = _strategy_fingerprint_payload(legacy_strategy)
+        legacy_payload.pop("strict_exception_profile", None)
+        legacy_payload.pop("partitioning_policy", None)
+        legacy_strategy["strategy_fingerprint"] = _canonical_hash(legacy_payload)
+
+        bundle = build_review_orchestration_bundle(
+            repo_root=repo,
+            review_id="review_orchestration_historical_medium_replay",
+            strategy_plan=legacy_strategy,
+            max_parallel_branches=4,
+            allow_historical_strategy_replay=True,
+        )
+        final_stage = _stage_manifest_map(bundle)["final_integrated_closeout"]
+        _assert(
+            final_stage["review_tier"] == "MEDIUM",
+            "historical non-STRICT strategy plans must preserve their original medium closeout tier",
+        )
+        _assert(
+            final_stage["agent_profile"] == "DEEP_DEFAULT_PROVIDER",
+            "historical non-STRICT strategy plans must still replay with their preserved medium closeout profile",
+        )
+        validated_legacy = review_orchestration._validate_strategy_plan(
+            repo_root=repo,
+            strategy_plan=legacy_strategy,
+            allow_historical_strategy_replay=True,
+        )
+        _assert(
+            "strict_exception_profile" not in validated_legacy,
+            "validated legacy non-STRICT strategy plans must preserve omitted strict_exception_profile in the replay payload",
+        )
+        _assert(
+            "partitioning_policy" not in validated_legacy,
+            "validated legacy non-STRICT strategy plans must preserve omitted partitioning_policy in the replay payload",
+        )
+        replay_bundle = build_review_orchestration_bundle(
+            repo_root=repo,
+            review_id="review_orchestration_historical_medium_replay_second_pass",
+            strategy_plan=validated_legacy,
+            max_parallel_branches=4,
+            allow_historical_strategy_replay=True,
+        )
+        _assert(
+            replay_bundle["composition_notes"]["strategy_fingerprint"] == legacy_strategy["strategy_fingerprint"],
+            "validated legacy non-STRICT strategy plans must stay replayable without rewriting their accepted strategy fingerprint",
+        )
+
+
+def _assert_tierless_strategy_replay_requires_explicit_historical_mode() -> None:
+    with tempfile.TemporaryDirectory(prefix="loop_review_orchestration_tierless_requires_historical_mode_") as td:
+        repo = Path(td)
+        scope_paths = [
+            "docs/contracts/alpha.md",
+            "docs/contracts/beta.md",
+            "tests/contract/test_alpha.py",
+            "tools/loop/review_a.py",
+            "tools/loop/review_b.py",
+            "tools/loop/review_c.py",
+        ]
+        for rel in scope_paths:
+            _write(repo / rel)
+        partitions = partition_review_scope_paths(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            max_files_per_partition=3,
+        )
+
+        current_strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            fast_profile="FAST_DEFAULT_PROVIDER",
+            deep_profile="DEEP_DEFAULT_PROVIDER",
+            strict_profile="STRICT_DEFAULT_PROVIDER",
+            final_closeout_tier="STRICT",
+            max_files_per_partition=3,
+            followup_partition_ids=[str(part["partition_id"]) for part in partitions],
+        )
+        tierless_strategy = json.loads(json.dumps(current_strategy))
+        tierless_strategy.pop("bounded_medium_profile", None)
+        tierless_strategy.pop("strict_exception_profile", None)
+        tierless_strategy.pop("partitioning_policy", None)
+        tierless_strategy["closeout_policy"].pop("review_tier_policy", None)
+        legacy_payload = _strategy_fingerprint_payload(tierless_strategy)
+        legacy_payload.pop("bounded_medium_profile", None)
+        legacy_payload.pop("strict_exception_profile", None)
+        legacy_payload.pop("partitioning_policy", None)
+        tierless_strategy["strategy_fingerprint"] = _canonical_hash(legacy_payload)
+
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_tierless_default_reject",
+                strategy_plan=tierless_strategy,
+                max_parallel_branches=4,
+            )
+        except ValueError as exc:
+            _assert(
+                "allow_historical_strategy_replay=True" in str(exc),
+                "default bundle compilation must reject tierless MEDIUM/STRICT strategies unless the caller explicitly opts into historical replay mode",
+            )
+        else:
+            raise AssertionError("tierless MEDIUM/STRICT strategies must require explicit historical replay mode")
+
+        explicit_historical_bundle = build_review_orchestration_bundle(
+            repo_root=repo,
+            review_id="review_orchestration_tierless_historical_mode",
+            strategy_plan=tierless_strategy,
+            max_parallel_branches=4,
+            allow_historical_strategy_replay=True,
+        )
+        explicit_historical_final_stage = _stage_manifest_map(explicit_historical_bundle)["final_integrated_closeout"]
+        _assert(
+            explicit_historical_final_stage["review_tier"] == "STRICT",
+            "explicit historical replay mode must preserve the accepted strict closeout tier for supported legacy strategies",
+        )
+        review_tierless_only_strategy = json.loads(json.dumps(current_strategy))
+        review_tierless_only_strategy["closeout_policy"].pop("review_tier_policy", None)
+        review_tierless_only_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(review_tierless_only_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_review_tier_policy_only_historical_bypass",
+                strategy_plan=review_tierless_only_strategy,
+                max_parallel_branches=4,
+                allow_historical_strategy_replay=True,
+            )
+        except ValueError as exc:
+            _assert(
+                "supported legacy strategy plans" in str(exc),
+                "historical replay mode must not act as a general bypass for current plans that only drop closeout_policy.review_tier_policy",
+            )
+        else:
+            raise AssertionError("historical replay mode must reject current plans that only omit review_tier_policy")
+
+
+def _assert_current_strategy_cannot_omit_present_legacy_fields_from_fingerprint() -> None:
+    with tempfile.TemporaryDirectory(prefix="loop_review_orchestration_current_legacy_omit_") as td:
+        repo = Path(td)
+        scope_paths = [
+            "docs/contracts/alpha.md",
+            "docs/contracts/beta.md",
+            "tests/contract/test_alpha.py",
+            "tools/loop/review_a.py",
+            "tools/loop/review_b.py",
+            "tools/loop/review_c.py",
+        ]
+        for rel in scope_paths:
+            _write(repo / rel)
+
+        strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            fast_profile="FAST_DEFAULT_PROVIDER",
+            deep_profile="DEEP_DEFAULT_PROVIDER",
+            strict_profile="STRICT_DEFAULT_PROVIDER",
+            final_closeout_tier="STRICT",
+            max_files_per_partition=3,
+            followup_partition_ids=["part_01_docs", "part_02_tests", "part_03_tools"],
+        )
+        forged_current_strict = json.loads(json.dumps(strategy))
+        forged_current_strict["_legacy_strategy_fingerprint_omit_keys"] = [
+            "bounded_medium_profile",
+            "strict_exception_profile",
+            "partitioning_policy",
+        ]
+        forged_current_strict["strategy_fingerprint"] = review_orchestration._expected_strategy_fingerprint(
+            forged_current_strict,
+            omit_top_level_keys=["bounded_medium_profile", "strict_exception_profile", "partitioning_policy"],
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_current_strict_legacy_omit_alias",
+                strategy_plan=forged_current_strict,
+                max_parallel_branches=4,
+            )
+        except ValueError as exc:
+            _assert(
+                "strategy_plan.strategy_fingerprint must match the canonical hash" in str(exc),
+                "current strict strategies must reject legacy omit fingerprints when the omitted top-level fields are still present",
+            )
+        else:
+            raise AssertionError("current strict strategies must not admit legacy omit aliases for present top-level fields")
+
+        strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            fast_profile="FAST_DEFAULT_PROVIDER",
+            deep_profile="DEEP_DEFAULT_PROVIDER",
+            strict_profile="STRICT_DEFAULT_PROVIDER",
+            final_closeout_tier="MEDIUM",
+            max_files_per_partition=3,
+            followup_partition_ids=["part_03_tools"],
+        )
+        forged_present_field = json.loads(json.dumps(strategy))
+        forged_present_field["strict_exception_profile"] = "FORGED_STRICT_PROVIDER"
+        forged_present_field["_legacy_strategy_fingerprint_omit_keys"] = [
+            "strict_exception_profile",
+            "partitioning_policy",
+        ]
+        forged_present_field["strategy_fingerprint"] = review_orchestration._expected_strategy_fingerprint(
+            forged_present_field,
+            omit_top_level_keys=["strict_exception_profile", "partitioning_policy"],
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_present_field_legacy_omit",
+                strategy_plan=forged_present_field,
+                max_parallel_branches=4,
+            )
+        except ValueError as exc:
+            _assert(
+                "strategy_plan.strategy_fingerprint must match the canonical hash" in str(exc),
+                "current strategies must not be able to hide present strict_exception_profile drift behind a legacy omit hash",
+            )
+        else:
+            raise AssertionError("current strategies must reject legacy omit hashes when the omitted field is still present")
+
+        blanked_current_fields = json.loads(json.dumps(strategy))
+        blanked_current_fields["bounded_medium_profile"] = ""
+        blanked_current_fields["strict_exception_profile"] = ""
+        blanked_current_fields["partitioning_policy"] = {}
+        blanked_current_fields["_legacy_strategy_fingerprint_omit_keys"] = [
+            "bounded_medium_profile",
+            "strict_exception_profile",
+            "partitioning_policy",
+        ]
+        blanked_current_fields["strategy_fingerprint"] = review_orchestration._expected_strategy_fingerprint(
+            blanked_current_fields,
+            omit_top_level_keys=["bounded_medium_profile", "strict_exception_profile", "partitioning_policy"],
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_blank_current_fields_legacy_alias",
+                strategy_plan=blanked_current_fields,
+                max_parallel_branches=4,
+            )
+        except ValueError as exc:
+            _assert(
+                "must preserve explicit top-level reviewer-profile provenance" in str(exc),
+                "current strategies must not be able to masquerade as legacy by blanking mandatory provenance fields",
+            )
+        else:
+            raise AssertionError("current strategies must reject legacy omit hashes when mandatory provenance fields are blanked")
+
+        omitted_current_fields = json.loads(json.dumps(strategy))
+        omitted_current_fields.pop("bounded_medium_profile", None)
+        omitted_current_fields.pop("strict_exception_profile", None)
+        omitted_current_fields.pop("partitioning_policy", None)
+        omitted_current_fields["strategy_fingerprint"] = review_orchestration._expected_strategy_fingerprint(
+            omitted_current_fields,
+            omit_top_level_keys=["bounded_medium_profile", "strict_exception_profile", "partitioning_policy"],
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_missing_current_fields_legacy_alias",
+                strategy_plan=omitted_current_fields,
+                max_parallel_branches=4,
+            )
+        except ValueError as exc:
+            _assert(
+                "must preserve explicit top-level reviewer-profile provenance" in str(exc),
+                "current strategies must not be able to masquerade as legacy by omitting mandatory provenance fields",
+            )
+        else:
+            raise AssertionError("current strategies must reject legacy omit hashes when mandatory provenance fields are missing")
+
+        current_missing_profiles = json.loads(json.dumps(strategy))
+        current_missing_profiles.pop("bounded_medium_profile", None)
+        current_missing_profiles.pop("strict_exception_profile", None)
+        current_missing_profiles["strategy_fingerprint"] = strategy["strategy_fingerprint"]
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_missing_current_profile_provenance",
+                strategy_plan=current_missing_profiles,
+                max_parallel_branches=4,
+            )
+        except ValueError as exc:
+            _assert(
+                "must preserve explicit top-level reviewer-profile provenance" in str(exc),
+                "current strategies must reject omitted reviewer-profile provenance even when stage descriptors could reconstruct it",
+            )
+        else:
+            raise AssertionError("current strategies must reject omitted reviewer-profile provenance")
+
+        current_missing_partitioning_policy = json.loads(json.dumps(strategy))
+        current_missing_partitioning_policy.pop("partitioning_policy", None)
+        current_missing_partitioning_policy["strategy_fingerprint"] = strategy["strategy_fingerprint"]
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_missing_current_partitioning_policy",
+                strategy_plan=current_missing_partitioning_policy,
+                max_parallel_branches=4,
+            )
+        except ValueError as exc:
+            _assert(
+                "must preserve explicit top-level partitioning_policy provenance" in str(exc),
+                "current strategies must reject omitted partitioning_policy even when helper logic could infer it from partitions",
+            )
+        else:
+            raise AssertionError("current strategies must reject omitted partitioning_policy provenance")
+
+        dropped_strict_only = json.loads(json.dumps(strategy))
+        dropped_strict_only.pop("strict_exception_profile", None)
+        dropped_strict_only["strategy_fingerprint"] = review_orchestration._expected_strategy_fingerprint(
+            dropped_strict_only,
+            omit_top_level_keys=["strict_exception_profile"],
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_strict_only_legacy_omit",
+                strategy_plan=dropped_strict_only,
+                max_parallel_branches=4,
+            )
+        except ValueError as exc:
+            _assert(
+                "must preserve explicit top-level reviewer-profile provenance" in str(exc),
+                "legacy omit fallback must reject unsupported one-field strict_exception_profile omissions",
+            )
+        else:
+            raise AssertionError("legacy omit fallback must reject strict_exception_profile-only omissions on current strategies")
+
+
+def _assert_low_closeout_strategies_reject_legacy_medium_backfill() -> None:
+    with tempfile.TemporaryDirectory(prefix="loop_review_orchestration_low_legacy_backfill_") as td:
+        repo = Path(td)
+        scope_paths = [
+            "docs/contracts/alpha.md",
+            "docs/contracts/beta.md",
+            "tests/contract/test_alpha.py",
+            "tools/loop/review_a.py",
+            "tools/loop/review_b.py",
+            "tools/loop/review_c.py",
+        ]
+        for rel in scope_paths:
+            _write(repo / rel)
+
+        strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            fast_profile="FAST_DEFAULT_PROVIDER",
+            deep_profile="DEEP_DEFAULT_PROVIDER",
+            strict_profile="STRICT_DEFAULT_PROVIDER",
+            final_closeout_tier="LOW",
+            review_tier_policy="LOW_ONLY",
+            max_files_per_partition=3,
+            followup_partition_ids=[],
+        )
+        legacy_like_low = json.loads(json.dumps(strategy))
+        legacy_like_low.pop("strict_exception_profile", None)
+        legacy_like_low.pop("partitioning_policy", None)
+        legacy_payload = _strategy_fingerprint_payload(legacy_like_low)
+        legacy_payload.pop("strict_exception_profile", None)
+        legacy_payload.pop("partitioning_policy", None)
+        legacy_like_low["strategy_fingerprint"] = _canonical_hash(legacy_payload)
+
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_low_closeout_legacy_backfill",
+                strategy_plan=legacy_like_low,
+                max_parallel_branches=4,
+            )
+        except ValueError as exc:
+            _assert(
+                "must preserve explicit top-level reviewer-profile provenance" in str(exc),
+                "current LOW closeout strategies must not reuse the historical medium replay backfill for strict_exception_profile",
+            )
+        else:
+            raise AssertionError("current LOW closeout strategies must reject historical medium-style strict backfill")
+
+
+def _assert_legacy_fingerprint_omit_keys_cannot_hide_unrelated_drift() -> None:
+    with tempfile.TemporaryDirectory(prefix="loop_review_orchestration_legacy_omit_guard_") as td:
+        repo = Path(td)
+        scope_paths = [
+            "docs/contracts/alpha.md",
+            "docs/contracts/beta.md",
+            "tests/contract/test_alpha.py",
+            "tools/loop/review_a.py",
+            "tools/loop/review_b.py",
+            "tools/loop/review_c.py",
+        ]
+        for rel in scope_paths:
+            _write(repo / rel)
+        partitions = partition_review_scope_paths(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            max_files_per_partition=3,
+        )
+        strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            fast_profile="FAST_DEFAULT_PROVIDER",
+            deep_profile="DEEP_DEFAULT_PROVIDER",
+            strict_profile="STRICT_DEFAULT_PROVIDER",
+            final_closeout_tier="STRICT",
+            max_files_per_partition=3,
+            followup_partition_ids=[str(part["partition_id"]) for part in partitions],
+        )
+        forged = json.loads(json.dumps(strategy))
+        forged["agent_provider_id"] = "FORGED_PROVIDER"
+        forged["_legacy_strategy_fingerprint_omit_keys"] = ["agent_provider_id"]
+        forged["strategy_fingerprint"] = review_orchestration._expected_strategy_fingerprint(
+            forged,
+            omit_top_level_keys=["agent_provider_id"],
+        )
+
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_forged_legacy_omit_keys",
+                strategy_plan=forged,
+                max_parallel_branches=4,
+            )
+        except ValueError as exc:
+            _assert(
+                "strategy_plan.strategy_fingerprint must match the canonical hash" in str(exc),
+                "forged legacy omit keys must be rejected as stale authoritative input",
+            )
+        else:
+            raise AssertionError("caller-supplied legacy omit keys must not hide unrelated strategy drift")
+
+
+def _assert_graph_only_rejects_stale_legacy_fingerprint_hint() -> None:
+    with tempfile.TemporaryDirectory(prefix="loop_review_orchestration_graph_legacy_hint_") as td:
+        repo = Path(td)
+        scope_paths = [
+            "docs/contracts/alpha.md",
+            "docs/contracts/beta.md",
+            "tests/contract/test_alpha.py",
+            "tools/loop/review_a.py",
+            "tools/loop/review_b.py",
+            "tools/loop/review_c.py",
+        ]
+        for rel in scope_paths:
+            _write(repo / rel)
+
+        strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=scope_paths,
+            fast_profile="FAST_DEFAULT_PROVIDER",
+            deep_profile="DEEP_DEFAULT_PROVIDER",
+            strict_profile="STRICT_DEFAULT_PROVIDER",
+            final_closeout_tier="STRICT",
+            max_files_per_partition=3,
+            followup_partition_ids=["part_01_docs", "part_02_tests", "part_03_tools"],
+        )
+        forged = json.loads(json.dumps(strategy))
+        forged.pop("bounded_medium_profile", None)
+        forged.pop("strict_exception_profile", None)
+        forged.pop("partitioning_policy", None)
+        forged["_legacy_strategy_fingerprint_omit_keys"] = [
+            "bounded_medium_profile",
+            "strict_exception_profile",
+            "partitioning_policy",
+        ]
+        forged["strategy_fingerprint"] = "deadbeef"
+
+        try:
+            build_review_orchestration_graph(
+                repo_root=repo,
+                review_id="review_orchestration_graph_stale_legacy_hint",
+                strategy_plan=forged,
+                max_parallel_branches=4,
+            )
+        except ValueError as exc:
+            _assert(
+                "must preserve explicit top-level reviewer-profile provenance" in str(exc),
+                "graph-only orchestration compilation must reject stale fingerprints even when legacy omit hints are supported",
+            )
+        else:
+            raise AssertionError("graph-only orchestration compilation must not accept stale legacy fingerprints")
+
+
 def main() -> int:
     _assert_compiled_graph_shape()
     _assert_runtime_evidence()
@@ -2374,6 +3357,14 @@ def main() -> int:
     _assert_no_followup_reconciliation_failures_block_authoritative_closeout()
     _assert_no_followup_success_executes_authoritative_closeout()
     _assert_large_partition_runtime_order_stays_lexically_stable()
+    _assert_historical_strategy_plan_replay_stays_compatible()
+    _assert_pre_tier_provenance_strict_strategy_replay_stays_compatible()
+    _assert_legacy_non_strict_strategy_replay_recovers_strict_profile()
+    _assert_tierless_strategy_replay_requires_explicit_historical_mode()
+    _assert_current_strategy_cannot_omit_present_legacy_fields_from_fingerprint()
+    _assert_low_closeout_strategies_reject_legacy_medium_backfill()
+    _assert_legacy_fingerprint_omit_keys_cannot_hide_unrelated_drift()
+    _assert_graph_only_rejects_stale_legacy_fingerprint_hint()
     print("[loop-review-orchestration] OK")
     return 0
 

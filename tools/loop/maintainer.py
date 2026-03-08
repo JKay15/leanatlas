@@ -550,6 +550,96 @@ def _write_jsonl_sequence_if_absent_or_equal(
     return path
 
 
+def _legacy_compatible_nested_lineage_rows(
+    *, actual: Sequence[dict[str, Any]], expected: Sequence[dict[str, Any]]
+) -> bool:
+    if len(actual) != len(expected):
+        return False
+    normalized_actual: list[dict[str, Any]] = []
+    for actual_row, expected_row in zip(actual, expected, strict=True):
+        normalized = dict(actual_row)
+        if normalized != expected_row:
+            comparable_actual = {key: value for key, value in normalized.items() if key != "child_state"}
+            comparable_expected = {key: value for key, value in expected_row.items() if key != "child_state"}
+            if (
+                comparable_actual == comparable_expected
+                and normalized.get("executed") is True
+                and expected_row.get("executed") is True
+                and normalized.get("blocked_state") is None
+                and expected_row.get("blocked_state") is None
+            ):
+                normalized["child_state"] = expected_row.get("child_state")
+            else:
+                return False
+        normalized_actual.append(normalized)
+    return normalized_actual == [dict(row) for row in expected]
+
+
+def _write_nested_lineage_jsonl_with_legacy_backfill(
+    *, store: LoopStore, rel: str, objs: Sequence[dict[str, Any]], stream: str = "artifact"
+) -> Path:
+    path = store.artifact_path(rel) if stream == "artifact" else store.cache_path(rel)
+    expected = [dict(obj) for obj in objs]
+    if path.exists():
+        actual = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        if actual == expected:
+            return path
+        if _legacy_compatible_nested_lineage_rows(actual=actual, expected=expected):
+            _write_jsonl_overwrite(path, expected)
+            return path
+        raise FileExistsError(f"append-only journal already exists with different content: {path}")
+    if not expected:
+        return path
+    for obj in expected:
+        store.append_jsonl(rel, obj, stream=stream)
+    return path
+
+
+def _legacy_compatible_scheduler_rows(
+    *, actual: Sequence[dict[str, Any]], expected: Sequence[dict[str, Any]]
+) -> bool:
+    if len(actual) != len(expected):
+        return False
+    normalized_actual: list[dict[str, Any]] = []
+    for actual_row, expected_row in zip(actual, expected, strict=True):
+        normalized = dict(actual_row)
+        if normalized != expected_row:
+            comparable_actual = {key: value for key, value in normalized.items() if key != "parallel_width"}
+            comparable_expected = {key: value for key, value in expected_row.items() if key != "parallel_width"}
+            if (
+                comparable_actual == comparable_expected
+                and normalized.get("execution_mode") == "SERIAL"
+                and expected_row.get("execution_mode") == "SERIAL"
+                and normalized.get("parallel_width") == 1
+                and expected_row.get("parallel_width") == 0
+            ):
+                normalized["parallel_width"] = 0
+            else:
+                return False
+        normalized_actual.append(normalized)
+    return normalized_actual == [dict(row) for row in expected]
+
+
+def _write_scheduler_jsonl_with_legacy_backfill(
+    *, store: LoopStore, rel: str, objs: Sequence[dict[str, Any]], stream: str = "artifact"
+) -> Path:
+    path = store.artifact_path(rel) if stream == "artifact" else store.cache_path(rel)
+    expected = [dict(obj) for obj in objs]
+    if path.exists():
+        actual = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        if actual == expected:
+            return path
+        if _legacy_compatible_scheduler_rows(actual=actual, expected=expected):
+            _write_jsonl_overwrite(path, expected)
+            return path
+        raise FileExistsError(f"append-only journal already exists with different content: {path}")
+    if not expected:
+        return path
+    for obj in expected:
+        store.append_jsonl(rel, obj, stream=stream)
+    return path
+
+
 def _legacy_compatible_arbitration_rows(
     *, actual: Sequence[dict[str, Any]], expected: Sequence[dict[str, Any]]
 ) -> bool:
@@ -1387,13 +1477,13 @@ def execute_recorded_graph(
             objs=arbitration_records,
             stream="artifact",
         )
-        _write_jsonl_sequence_if_absent_or_equal(
+        _write_nested_lineage_jsonl_with_legacy_backfill(
             store=store,
             rel="graph/nested_lineage.jsonl",
             objs=nested_lineage_records,
             stream="artifact",
         )
-        _write_jsonl_sequence_if_absent_or_equal(
+        _write_scheduler_jsonl_with_legacy_backfill(
             store=store,
             rel="graph/scheduler.jsonl",
             objs=scheduler_records,

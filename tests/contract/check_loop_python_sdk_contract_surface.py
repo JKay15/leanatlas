@@ -29,7 +29,7 @@ from tools.loop import (
     merge_partition_scope_paths,
     partition_review_scope_paths,
 )
-from tools.loop.sdk import loop, resume, run
+from tools.loop.sdk import loop, nested, parallel, resume, run, serial
 
 
 def _fail(msg: str) -> int:
@@ -110,11 +110,17 @@ def main() -> int:
         "`persist_review_reconciliation(...)`",
         "`ReviewSupersessionReconciliation.schema.json`",
         "authoritative finding ledger",
-        "`final_integrated_closeout.review_tier` MUST be `MEDIUM`",
+        "`final_integrated_closeout.review_tier` defaults to `MEDIUM`",
         "`final_integrated_closeout.agent_profile` MUST reuse the bounded medium escalation profile",
+        "`LOW_ONLY` staged-review policies MAY set `final_integrated_closeout.review_tier = LOW`",
+        "`strategy_plan.closeout_policy.review_tier_policy = LOW_ONLY`",
+        "`final_integrated_closeout.agent_profile` MUST reuse `fast_partition_scan.agent_profile` exactly",
         "`strategy_plan.bounded_medium_profile` MUST be non-empty",
         "`final_integrated_closeout.agent_profile` MUST match `strategy_plan.bounded_medium_profile` exactly",
-        "`strategy_plan.strict_exception_profile` MUST be non-empty",
+        "`strategy_plan.strict_exception_profile` MUST be non-empty in helper-authored/current strategies",
+        "missing `strategy_plan.closeout_policy.review_tier_policy` is rejected on the default authoritative replay path",
+        "`allow_historical_strategy_replay=True`",
+        "Explicit historical replay mode MAY deterministically backfill `strategy_plan.strict_exception_profile` for supported legacy MEDIUM/STRICT-closeout plans that match one of the supported historical omit sets",
         "Explicit exception plans MAY set `final_integrated_closeout.review_tier = STRICT`",
         "`final_integrated_closeout.agent_profile` MUST reuse the explicit strict/xhigh exception profile",
         "`final_integrated_closeout.agent_profile` MUST match `strategy_plan.strict_exception_profile` exactly",
@@ -127,7 +133,7 @@ def main() -> int:
         "`strategy_plan.full_scope_paths` MUST preserve canonical repo-relative file order",
         "`strategy_plan.partitions` itself MUST preserve the canonical helper-derived partition order",
         "`strategy_plan.partitioning_policy` MUST preserve the helper-authored partitioning policy shape exactly",
-        "`max_files_per_partition` MUST remain the helper-authored integer chunk size; string/bool lookalikes such as `\"2\"` or `true` are not authoritative replays",
+        "`max_files_per_partition` MUST remain a positive integer policy field; string/bool lookalikes such as `\"2\"` or `true` are not authoritative replays",
         "`strategy_plan.partitions.*.scope_paths` MUST preserve canonical repo-relative file order within each partition",
         "`strategy_plan.stages` MUST preserve the canonical helper-authored stage order exactly",
         "helper-authored stage descriptor shape exactly",
@@ -144,6 +150,7 @@ def main() -> int:
         "`strategy_plan.partitions[*].partition_id` numeric prefix MUST remain zero-padded",
         "`strategy_plan.partitions[*].partition_id` values MUST preserve the canonical helper-derived routing ids exactly",
         "`strategy_plan.partitions` MUST also match the helper-generated partition boundaries exactly for the declared `partitioning_policy`",
+        "boundary-equivalent `max_files_per_partition` values are accepted when the frozen helper-generated partition boundaries remain identical",
         "MUST preserve the frozen `fast_partition_scan.partition_ids` order exactly",
         "deep_partition_followup.scope_paths` MUST stay within the selected partition lineage",
         "canonical selected partition lineage exactly",
@@ -206,6 +213,15 @@ def main() -> int:
     ):
         if not callable(helper):
             return _fail(f"tools.loop must export callable helper `{helper_name}`")
+
+    node_a = {"node_id": "a"}
+    node_b = {"node_id": "b"}
+    if serial(node_a, node_b) != {"kind": "SERIAL", "nodes": [node_a, node_b]}:
+        return _fail("serial(...) must stay pinned to the committed SDK composition shape")
+    if parallel(node_a, node_b) != {"kind": "PARALLEL", "nodes": [node_a, node_b]}:
+        return _fail("parallel(...) must stay pinned to the committed SDK composition shape")
+    if nested(node_a, node_b) != {"kind": "NESTED", "parent": node_a, "child": node_b}:
+        return _fail("nested(...) must stay pinned to the committed SDK composition shape")
 
     # MCP/SDK group alignment
     groups = [

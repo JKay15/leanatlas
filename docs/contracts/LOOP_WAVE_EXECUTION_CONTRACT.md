@@ -135,6 +135,7 @@ Review acceleration strategies (allowed, but constrained):
 - `LOW_PLUS_MEDIUM` is the committed default reviewer tier policy.
 - `FAST + low` remains the baseline reviewer path.
 - `medium` is the standard bounded escalation tier.
+- `LOW_ONLY` policies may still keep the integrated no-escalation closeout at `LOW`; when they do, `final_integrated_closeout.agent_profile` must match `fast_partition_scan.agent_profile`.
 - `STRICT / xhigh` remains exceptional.
 - staged narrowing is allowed: intermediate review rounds may partition a large scope into smaller auditable review partitions to reduce latency and context burden.
 - pyramid reviewer is allowed: faster/lower-cost reviewer tiers may run before slower/higher-thinking tiers.

@@ -786,6 +786,76 @@ def main() -> int:
         if not all("predecessor_executed" in row for row in gate_rows):
             return _fail("legacy arbitration replay must backfill predecessor_executed for old arbitration rows")
 
+        legacy_sidecar_run_key = "b" * 64
+        legacy_sidecar_graph = {
+            "version": "1",
+            "graph_id": "graph.loop.maintainer_replay_legacy_sidecars",
+            "graph_mode": "STATIC_USER_MODE",
+            "nodes": [
+                {"node_id": "parent_fail", "loop_id": "loop.parent_fail"},
+                {"node_id": "child_closeout", "loop_id": "loop.child_closeout", "allow_terminal_predecessors": True},
+                {"node_id": "blocked_child", "loop_id": "loop.blocked_child"},
+            ],
+            "edges": [
+                {"from": "parent_fail", "to": "child_closeout", "kind": "NESTED"},
+                {"from": "parent_fail", "to": "blocked_child", "kind": "SERIAL"},
+            ],
+        }
+        legacy_sidecar_node_results = {
+            "parent_fail": {"state": "FAILED", "reason_code": "PARENT_FAIL"},
+            "child_closeout": {"state": "PASSED", "reason_code": "BOOKKEEPING_PASS"},
+        }
+        initial_legacy_sidecar_summary = execute_recorded_graph(
+            repo_root=repo,
+            run_key=legacy_sidecar_run_key,
+            graph_spec=legacy_sidecar_graph,
+            node_results=legacy_sidecar_node_results,
+        )
+        legacy_sidecar_root = (
+            repo
+            / "artifacts"
+            / "loop_runtime"
+            / "by_key"
+            / legacy_sidecar_run_key
+            / "graph"
+        )
+        legacy_scheduler_path = legacy_sidecar_root / "scheduler.jsonl"
+        legacy_nested_path = legacy_sidecar_root / "nested_lineage.jsonl"
+        current_scheduler_rows = _read_jsonl(legacy_scheduler_path)
+        current_nested_rows = _read_jsonl(legacy_nested_path)
+        legacy_scheduler_rows = []
+        for row in current_scheduler_rows:
+            mutated = dict(row)
+            if mutated.get("parallel_width") == 0 and mutated.get("execution_mode") == "SERIAL":
+                mutated["parallel_width"] = 1
+            legacy_scheduler_rows.append(mutated)
+        legacy_nested_rows = []
+        for row in current_nested_rows:
+            mutated = dict(row)
+            if mutated.get("executed") is True and mutated.get("blocked_state") is None:
+                mutated["child_state"] = "FAILED"
+            legacy_nested_rows.append(mutated)
+        legacy_scheduler_path.write_text(
+            "".join(json.dumps(row, sort_keys=True) + "\n" for row in legacy_scheduler_rows),
+            encoding="utf-8",
+        )
+        legacy_nested_path.write_text(
+            "".join(json.dumps(row, sort_keys=True) + "\n" for row in legacy_nested_rows),
+            encoding="utf-8",
+        )
+        replay_legacy_sidecars = execute_recorded_graph(
+            repo_root=repo,
+            run_key=legacy_sidecar_run_key,
+            graph_spec=legacy_sidecar_graph,
+            node_results=legacy_sidecar_node_results,
+        )
+        if replay_legacy_sidecars.get("summary_ref") != initial_legacy_sidecar_summary.get("summary_ref"):
+            return _fail("legacy sidecar replay should still reuse the existing GraphSummary ref")
+        if _read_jsonl(legacy_scheduler_path) != current_scheduler_rows:
+            return _fail("legacy sidecar replay must rewrite scheduler.jsonl from the pre-fix blocked-batch shape")
+        if _read_jsonl(legacy_nested_path) != current_nested_rows:
+            return _fail("legacy sidecar replay must rewrite nested_lineage.jsonl from the pre-fix child_state shape")
+
         ordering = MaintainerLoopSession.materialize(
             repo_root=repo,
             change_id="review_wait_policy_ordering",

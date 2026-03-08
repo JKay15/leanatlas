@@ -27,8 +27,8 @@ Out of scope:
 The preference layer should expose only these bounded items:
 
 1) Default assurance preset
-- `Balanced` (recommended)
-- `Budget Saver`
+- `Budget Saver` (recommended)
+- `Balanced`
 - `Auditable`
 
 2) Default agent provider
@@ -75,8 +75,8 @@ These presets map to LOOP internals, but new users should not need to manipulate
 
 2) Define preset semantics
 - Deliverables:
-  - `Balanced` maps to the recommended default development path
-  - `Budget Saver` maps to the lowest-cost supported review/assurance path
+  - `Budget Saver` maps to the recommended default development path
+  - `Balanced` maps to a higher-cost but still bounded review/assurance path
   - `Auditable` maps to the publication-grade closeout path
   - explicit note that pyramid-review automation and staged execution may remain partial until corresponding execution work lands
 - Acceptance:

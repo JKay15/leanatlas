@@ -65,7 +65,6 @@ It includes:
 - graph composition semantics (`serial`, `parallel`, `nested`, `race`, `quorum`, `barrier`)
 - runtime execution and scheduler evidence
 - review/evidence payload normalization
-- stable maintainer session bookkeeping and closeout refs
 - resource-arbiter rules and contracts
 
 ### LeanAtlas adapters
@@ -75,6 +74,7 @@ LeanAtlas adapters are project/workflow layers built on top of LOOP core.
 They include:
 - MAINTAINER workflow integration
 - OPERATOR workflow integration
+- stable maintainer session bookkeeping and closeout refs
 - review acceleration/pyramid-review usage policies
 - future worktree orchestration
 - future batch supervisor/autopilot over LeanAtlas-specific waves

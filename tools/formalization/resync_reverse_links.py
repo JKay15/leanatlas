@@ -4,13 +4,31 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import os
 import re
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 ANNOTATION_RE = re.compile(r"LEAN_LINK\s+claim_id=(\S+)\s+clause_id=(\S+)\s+span_id=(\S+)")
-DECL_START_RE = re.compile(r"^\s*(theorem|lemma|def|abbrev|example|opaque|instance)\s+([A-Za-z_][A-Za-z0-9_']*)\b")
+ATTRIBUTE_ONLY_RE = re.compile(r"^\s*@\[[^\]]+\]\s*$")
+DECL_START_RE = re.compile(
+    r"^\s*(?:@\[[^\]]+\]\s*)*"
+    r"(?:(?:private|protected|noncomputable|unsafe|partial|local|scoped)\s+)*"
+    r"(theorem|lemma|def|abbrev|example|opaque|instance)\s+([A-Za-z_][A-Za-z0-9_']*)\b"
+)
+NAMESPACE_RE = re.compile(r"^\s*namespace\s+([A-Za-z_][A-Za-z0-9_.']*)\b")
+SECTION_RE = re.compile(r"^\s*section(?:\s+([A-Za-z_][A-Za-z0-9_.']*))?\b")
+END_RE = re.compile(r"^\s*end(?:\s+([A-Za-z_][A-Za-z0-9_.']*))?\b")
+WORKSPACE_ROOT_MARKERS = (
+    ".git",
+    "pyproject.toml",
+    "lakefile.lean",
+    "lakefile.toml",
+    "lean-toolchain",
+)
 
 
 def utc_now_iso() -> str:
@@ -33,12 +51,240 @@ def make_review(confidence: float = 0.95) -> dict[str, Any]:
     }
 
 
+def _resolve_annotation_path(path: Any, *, base_dirs: Sequence[Path] = ()) -> Path | None:
+    raw = str(path).strip()
+    if not raw:
+        return None
+    candidate = Path(raw).expanduser()
+    if candidate.is_absolute():
+        return candidate.resolve()
+    normalized_base_dirs: list[Path] = []
+    for base_dir in base_dirs:
+        base = Path(base_dir).expanduser().resolve()
+        if base not in normalized_base_dirs:
+            normalized_base_dirs.append(base)
+    for base_dir in normalized_base_dirs:
+        resolved = (base_dir / candidate).resolve()
+        if resolved.exists():
+            return resolved
+    if normalized_base_dirs:
+        return (normalized_base_dirs[0] / candidate).resolve()
+    return candidate.resolve()
+
+
+def normalize_file_path(path: Any, *, base_dirs: Sequence[Path] = ()) -> str:
+    resolved = _resolve_annotation_path(path, base_dirs=base_dirs)
+    return str(resolved) if resolved is not None else ""
+
+
+def _workspace_root(path: Path) -> Path | None:
+    resolved = path.expanduser().resolve()
+    for candidate in (resolved.parent, *resolved.parents):
+        if any((candidate / marker).exists() for marker in WORKSPACE_ROOT_MARKERS):
+            return candidate
+    return None
+
+
+def stable_annotation_file_identity(path: Any, *, base_dirs: Sequence[Path] = ()) -> str:
+    resolved = _resolve_annotation_path(path, base_dirs=base_dirs)
+    if resolved is None:
+        return ""
+    workspace_root = _workspace_root(resolved)
+    if workspace_root is not None:
+        try:
+            return resolved.relative_to(workspace_root).as_posix()
+        except ValueError:
+            pass
+    parts = list(resolved.parts)
+    return Path(*parts[-3:]).as_posix() if len(parts) >= 3 else resolved.as_posix()
+
+
+def coalesce_module_name(*candidates: str | None) -> str:
+    for candidate in candidates:
+        if candidate is not None:
+            return str(candidate)
+    return ""
+
+
+def reverse_link_id_for_annotation(
+    *,
+    module_name: str,
+    declaration_name: str,
+    file_key: str,
+    clause_id: str,
+    span_id: str,
+    line_no: int,
+) -> str:
+    return (
+        f"{slugify(module_name)}.{slugify(declaration_name or 'annotation')}."
+        f"f.{file_key}.ann.{slugify(clause_id)}.{slugify(span_id)}.{line_no}"
+    )
+
+
+def _namespace_parts(raw: str) -> tuple[list[str], bool]:
+    text = str(raw).strip()
+    absolute = text.startswith("_root_.")
+    if absolute:
+        text = text[len("_root_.") :]
+    return [part for part in text.split(".") if part], absolute
+
+
+def _namespace_module(stack: list[dict[str, str]]) -> str:
+    for entry in reversed(stack):
+        if entry.get("kind") == "namespace":
+            return str(entry.get("module") or "")
+    return ""
+
+
+def _open_namespace(stack: list[dict[str, str]], raw_name: str) -> list[dict[str, str]]:
+    parts, absolute = _namespace_parts(raw_name)
+    if not parts:
+        return list(stack)
+    current_module = _namespace_module(stack)
+    if absolute or not current_module:
+        module = ".".join(parts)
+    else:
+        current_parts = [part for part in current_module.split(".") if part]
+        module = ".".join([*current_parts, *parts])
+    return [
+        *stack,
+        {
+            "kind": "namespace",
+            "name": str(raw_name).strip(),
+            "module": module,
+        },
+    ]
+
+
+def _open_section(stack: list[dict[str, str]], raw_name: str) -> list[dict[str, str]]:
+    return [
+        *stack,
+        {
+            "kind": "section",
+            "name": str(raw_name).strip(),
+            "module": _namespace_module(stack),
+        },
+    ]
+
+
+def _close_block(stack: list[dict[str, str]], raw_name: str) -> list[dict[str, str]]:
+    if not stack:
+        return []
+    raw = str(raw_name).strip()
+    if not raw:
+        return stack[:-1]
+    parts, _absolute = _namespace_parts(raw)
+    for index in range(len(stack) - 1, -1, -1):
+        entry = stack[index]
+        entry_kind = str(entry.get("kind") or "")
+        entry_name = str(entry.get("name") or "")
+        entry_module = str(entry.get("module") or "")
+        if entry_kind == "section" and entry_name and raw == entry_name:
+            return stack[:index]
+        if entry_kind != "namespace":
+            continue
+        if raw == entry_name or raw == entry_module:
+            return stack[:index]
+        if parts:
+            module_parts = [part for part in entry_module.split(".") if part]
+            if len(parts) <= len(module_parts) and module_parts[-len(parts) :] == parts:
+                return stack[:index]
+    return stack[:-1]
+
+
+def inferred_module_name(lines: list[str]) -> str:
+    stack: list[dict[str, str]] = []
+    for line in lines:
+        match = NAMESPACE_RE.match(line)
+        if match:
+            stack = _open_namespace(stack, str(match.group(1)))
+            module = _namespace_module(stack)
+            if module:
+                return module
+    return ""
+
+
+def inferred_module_name_for_line(lines: list[str], *, line_no: int) -> str | None:
+    stack: list[dict[str, str]] = []
+    file_has_namespace = any(NAMESPACE_RE.match(line) for line in lines)
+    saw_namespace = False
+    for index, line in enumerate(lines, start=1):
+        match = NAMESPACE_RE.match(line)
+        if match:
+            saw_namespace = True
+            stack = _open_namespace(stack, str(match.group(1)))
+        else:
+            section_match = SECTION_RE.match(line)
+            if section_match:
+                stack = _open_section(stack, str(section_match.group(1) or ""))
+            else:
+                end_match = END_RE.match(line)
+                if end_match:
+                    stack = _close_block(stack, str(end_match.group(1) or ""))
+        if index >= line_no:
+            if saw_namespace:
+                return _namespace_module(stack)
+            return "" if file_has_namespace else None
+    if saw_namespace:
+        return _namespace_module(stack)
+    return "" if file_has_namespace else None
+
+
+def _consume_attribute_prefix(lines: list[str], start_index: int) -> tuple[str, int]:
+    parts: list[str] = []
+    index = start_index
+    while index < len(lines):
+        part = lines[index].strip()
+        if not part:
+            break
+        parts.append(part)
+        if "]" in part:
+            break
+        index += 1
+    return " ".join(parts).strip(), index
+
+
 def parse_declaration_starts(lines: list[str]) -> list[tuple[int, str]]:
     starts: list[tuple[int, str]] = []
-    for index, line in enumerate(lines, start=1):
+    pending_attribute_prefix = ""
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.strip()
+        if pending_attribute_prefix:
+            if stripped.startswith("@["):
+                next_prefix, end_index = _consume_attribute_prefix(lines, index)
+                pending_attribute_prefix = " ".join(
+                    part for part in (pending_attribute_prefix, next_prefix) if part
+                ).strip()
+                index = end_index + 1
+                continue
+            candidate = " ".join(part for part in (pending_attribute_prefix, stripped) if part).strip()
+            if stripped:
+                match = DECL_START_RE.match(candidate)
+                if match:
+                    starts.append((index + 1, match.group(2)))
+                    pending_attribute_prefix = ""
+                    index += 1
+                    continue
+            if not stripped:
+                index += 1
+                continue
+            pending_attribute_prefix = ""
+        if stripped.startswith("@["):
+            attribute_prefix, end_index = _consume_attribute_prefix(lines, index)
+            if ATTRIBUTE_ONLY_RE.match(attribute_prefix):
+                pending_attribute_prefix = attribute_prefix
+            else:
+                match = DECL_START_RE.match(attribute_prefix)
+                if match:
+                    starts.append((end_index + 1, match.group(2)))
+            index = end_index + 1
+            continue
         match = DECL_START_RE.match(line)
         if match:
-            starts.append((index, match.group(2)))
+            starts.append((index + 1, match.group(2)))
+        index += 1
     return starts
 
 
@@ -67,8 +313,96 @@ def resync_annotation_reverse_links(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     updated = copy.deepcopy(ledger)
     reverse_links = [link for link in updated.get("lean_reverse_links", []) if isinstance(link, dict)]
-    keep = [link for link in reverse_links if link.get("link_origin") != "AUTO_FROM_ANNOTATION"]
+    target_files: list[Path] = []
+    target_normalized_files: set[str] = set()
+    target_file_identities: set[str] = set()
+    for path in annotation_files:
+        resolved = path.expanduser().resolve()
+        if not resolved.exists() or resolved.suffix != ".lean":
+            continue
+        target_files.append(resolved)
+        target_normalized_files.add(normalize_file_path(resolved))
+        target_file_identities.add(stable_annotation_file_identity(resolved))
+    normalization_base_dirs: list[Path] = []
+    if target_files:
+        common_parent = Path(os.path.commonpath([str(path.parent) for path in target_files])).resolve()
+        normalization_base_dirs.append(common_parent)
+    for resolved in target_files:
+        for candidate in (_workspace_root(resolved), resolved.parent):
+            if candidate is None:
+                continue
+            resolved_candidate = candidate.resolve()
+            if resolved_candidate not in normalization_base_dirs:
+                normalization_base_dirs.append(resolved_candidate)
+    existing_identity_files: dict[str, set[str]] = {}
+    for link in reverse_links:
+        if link.get("link_origin") != "AUTO_FROM_ANNOTATION":
+            continue
+        normalized_file = normalize_file_path(
+            (link.get("lean_ref") or {}).get("file_path", ""),
+            base_dirs=normalization_base_dirs,
+        )
+        identity = stable_annotation_file_identity(
+            (link.get("lean_ref") or {}).get("file_path", ""),
+            base_dirs=normalization_base_dirs,
+        )
+        if not identity or not normalized_file:
+            continue
+        existing_identity_files.setdefault(identity, set()).add(normalized_file)
+    keep = [
+        link
+        for link in reverse_links
+        if link.get("link_origin") != "AUTO_FROM_ANNOTATION"
+        or (
+            normalize_file_path(
+                (link.get("lean_ref") or {}).get("file_path", ""),
+                base_dirs=normalization_base_dirs,
+            )
+            not in target_normalized_files
+            and (
+                stable_annotation_file_identity(
+                    (link.get("lean_ref") or {}).get("file_path", ""),
+                    base_dirs=normalization_base_dirs,
+                )
+                not in target_file_identities
+                or len(
+                    existing_identity_files.get(
+                        stable_annotation_file_identity(
+                            (link.get("lean_ref") or {}).get("file_path", ""),
+                            base_dirs=normalization_base_dirs,
+                        ),
+                        set(),
+                    )
+                )
+                > 1
+            )
+        )
+    ]
     seen_ids = {str(link.get("reverse_link_id", "")) for link in keep}
+    seen_annotation_origins = {
+        (
+            normalize_file_path(
+                (link.get("lean_ref") or {}).get("file_path", ""),
+                base_dirs=normalization_base_dirs,
+            ),
+            int((link.get("lean_ref") or {}).get("line", 0) or 0),
+            str((link.get("target") or {}).get("claim_id", "")),
+            str((link.get("target") or {}).get("clause_id", "")),
+            str((link.get("target") or {}).get("span_id", "")),
+        )
+        for link in reverse_links
+        if link.get("link_origin") == "AUTO_FROM_ANNOTATION"
+        and normalize_file_path(
+            (link.get("lean_ref") or {}).get("file_path", ""),
+            base_dirs=normalization_base_dirs,
+        )
+        not in target_normalized_files
+        and stable_annotation_file_identity(
+            (link.get("lean_ref") or {}).get("file_path", ""),
+            base_dirs=normalization_base_dirs,
+        )
+        not in target_file_identities
+    }
 
     module_by_file: dict[str, str] = {}
     decl_by_file: dict[str, str] = {}
@@ -77,39 +411,56 @@ def resync_annotation_reverse_links(
             continue
         lean_target = binding.get("lean_target", {})
         lean_target = lean_target if isinstance(lean_target, dict) else {}
-        file_path = str(lean_target.get("file_path", ""))
+        file_path = normalize_file_path(lean_target.get("file_path", ""))
         if file_path:
-            module_by_file[file_path] = str(lean_target.get("module", "UNKNOWN"))
+            module_by_file[file_path] = str(lean_target.get("module", ""))
             decl_by_file[file_path] = str(lean_target.get("declaration_name", ""))
 
     rebuilt = list(keep)
-    for path in annotation_files:
-        resolved = path.expanduser()
-        if not resolved.exists() or resolved.suffix != ".lean":
-            continue
+    pending_links: list[dict[str, Any]] = []
+    for resolved in target_files:
         lines = resolved.read_text(encoding="utf-8").splitlines()
         declaration_starts = parse_declaration_starts(lines)
+        normalized_file = normalize_file_path(resolved)
+        file_identity = stable_annotation_file_identity(resolved)
         for line_no, line in enumerate(lines, start=1):
             match = ANNOTATION_RE.search(line)
             if not match:
                 continue
             claim_id, clause_id, span_id = match.groups()
-            reverse_link_id = f"{slugify(resolved.as_posix())}.ann.{slugify(clause_id)}.{line_no}"
-            if reverse_link_id in seen_ids:
+            line_module_name = inferred_module_name_for_line(lines, line_no=line_no)
+            module_name = coalesce_module_name(
+                line_module_name,
+                module_by_file.get(normalized_file) if normalized_file in module_by_file else None,
+                inferred_module_name(lines),
+            )
+            declaration_name = infer_declaration_for_line(
+                line=line_no,
+                declaration_starts=declaration_starts,
+            ) or decl_by_file.get(normalized_file, "")
+            annotation_origin = (normalized_file, line_no, claim_id, clause_id, span_id)
+            if annotation_origin in seen_annotation_origins:
                 continue
-            seen_ids.add(reverse_link_id)
-            rebuilt.append(
+            seen_annotation_origins.add(annotation_origin)
+            file_key = hashlib.sha256(file_identity.encode("utf-8")).hexdigest()[:12]
+            base_reverse_link_id = reverse_link_id_for_annotation(
+                module_name=module_name,
+                declaration_name=declaration_name,
+                file_key=file_key,
+                clause_id=clause_id,
+                span_id=span_id,
+                line_no=line_no,
+            )
+            pending_links.append(
                 {
-                    "reverse_link_id": reverse_link_id,
+                    "base_reverse_link_id": base_reverse_link_id,
+                    "base_file_key": file_key,
+                    "normalized_file": normalized_file,
                     "link_origin": "AUTO_FROM_ANNOTATION",
                     "lean_ref": {
-                        "module": module_by_file.get(str(resolved), "UNKNOWN"),
-                        "file_path": str(resolved),
-                        "declaration_name": infer_declaration_for_line(
-                            line=line_no,
-                            declaration_starts=declaration_starts,
-                        )
-                        or decl_by_file.get(str(resolved), ""),
+                        "module": module_name,
+                        "file_path": normalized_file,
+                        "declaration_name": declaration_name,
                         "line": line_no,
                         "column": 1,
                     },
@@ -122,6 +473,44 @@ def resync_annotation_reverse_links(
                     "notes": "parsed from LEAN_LINK annotation in .lean file",
                 }
             )
+    base_id_counts = Counter(str(link.get("base_reverse_link_id", "")) for link in pending_links)
+    for pending in sorted(
+        pending_links,
+        key=lambda link: (
+            str(link.get("normalized_file", "")),
+            int((link.get("lean_ref") or {}).get("line", 0) or 0),
+            str((link.get("target") or {}).get("claim_id", "")),
+            str((link.get("target") or {}).get("clause_id", "")),
+            str((link.get("target") or {}).get("span_id", "")),
+        ),
+    ):
+        base_reverse_link_id = str(pending.pop("base_reverse_link_id", ""))
+        file_key = str(pending.pop("base_file_key", ""))
+        normalized_file = str(pending.pop("normalized_file", ""))
+        reverse_link_id = base_reverse_link_id
+        if base_id_counts.get(base_reverse_link_id, 0) > 1 or reverse_link_id in seen_ids:
+            path_disambiguator = hashlib.sha256(normalized_file.encode("utf-8")).hexdigest()[:8]
+            reverse_link_id = reverse_link_id_for_annotation(
+                module_name=str((pending.get("lean_ref") or {}).get("module", "")),
+                declaration_name=str((pending.get("lean_ref") or {}).get("declaration_name", "")),
+                file_key=f"{file_key}_{path_disambiguator}",
+                clause_id=str((pending.get("target") or {}).get("clause_id", "")),
+                span_id=str((pending.get("target") or {}).get("span_id", "")),
+                line_no=int((pending.get("lean_ref") or {}).get("line", 1) or 1),
+            )
+        while reverse_link_id in seen_ids:
+            path_disambiguator = hashlib.sha256(f"{normalized_file}:{reverse_link_id}".encode("utf-8")).hexdigest()[:8]
+            reverse_link_id = reverse_link_id_for_annotation(
+                module_name=str((pending.get("lean_ref") or {}).get("module", "")),
+                declaration_name=str((pending.get("lean_ref") or {}).get("declaration_name", "")),
+                file_key=f"{file_key}_{path_disambiguator}",
+                clause_id=str((pending.get("target") or {}).get("clause_id", "")),
+                span_id=str((pending.get("target") or {}).get("span_id", "")),
+                line_no=int((pending.get("lean_ref") or {}).get("line", 1) or 1),
+            )
+        pending["reverse_link_id"] = reverse_link_id
+        seen_ids.add(reverse_link_id)
+        rebuilt.append(pending)
 
     updated["lean_reverse_links"] = rebuilt
     report = {

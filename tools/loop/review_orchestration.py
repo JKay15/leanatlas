@@ -10,13 +10,26 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .review_runner import compute_review_scope_fingerprint
-from .review_strategy import partition_review_scope_paths
+from .review_strategy import _canonical_partitioning_policy_for_strategy_fingerprint, partition_review_scope_paths
 
 _GRAPH_MODE_VALUES = {"STATIC_USER_MODE", "SYSTEM_EXCEPTION_MODE"}
 _RESOURCE_CLASS_VALUES = {"IMMUTABLE", "APPEND_ONLY", "MUTABLE_CONTROLLED"}
 _TOKEN_SANITIZER = re.compile(r"[^A-Za-z0-9._-]+")
 _PARTITION_ID_SEQUENCE = re.compile(r"^part_(\d+)(?:_|$)")
 _PYRAMID_STRATEGY_ID = "review.pyramid_partition.v1"
+_LEGACY_FINGERPRINT_OMITTABLE_TOP_LEVEL_KEYS = (
+    "bounded_medium_profile",
+    "strict_exception_profile",
+    "partitioning_policy",
+)
+_SUPPORTED_LEGACY_FINGERPRINT_OMIT_KEY_SETS = (
+    frozenset({"bounded_medium_profile", "strict_exception_profile", "partitioning_policy"}),
+    frozenset({"bounded_medium_profile", "strict_exception_profile"}),
+    frozenset({"strict_exception_profile", "partitioning_policy"}),
+)
+_PRE_TIER_PROVENANCE_STRICT_OMIT_KEYS = frozenset(
+    {"bounded_medium_profile", "strict_exception_profile", "partitioning_policy"}
+)
 _REQUIRED_STAGE_IDS = (
     "fast_partition_scan",
     "deep_partition_followup",
@@ -82,11 +95,17 @@ _STAGE_STATIC_FIELDS = {
         "selection_policy": "INTEGRATED_MAIN_SCOPE",
     },
 }
-_CLOSEOUT_POLICY_ALLOWED_KEYS = frozenset(
+_CLOSEOUT_POLICY_REQUIRED_KEYS = frozenset(
     {
         "final_stage_id",
         "intermediate_rounds_are_advisory",
         "requires_integrated_scope_closeout",
+    }
+)
+_CLOSEOUT_POLICY_ALLOWED_KEYS = frozenset(
+    {
+        *_CLOSEOUT_POLICY_REQUIRED_KEYS,
+        "review_tier_policy",
     }
 )
 _PARTITIONING_POLICY_ALLOWED_KEYS = frozenset({"group_by", "max_files_per_partition"})
@@ -123,7 +142,11 @@ _EFFECTIVE_SCOPE_SOURCE_VALUES = frozenset(
 )
 
 
-def _fingerprint_stage_payload(stage: Mapping[str, Any]) -> dict[str, Any]:
+def _fingerprint_stage_payload(
+    stage: Mapping[str, Any],
+    *,
+    omit_final_stage_review_tier: bool = False,
+) -> dict[str, Any]:
     stage_id = str(stage.get("stage_id") or "")
     keys = _FINGERPRINT_STAGE_KEYS.get(stage_id)
     if keys is None:
@@ -134,7 +157,10 @@ def _fingerprint_stage_payload(stage: Mapping[str, Any]) -> dict[str, Any]:
             "partition_ids",
             "scope_paths",
         )
-    return {key: stage.get(key) for key in keys}
+    payload = {key: stage.get(key) for key in keys}
+    if stage_id == "final_integrated_closeout" and omit_final_stage_review_tier:
+        payload.pop("review_tier", None)
+    return payload
 
 
 def _slug_token(raw: str, *, fallback: str) -> str:
@@ -188,34 +214,170 @@ def _canonicalize_scope_paths(
     return canonical
 
 
-def _expected_strategy_fingerprint(plan: dict[str, Any]) -> str:
+def _expected_strategy_fingerprint(
+    plan: dict[str, Any],
+    *,
+    omit_top_level_keys: Sequence[str] = (),
+    canonicalize_partitioning_policy: bool = True,
+    omit_final_stage_review_tier: bool = False,
+) -> str:
     authoritative_partitions = [
         {key: part.get(key) for key in _FINGERPRINT_PARTITION_KEYS}
         for part in plan.get("partitions") or []
     ]
     authoritative_stages = [
-        _fingerprint_stage_payload(dict(stage))
+        _fingerprint_stage_payload(
+            dict(stage),
+            omit_final_stage_review_tier=omit_final_stage_review_tier,
+        )
         for stage in plan.get("stages") or []
     ]
-    return _canonical_hash(
-        {
-            "version": str(plan.get("version") or ""),
-            "strategy_id": str(plan.get("strategy_id") or ""),
-            "agent_provider_id": str(plan.get("agent_provider_id") or ""),
-            "bounded_medium_profile": str(plan.get("bounded_medium_profile") or ""),
-            "strict_exception_profile": str(plan.get("strict_exception_profile") or ""),
-            "partitioning_policy": dict(plan.get("partitioning_policy") or {}),
-            "full_scope_paths": [str(path) for path in plan.get("full_scope_paths") or []],
-            "full_scope_fingerprint": str(plan.get("full_scope_fingerprint") or ""),
-            "partitions": authoritative_partitions,
-            "selected_partition_ids": [str(pid) for pid in plan.get("selected_partition_ids") or []],
-            "effective_scope_paths": [str(path) for path in plan.get("effective_scope_paths") or []],
-            "effective_scope_fingerprint": str(plan.get("effective_scope_fingerprint") or ""),
-            "effective_scope_source": str(plan.get("effective_scope_source") or ""),
-            "stages": authoritative_stages,
-            "closeout_policy": dict(plan.get("closeout_policy") or {}),
-        }
+    payload = {
+        "version": str(plan.get("version") or ""),
+        "strategy_id": str(plan.get("strategy_id") or ""),
+        "agent_provider_id": str(plan.get("agent_provider_id") or ""),
+        "bounded_medium_profile": str(plan.get("bounded_medium_profile") or ""),
+        "strict_exception_profile": str(plan.get("strict_exception_profile") or ""),
+        "partitioning_policy": (
+            _canonical_partitioning_policy_for_strategy_fingerprint(plan)
+            if canonicalize_partitioning_policy
+            else dict(plan.get("partitioning_policy") or {})
+        ),
+        "full_scope_paths": [str(path) for path in plan.get("full_scope_paths") or []],
+        "full_scope_fingerprint": str(plan.get("full_scope_fingerprint") or ""),
+        "partitions": authoritative_partitions,
+        "selected_partition_ids": [str(pid) for pid in plan.get("selected_partition_ids") or []],
+        "effective_scope_paths": [str(path) for path in plan.get("effective_scope_paths") or []],
+        "effective_scope_fingerprint": str(plan.get("effective_scope_fingerprint") or ""),
+        "effective_scope_source": str(plan.get("effective_scope_source") or ""),
+        "stages": authoritative_stages,
+        "closeout_policy": dict(plan.get("closeout_policy") or {}),
+    }
+    for key in omit_top_level_keys:
+        payload.pop(str(key), None)
+    return _canonical_hash(payload)
+
+
+def _matching_legacy_fingerprint_omit_keys(
+    *,
+    plan: dict[str, Any],
+    strategy_fingerprint: str,
+    eligible_omit_keys: Sequence[str],
+) -> list[str]:
+    eligible = set(str(key) for key in eligible_omit_keys)
+    for combo in _SUPPORTED_LEGACY_FINGERPRINT_OMIT_KEY_SETS:
+        if not combo.issubset(eligible):
+            continue
+        ordered_combo = [key for key in _LEGACY_FINGERPRINT_OMITTABLE_TOP_LEVEL_KEYS if key in combo]
+        if strategy_fingerprint in _legacy_candidate_strategy_fingerprints(plan, omit_top_level_keys=ordered_combo):
+            return ordered_combo
+    return []
+
+
+def _legacy_candidate_strategy_fingerprints(
+    plan: dict[str, Any],
+    *,
+    omit_top_level_keys: Sequence[str],
+) -> list[str]:
+    candidates = [_expected_strategy_fingerprint(plan, omit_top_level_keys=omit_top_level_keys)]
+    final_stage = next(
+        (
+            dict(stage)
+            for stage in plan.get("stages") or []
+            if str(stage.get("stage_id") or "") == "final_integrated_closeout"
+        ),
+        {},
     )
+    if (
+        set(str(key) for key in omit_top_level_keys) == _PRE_TIER_PROVENANCE_STRICT_OMIT_KEYS
+        and str(final_stage.get("review_tier") or "").strip() == "STRICT"
+    ):
+        candidates.append(
+            _expected_strategy_fingerprint(
+                plan,
+                omit_top_level_keys=omit_top_level_keys,
+                omit_final_stage_review_tier=True,
+            )
+        )
+    return list(dict.fromkeys(candidates))
+
+
+def _normalize_supported_legacy_omit_keys(raw_keys: Sequence[str] | None) -> list[str]:
+    if not raw_keys:
+        return []
+    normalized = {str(key) for key in raw_keys if str(key)}
+    for combo in _SUPPORTED_LEGACY_FINGERPRINT_OMIT_KEY_SETS:
+        if normalized == combo:
+            return [key for key in _LEGACY_FINGERPRINT_OMITTABLE_TOP_LEVEL_KEYS if key in combo]
+    return []
+
+
+def _legacy_omit_keys_consistent_with_plan(
+    *,
+    repo_root: Path,
+    plan: dict[str, Any],
+    omit_keys: Sequence[str],
+) -> bool:
+    omit = set(str(key) for key in omit_keys)
+    if "bounded_medium_profile" in omit:
+        expected_bounded = (
+            _legacy_stage_profile(plan, stage_id="final_integrated_closeout", review_tier="MEDIUM")
+            or _legacy_stage_profile(plan, stage_id="deep_partition_followup")
+        )
+        if str(plan.get("bounded_medium_profile") or "") != expected_bounded:
+            return False
+    if "strict_exception_profile" in omit:
+        expected_strict = _legacy_strict_exception_profile(
+            plan,
+            bounded_medium_profile=str(plan.get("bounded_medium_profile") or ""),
+        )
+        if str(plan.get("strict_exception_profile") or "") != expected_strict:
+            return False
+    if "partitioning_policy" in omit:
+        expected_partitioning_policy = _infer_partitioning_policy(
+            repo_root=repo_root,
+            full_scope_paths=[str(path) for path in plan.get("full_scope_paths") or []],
+            partitions=[dict(part) for part in plan.get("partitions") or []],
+        )
+        if not expected_partitioning_policy:
+            return False
+        if dict(plan.get("partitioning_policy") or {}) != expected_partitioning_policy:
+            return False
+    return True
+
+
+def _legacy_stage_profile(plan: dict[str, Any], *, stage_id: str, review_tier: str | None = None) -> str:
+    for stage in plan.get("stages") or []:
+        if str(stage.get("stage_id") or "") != stage_id:
+            continue
+        if review_tier is not None and str(stage.get("review_tier") or "") != review_tier:
+            continue
+        profile = str(stage.get("agent_profile") or "").strip()
+        if profile:
+            return profile
+    return ""
+
+
+def _legacy_strict_exception_profile(plan: dict[str, Any], *, bounded_medium_profile: str) -> str:
+    strict_profile = _legacy_stage_profile(
+        plan,
+        stage_id="final_integrated_closeout",
+        review_tier="STRICT",
+    )
+    if strict_profile:
+        return strict_profile
+    final_stage = next(
+        (
+            dict(stage)
+            for stage in plan.get("stages") or []
+            if str(stage.get("stage_id") or "") == "final_integrated_closeout"
+        ),
+        {},
+    )
+    final_review_tier = str(final_stage.get("review_tier") or "").strip()
+    if final_review_tier == "MEDIUM":
+        return bounded_medium_profile or str(final_stage.get("agent_profile") or "").strip()
+    return ""
 
 
 def _duplicate_paths(scope_paths: Sequence[str]) -> list[str]:
@@ -376,10 +538,9 @@ def _validate_stage_descriptor(stage_id: str, stage: dict[str, Any]) -> None:
             )
     if stage_id == "final_integrated_closeout":
         review_tier = str(stage.get("review_tier") or "")
-        if review_tier not in {"MEDIUM", "STRICT"}:
+        if review_tier not in {"LOW", "MEDIUM", "STRICT"}:
             raise ValueError(
-                "strategy_plan.final_integrated_closeout.review_tier must be `MEDIUM` by default or "
-                "`STRICT` for an explicit exception closeout"
+                "strategy_plan.final_integrated_closeout.review_tier must be `LOW`, `MEDIUM`, or `STRICT`"
             )
 
 
@@ -442,6 +603,30 @@ def _partition_boundary_projection(partitions: Sequence[dict[str, Any]]) -> list
         }
         for part in partitions
     ]
+
+
+def _infer_partitioning_policy(
+    *,
+    repo_root: Path,
+    full_scope_paths: Sequence[str],
+    partitions: Sequence[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if not full_scope_paths or not partitions:
+        return None
+    max_candidate = max(len(full_scope_paths), 1)
+    expected_projection = _partition_boundary_projection(partitions)
+    for max_files_per_partition in range(1, max_candidate + 1):
+        candidate = partition_review_scope_paths(
+            repo_root=repo_root,
+            scope_paths=full_scope_paths,
+            max_files_per_partition=max_files_per_partition,
+        )
+        if _partition_boundary_projection(candidate) == expected_projection:
+            return {
+                "group_by": "TOP_LEVEL_SCOPE_PREFIX",
+                "max_files_per_partition": max_files_per_partition,
+            }
+    return None
 
 
 def _expected_helper_partition_ids(
@@ -533,11 +718,46 @@ def _canonical_selected_partition_lineage(
     return lineage
 
 
-def _validate_strategy_plan(*, repo_root: str | Path, strategy_plan: dict[str, Any]) -> dict[str, Any]:
+def _validate_strategy_plan(
+    *,
+    repo_root: str | Path,
+    strategy_plan: dict[str, Any],
+    allow_historical_strategy_replay: bool = False,
+) -> dict[str, Any]:
     repo_root = _normalize_repo_root(repo_root)
+    raw_plan = dict(strategy_plan)
     plan = dict(strategy_plan)
+    plan.pop("_legacy_strategy_fingerprint_omit_keys", None)
+    raw_closeout_policy = raw_plan.get("closeout_policy", {})
+    raw_closeout_policy = raw_closeout_policy if isinstance(raw_closeout_policy, dict) else {}
+    caller_legacy_fingerprint_omit_keys = _normalize_supported_legacy_omit_keys(
+        strategy_plan.get("_legacy_strategy_fingerprint_omit_keys") or []
+    )
+    current_policy_provenance_present = bool(str(raw_closeout_policy.get("review_tier_policy") or "").strip())
     plan["partitions"] = [dict(part) for part in plan.get("partitions") or []]
     plan["stages"] = [dict(stage) for stage in plan.get("stages") or []]
+    legacy_fingerprint_omit_keys: list[str] = []
+    eligible_legacy_omit_keys: list[str] = []
+    for key in _LEGACY_FINGERPRINT_OMITTABLE_TOP_LEVEL_KEYS:
+        if key not in raw_plan:
+            eligible_legacy_omit_keys.append(key)
+    eligible_legacy_omit_key_set = set(eligible_legacy_omit_keys)
+    if current_policy_provenance_present:
+        missing_or_blank_profile_keys = [
+            key
+            for key in ("bounded_medium_profile", "strict_exception_profile")
+            if not str(raw_plan.get(key) or "").strip()
+        ]
+        if missing_or_blank_profile_keys:
+            raise ValueError(
+                "current strategies with closeout_policy.review_tier_policy must preserve explicit top-level reviewer-profile provenance; missing or blank: "
+                + ", ".join(missing_or_blank_profile_keys)
+            )
+        raw_partitioning_policy = raw_plan.get("partitioning_policy")
+        if not isinstance(raw_partitioning_policy, dict) or not raw_partitioning_policy:
+            raise ValueError(
+                "current strategies with closeout_policy.review_tier_policy must preserve explicit top-level partitioning_policy provenance"
+            )
     if str(plan.get("version") or "") != "1":
         raise ValueError("strategy_plan.version must be '1'")
     if str(plan.get("strategy_id") or "").strip() != _PYRAMID_STRATEGY_ID:
@@ -546,10 +766,22 @@ def _validate_strategy_plan(*, repo_root: str | Path, strategy_plan: dict[str, A
         raise ValueError("strategy_plan.agent_provider_id must be non-empty")
     bounded_medium_profile = str(plan.get("bounded_medium_profile") or "").strip()
     if not bounded_medium_profile:
-        raise ValueError("strategy_plan.bounded_medium_profile must be non-empty")
+        bounded_medium_profile = (
+            _legacy_stage_profile(plan, stage_id="final_integrated_closeout", review_tier="MEDIUM")
+            or _legacy_stage_profile(plan, stage_id="deep_partition_followup")
+        )
+        if not bounded_medium_profile:
+            raise ValueError("strategy_plan.bounded_medium_profile must be non-empty")
+        plan["bounded_medium_profile"] = bounded_medium_profile
     strict_exception_profile = str(plan.get("strict_exception_profile") or "").strip()
     if not strict_exception_profile:
-        raise ValueError("strategy_plan.strict_exception_profile must be non-empty")
+        strict_exception_profile = _legacy_strict_exception_profile(
+            plan,
+            bounded_medium_profile=bounded_medium_profile,
+        )
+        if not strict_exception_profile:
+            raise ValueError("strategy_plan.strict_exception_profile must be non-empty")
+        plan["strict_exception_profile"] = strict_exception_profile
     full_scope_paths = _validate_distinct_scope_paths(
         repo_root=repo_root,
         field_name="strategy_plan.full_scope_paths",
@@ -565,6 +797,15 @@ def _validate_strategy_plan(*, repo_root: str | Path, strategy_plan: dict[str, A
     if not str(plan.get("full_scope_fingerprint") or "").strip():
         raise ValueError("strategy_plan.full_scope_fingerprint must be non-empty")
     partitioning_policy = dict(plan.get("partitioning_policy") or {})
+    if not partitioning_policy:
+        inferred_partitioning_policy = _infer_partitioning_policy(
+            repo_root=repo_root,
+            full_scope_paths=full_scope_paths,
+            partitions=plan["partitions"],
+        )
+        if inferred_partitioning_policy is not None:
+            partitioning_policy = inferred_partitioning_policy
+            plan["partitioning_policy"] = dict(inferred_partitioning_policy)
     actual_partitioning_policy_keys = set(partitioning_policy)
     missing_partitioning_policy_keys = sorted(_PARTITIONING_POLICY_ALLOWED_KEYS - actual_partitioning_policy_keys)
     unexpected_partitioning_policy_keys = sorted(actual_partitioning_policy_keys - _PARTITIONING_POLICY_ALLOWED_KEYS)
@@ -585,7 +826,7 @@ def _validate_strategy_plan(*, repo_root: str | Path, strategy_plan: dict[str, A
     raw_max_files_per_partition = partitioning_policy.get("max_files_per_partition")
     if isinstance(raw_max_files_per_partition, bool) or not isinstance(raw_max_files_per_partition, int):
         raise ValueError(
-            "strategy_plan.partitioning_policy.max_files_per_partition must remain the helper-authored integer chunk size"
+            "strategy_plan.partitioning_policy.max_files_per_partition must remain a positive integer policy field"
         )
     max_files_per_partition = int(raw_max_files_per_partition)
     if max_files_per_partition <= 0:
@@ -791,9 +1032,9 @@ def _validate_strategy_plan(*, repo_root: str | Path, strategy_plan: dict[str, A
             f"unexpected paths: {', '.join(fast_scope_paths_outside_full)}"
         )
     deep_stage = _required_stage(plan, "deep_partition_followup")
-    if not str(deep_stage.get("agent_profile") or "").strip():
-        raise ValueError("strategy_plan.deep_partition_followup.agent_profile must be non-empty")
     deep_partition_ids = [str(pid) for pid in deep_stage.get("partition_ids") or []]
+    if deep_partition_ids and not str(deep_stage.get("agent_profile") or "").strip():
+        raise ValueError("strategy_plan.deep_partition_followup.agent_profile must be non-empty")
     if [str(pid) for pid in plan.get("selected_partition_ids") or []] != deep_partition_ids:
         raise ValueError(
             "strategy_plan.selected_partition_ids must match deep_partition_followup.partition_ids exactly"
@@ -841,16 +1082,61 @@ def _validate_strategy_plan(*, repo_root: str | Path, strategy_plan: dict[str, A
             "strategy_plan.deep_partition_followup.candidate_partition_ids must be a subset of strategy_plan.partitions; "
             f"unknown ids: {', '.join(missing_deep_candidate_partition_ids)}"
         )
+    deep_candidate_partition_ids_outside_fast_stage = sorted(set(deep_candidate_partition_ids) - set(fast_partition_ids))
+    if deep_candidate_partition_ids_outside_fast_stage:
+        raise ValueError(
+            "strategy_plan.deep_partition_followup.candidate_partition_ids must stay within the frozen "
+            "fast_partition_scan.partition_ids subset; "
+            f"unexpected ids: {', '.join(deep_candidate_partition_ids_outside_fast_stage)}"
+        )
+    missing_selected_deep_candidate_partition_ids = sorted(set(deep_partition_ids) - set(deep_candidate_partition_ids))
+    if missing_selected_deep_candidate_partition_ids:
+        raise ValueError(
+            "strategy_plan.deep_partition_followup.candidate_partition_ids must cover every selected deep partition id; "
+            f"missing ids: {', '.join(missing_selected_deep_candidate_partition_ids)}"
+        )
     final_stage = _required_stage(plan, "final_integrated_closeout")
     if not str(final_stage.get("agent_profile") or "").strip():
         raise ValueError("strategy_plan.final_integrated_closeout.agent_profile must be non-empty")
     final_review_tier = str(final_stage.get("review_tier") or "")
     final_agent_profile = str(final_stage.get("agent_profile") or "")
+    closeout_policy = dict(plan.get("closeout_policy") or {})
+    review_tier_policy = str(closeout_policy.get("review_tier_policy") or "").strip()
+    if "review_tier_policy" in closeout_policy and not review_tier_policy:
+        raise ValueError("strategy_plan.closeout_policy.review_tier_policy must be non-empty when provided")
+    if (
+        final_review_tier in {"MEDIUM", "STRICT"}
+        and not review_tier_policy
+        and not allow_historical_strategy_replay
+    ):
+        raise ValueError(
+            "missing strategy_plan.closeout_policy.review_tier_policy is rejected on the default authoritative replay path; "
+            "pass allow_historical_strategy_replay=True only for supported legacy strategy plans"
+        )
+    if review_tier_policy == "LOW_ONLY" and final_review_tier != "LOW":
+        raise ValueError(
+            "LOW_ONLY closeout policy requires strategy_plan.final_integrated_closeout.review_tier=`LOW`"
+        )
     if final_review_tier == "MEDIUM" and bounded_medium_profile and final_agent_profile != bounded_medium_profile:
         raise ValueError(
             "strategy_plan.final_integrated_closeout.agent_profile must match the bounded medium "
             "escalation profile exactly when review_tier is `MEDIUM`"
         )
+    if final_review_tier == "LOW":
+        if review_tier_policy != "LOW_ONLY":
+            raise ValueError(
+                "LOW closeout strategies require closeout_policy.review_tier_policy=`LOW_ONLY`"
+            )
+        if deep_partition_ids:
+            raise ValueError(
+                "LOW authoritative closeout requires deep_partition_followup.partition_ids to be empty"
+            )
+        fast_stage_profile = str(fast_stage.get("agent_profile") or "").strip()
+        if final_agent_profile != fast_stage_profile:
+            raise ValueError(
+                "strategy_plan.final_integrated_closeout.agent_profile must match "
+                "strategy_plan.fast_partition_scan.agent_profile exactly when review_tier is `LOW`"
+            )
     if final_review_tier == "STRICT":
         if final_agent_profile != strict_exception_profile:
             raise ValueError(
@@ -983,9 +1269,8 @@ def _validate_strategy_plan(*, repo_root: str | Path, strategy_plan: dict[str, A
                 "match exactly when deep_partition_followup.partition_ids is non-empty; "
                 + deep_effective_mismatch
             )
-    closeout_policy = dict(plan.get("closeout_policy") or {})
     actual_closeout_policy_keys = set(closeout_policy)
-    missing_closeout_policy_keys = sorted(_CLOSEOUT_POLICY_ALLOWED_KEYS - actual_closeout_policy_keys)
+    missing_closeout_policy_keys = sorted(_CLOSEOUT_POLICY_REQUIRED_KEYS - actual_closeout_policy_keys)
     unexpected_closeout_policy_keys = sorted(actual_closeout_policy_keys - _CLOSEOUT_POLICY_ALLOWED_KEYS)
     if missing_closeout_policy_keys or unexpected_closeout_policy_keys:
         detail: list[str] = []
@@ -1007,15 +1292,86 @@ def _validate_strategy_plan(*, repo_root: str | Path, strategy_plan: dict[str, A
         raise ValueError(
             "strategy_plan.closeout_policy.requires_integrated_scope_closeout must remain `true` in authoritative replay plans"
         )
+    review_tier_policy = str(closeout_policy.get("review_tier_policy") or "").strip()
+    if review_tier_policy and review_tier_policy not in {"LOW_ONLY", "LOW_PLUS_MEDIUM"}:
+        raise ValueError(
+            "strategy_plan.closeout_policy.review_tier_policy must be `LOW_ONLY` or `LOW_PLUS_MEDIUM`"
+        )
+    historical_replay_allowed = allow_historical_strategy_replay and not current_policy_provenance_present
     strategy_fingerprint = str(plan.get("strategy_fingerprint") or "")
     if not strategy_fingerprint:
         raise ValueError("strategy_plan.strategy_fingerprint must be non-empty")
     expected_strategy_fingerprint = _expected_strategy_fingerprint(plan)
+    legacy_boundary_equivalent_strategy_fingerprint = _expected_strategy_fingerprint(
+        plan,
+        canonicalize_partitioning_policy=False,
+    )
     if strategy_fingerprint != expected_strategy_fingerprint:
+        if (
+            strategy_fingerprint == legacy_boundary_equivalent_strategy_fingerprint
+            and legacy_boundary_equivalent_strategy_fingerprint != expected_strategy_fingerprint
+            and dict(plan.get("partitioning_policy") or {})
+            != _canonical_partitioning_policy_for_strategy_fingerprint(plan)
+        ):
+            pass
+        elif (
+            historical_replay_allowed
+            and caller_legacy_fingerprint_omit_keys
+            and set(caller_legacy_fingerprint_omit_keys).issubset(
+            eligible_legacy_omit_key_set
+            )
+        ):
+            if _legacy_omit_keys_consistent_with_plan(
+                repo_root=repo_root,
+                plan=plan,
+                omit_keys=caller_legacy_fingerprint_omit_keys,
+            ):
+                candidate_fingerprint = _expected_strategy_fingerprint(
+                    plan,
+                    omit_top_level_keys=caller_legacy_fingerprint_omit_keys,
+                )
+                if strategy_fingerprint in _legacy_candidate_strategy_fingerprints(
+                    plan,
+                    omit_top_level_keys=caller_legacy_fingerprint_omit_keys,
+                ):
+                    legacy_fingerprint_omit_keys = caller_legacy_fingerprint_omit_keys
+                else:
+                    raise ValueError(
+                        "strategy_plan.strategy_fingerprint must match the canonical hash of the authoritative "
+                        "strategy-plan content that executable orchestration artifacts actually consume"
+                    )
+        elif historical_replay_allowed and not legacy_fingerprint_omit_keys:
+            legacy_fingerprint_omit_keys = _matching_legacy_fingerprint_omit_keys(
+                plan=plan,
+                strategy_fingerprint=strategy_fingerprint,
+                eligible_omit_keys=eligible_legacy_omit_keys,
+            )
+            legacy_expected_strategy_fingerprints = (
+                _legacy_candidate_strategy_fingerprints(plan, omit_top_level_keys=legacy_fingerprint_omit_keys)
+                if legacy_fingerprint_omit_keys
+                else []
+            )
+            if not legacy_expected_strategy_fingerprints or strategy_fingerprint not in legacy_expected_strategy_fingerprints:
+                raise ValueError(
+                    "strategy_plan.strategy_fingerprint must match the canonical hash of the authoritative "
+                    "strategy-plan content that executable orchestration artifacts actually consume"
+                )
+        else:
+            raise ValueError(
+                "strategy_plan.strategy_fingerprint must match the canonical hash of the authoritative "
+                "strategy-plan content that executable orchestration artifacts actually consume"
+            )
+    if (
+        final_review_tier in {"MEDIUM", "STRICT"}
+        and not review_tier_policy
+        and not legacy_fingerprint_omit_keys
+    ):
         raise ValueError(
-            "strategy_plan.strategy_fingerprint must match the canonical hash of the authoritative "
-            "strategy-plan content that executable orchestration artifacts actually consume"
+            "missing strategy_plan.closeout_policy.review_tier_policy may be replayed only for supported legacy strategy plans"
         )
+    for key in legacy_fingerprint_omit_keys:
+        if key in eligible_legacy_omit_key_set:
+            plan.pop(key, None)
     return plan
 
 
@@ -1143,9 +1499,14 @@ def build_review_orchestration_graph(
     review_id: str,
     strategy_plan: dict[str, Any],
     max_parallel_branches: int = 4,
+    allow_historical_strategy_replay: bool = False,
 ) -> dict[str, Any]:
     repo_root = _normalize_repo_root(repo_root)
-    plan = _validate_strategy_plan(repo_root=repo_root, strategy_plan=strategy_plan)
+    plan = _validate_strategy_plan(
+        repo_root=repo_root,
+        strategy_plan=strategy_plan,
+        allow_historical_strategy_replay=allow_historical_strategy_replay,
+    )
     if int(max_parallel_branches) <= 0:
         raise ValueError("max_parallel_branches must be >= 1")
 
@@ -1233,14 +1594,20 @@ def build_review_orchestration_bundle(
     review_id: str,
     strategy_plan: dict[str, Any],
     max_parallel_branches: int = 4,
+    allow_historical_strategy_replay: bool = False,
 ) -> dict[str, Any]:
     repo_root = _normalize_repo_root(repo_root)
-    plan = _validate_strategy_plan(repo_root=repo_root, strategy_plan=strategy_plan)
+    plan = _validate_strategy_plan(
+        repo_root=repo_root,
+        strategy_plan=strategy_plan,
+        allow_historical_strategy_replay=allow_historical_strategy_replay,
+    )
     graph = build_review_orchestration_graph(
         repo_root=repo_root,
         review_id=review_id,
         strategy_plan=plan,
         max_parallel_branches=max_parallel_branches,
+        allow_historical_strategy_replay=allow_historical_strategy_replay,
     )
     fast_stage = _required_stage(plan, "fast_partition_scan")
     deep_stage = _required_stage(plan, "deep_partition_followup")

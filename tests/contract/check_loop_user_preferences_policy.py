@@ -88,6 +88,7 @@ def main() -> int:
     onboard_skill = _read(".agents/skills/leanatlas-onboard/SKILL.md")
     mainline_skill = _read(".agents/skills/leanatlas-loop-mainline/SKILL.md")
     review_skill = _read(".agents/skills/leanatlas-loop-review-acceleration/SKILL.md")
+    user_prefs_execplan = _read("docs/agents/execplans/20260308_loop_user_preferences_and_onboarding_defaults_v0.md")
 
     required_docs = {
         "docs/agents/ONBOARDING.md": [
@@ -164,6 +165,10 @@ def main() -> int:
         return _fail("review acceleration skill must bound medium escalation to small high-risk scopes")
     if "STRICT / xhigh" not in review_skill:
         return _fail("review acceleration skill must mark STRICT / xhigh as exceptional")
+    if "`Budget Saver` (recommended)" not in user_prefs_execplan:
+        return _fail("user preferences execplan must mark Budget Saver as the recommended preset")
+    if "`Balanced` maps to the recommended default development path" in user_prefs_execplan:
+        return _fail("user preferences execplan must not still describe Balanced as the recommended default path")
 
     with tempfile.TemporaryDirectory(prefix="loop_user_prefs_") as td:
         repo_root = Path(td)

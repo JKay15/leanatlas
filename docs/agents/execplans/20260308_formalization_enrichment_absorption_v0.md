@@ -6,12 +6,12 @@ created: 2026-03-08
 ---
 
 ## Purpose / Big Picture
-LeanAtlas already absorbed the deterministic formalization core from the paper experiments, but several high-value front-end helpers still live only under `.cache/leanatlas/tmp/theorem_proof_proto_v0_2/**` and `.cache/leanatlas/tmp/arxiv_2112_13254v3_proto_v0_3/**`. Those helpers are now the highest-value remaining gap for real-paper usability: human-provided external sources are not yet first-class, LaTeX/PDF enrichment is not yet on the canonical path, mapping triage remains mostly paper-local, and annotation reverse-link resync still depends on experimental scripts. This plan productizes the bounded P1-P4 subset into committed tools/contracts/tests/docs so paper formalization can start from a mainline path instead of reconstructing experiment glue from `.cache`. The goal is capability absorption, not experiment-directory copying.
+LeanAtlas already absorbed the deterministic formalization core from the paper experiments, but several high-value front-end helpers still live only under `.cache/leanatlas/tmp/theorem_proof_proto_v0_2/**` and `.cache/leanatlas/tmp/arxiv_2112_13254v3_proto_v0_3/**`. Those helpers are now the highest-value remaining gap for real-paper usability: human-provided external sources are not yet first-class, LaTeX/Bib enrichment is not yet on the canonical path, bounded PDF roots as source inputs are not yet formalized on the canonical path, mapping triage remains mostly paper-local, and annotation reverse-link resync still depends on experimental scripts. This plan productizes the bounded P1-P4 subset into committed tools/contracts/tests/docs so paper formalization can start from a mainline path instead of reconstructing experiment glue from `.cache`. The goal is capability absorption, not experiment-directory copying.
 
 ## Glossary
 - ExternalSourcePack: machine-readable bundle of user-provided source files plus deterministic retrieval/enrichment metadata for external dependencies.
 - Human ingress: explicit formalization input supplied by a human outside the current run; it must be published as evidence rather than hidden in chat state.
-- Source enrichment: deterministic augmentation of a formalization ledger using LaTeX/PDF-derived equation and citation information.
+- Source enrichment: deterministic augmentation of a formalization ledger using LaTeX/Bib-derived equation and citation information, while still allowing bounded PDF roots as source inputs.
 - Mapping triage: deterministic prioritization and reporting of which claim/clause/atom/anchor mappings still need review.
 - Reverse-link resync: deterministic refresh of annotation-backed `lean_reverse_links` / anchor alignment after Lean source edits.
 
@@ -19,7 +19,7 @@ LeanAtlas already absorbed the deterministic formalization core from the paper e
 In scope:
 - absorb P1-P4 experimental capabilities into committed mainline tools/docs/tests:
   - ExternalSourcePack + human ingress
-  - LaTeX/PDF enrichment
+  - LaTeX/Bib enrichment plus bounded PDF-root handling
   - mapping triage / review todo generation
   - annotation reverse-link resync
 - update formalization contracts/schemas/docs where the canonical surface changes
@@ -103,7 +103,7 @@ Acceptance:
 
 ### 3) Productize source enrichment + mapping triage + reverse-link resync
 Deliverables:
-- committed enrichment tool(s) for LaTeX/PDF augmentation
+- committed enrichment tool(s) for LaTeX/Bib augmentation plus bounded PDF-root handling
 - committed mapping-triage/review-todo tool(s)
 - committed annotation reverse-link resync tool
 - docs/contracts updated so these are clearly canonical helpers rather than paper-local scripts

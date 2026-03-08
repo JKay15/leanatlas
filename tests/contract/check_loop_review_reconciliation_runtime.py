@@ -197,6 +197,45 @@ def _assert_full_reconciliation_settles_findings() -> None:
         )
 
 
+def _assert_execplan_uses_immutable_plus_journaled_persistence_language() -> None:
+    execplan = (ROOT / "docs" / "agents" / "execplans" / "20260308_review_supersession_reconciliation_runtime_v0.md").read_text(
+        encoding="utf-8"
+    )
+    if "immutable by-digest evidence" not in execplan:
+        raise AssertionError("supersession reconciliation execplan must describe the authoritative ledger as immutable")
+    if "append-only reconciliation artifact" in execplan:
+        raise AssertionError("supersession reconciliation execplan must not describe the authoritative ledger as append-only")
+
+
+def _assert_execplan_does_not_claim_current_repairs_already_closed_out() -> None:
+    execplan = (ROOT / "docs" / "agents" / "execplans" / "20260308_review_supersession_reconciliation_runtime_v0.md").read_text(
+        encoding="utf-8"
+    )
+    stale_claim = "later closeout-docs reviews caught and corrected wording overclaims before final closeout"
+    if stale_claim in execplan:
+        raise AssertionError("supersession reconciliation execplan must not claim post-repair wording fixes were already covered by the old closeout alias")
+    if "active 20260308 repair wave" not in execplan:
+        raise AssertionError("supersession reconciliation execplan must route current wording repairs through the active 20260308 repair wave instead of the historical closeout alias")
+    premature_policy_claim = "without reopening `STRICT / xhigh` as the default path"
+    if premature_policy_claim in execplan:
+        raise AssertionError("supersession reconciliation execplan must not claim the current-head reviewer policy conclusion before the reduced xhigh recheck is clean")
+
+
+def _assert_execplan_retrospective_cites_stable_closeout_alias() -> None:
+    execplan = (ROOT / "docs" / "agents" / "execplans" / "20260308_review_supersession_reconciliation_runtime_v0.md").read_text(
+        encoding="utf-8"
+    )
+    stable_closeout_ref = (
+        "artifacts/loop_runtime/by_execplan/"
+        "docs__agents__execplans__20260308_review_supersession_reconciliation_runtime_v0.md__6f0765683810/"
+        "MaintainerCloseoutRef.json"
+    )
+    if stable_closeout_ref not in execplan:
+        raise AssertionError("supersession reconciliation execplan retrospective must cite the stable MaintainerCloseoutRef.json alias")
+    if "active 20260308 repair wave" not in execplan:
+        raise AssertionError("supersession reconciliation execplan retrospective must still route current-head repairs through the active 20260308 repair wave")
+
+
 def _assert_same_finding_key_requires_scope_lineage_or_explicit_supersession() -> None:
     with tempfile.TemporaryDirectory(prefix="loop_review_reconciliation_scope_lineage_") as td:
         repo = Path(td)
@@ -715,6 +754,9 @@ def _assert_persisted_artifacts_are_append_only() -> None:
 
 
 def main() -> int:
+    _assert_execplan_uses_immutable_plus_journaled_persistence_language()
+    _assert_execplan_does_not_claim_current_repairs_already_closed_out()
+    _assert_execplan_retrospective_cites_stable_closeout_alias()
     _assert_full_reconciliation_settles_findings()
     _assert_same_finding_key_requires_scope_lineage_or_explicit_supersession()
     _assert_supersession_records_capture_late_output_dispositions()

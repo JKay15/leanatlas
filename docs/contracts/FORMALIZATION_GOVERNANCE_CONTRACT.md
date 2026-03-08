@@ -34,7 +34,7 @@ Formalization gate and mapping gate are independent but composable:
 
 Committed front-end governance helpers that feed those gates include:
 - human ingress through `ExternalSourcePack`
-- source enrichment from LaTeX/PDF evidence
+- source enrichment from LaTeX/Bib evidence, with PDF roots accepted only as bounded coverage inputs
 - review todo generation for mapping triage
 - reverse-link resync for annotation-backed alignment refresh
 
@@ -81,4 +81,4 @@ Reason-code examples:
 
 ## 6) Compatibility and migration
 Experimental artifacts remain valid evidence sources but non-authoritative.
-The authoritative outputs for workflow/Judge integration are the four canonical schemas above.
+The authoritative outputs for workflow/Judge integration are the five canonical governance artifacts above.

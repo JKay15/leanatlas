@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import re
 import sys
+from datetime import date
 from pathlib import Path
 
 
@@ -51,6 +53,10 @@ def main() -> int:
     for snippet in required_doc_snippets:
         if snippet not in mainline_doc:
             return _fail(f"{mainline_doc_rel} missing required snippet `{snippet}`")
+    if "- stable maintainer session bookkeeping and closeout refs" in mainline_doc.split("### LeanAtlas adapters", 1)[0]:
+        return _fail("docs/agents/LOOP_MAINLINE.md must not classify maintainer closeout refs as LOOP core semantics")
+    if "stable maintainer session bookkeeping and closeout refs" not in mainline_doc.split("### LeanAtlas adapters", 1)[-1]:
+        return _fail("docs/agents/LOOP_MAINLINE.md must classify maintainer closeout refs under LeanAtlas adapters")
 
     project_entry_docs = [
         "docs/agents/STATUS.md",
@@ -69,6 +75,31 @@ def main() -> int:
         return _fail(f"missing LOOP mainline skill: {skill_rel}")
     if "LOOP mainline" not in skill:
         return _fail(f"{skill_rel} must describe LOOP mainline usage explicitly")
+
+    agents_readme = _read("docs/agents/README.md")
+    if ".agents/skills/leanatlas-dedup|promote|gc/SKILL.md" in agents_readme:
+        return _fail("docs/agents/README.md must not advertise the non-resolvable combined Phase3 skill path")
+    for skill_ref in (
+        ".agents/skills/leanatlas-dedup/SKILL.md",
+        ".agents/skills/leanatlas-promote/SKILL.md",
+        ".agents/skills/leanatlas-gc/SKILL.md",
+    ):
+        if skill_ref not in agents_readme:
+            return _fail(f"docs/agents/README.md must route Phase3 readers to {skill_ref}")
+
+    status_doc = _read("docs/agents/STATUS.md")
+    header_match = re.search(r"## Where are we now \(as of (\d{4}-\d{2}-\d{2})\)", status_doc)
+    if not header_match:
+        return _fail("docs/agents/STATUS.md must carry an `as of YYYY-MM-DD` snapshot header")
+    try:
+        snapshot_date = date.fromisoformat(header_match.group(1))
+    except ValueError:
+        return _fail("docs/agents/STATUS.md snapshot header must use ISO date format")
+    mentioned_dates = [date.fromisoformat(raw) for raw in re.findall(r"\b(\d{4}-\d{2}-\d{2})\b", status_doc)]
+    if not mentioned_dates:
+        return _fail("docs/agents/STATUS.md must mention at least one dated project update")
+    if snapshot_date != max(mentioned_dates):
+        return _fail("docs/agents/STATUS.md snapshot date must match the newest dated update in the document")
 
     skills_index = _read(".agents/skills/README.md")
     if skill_rel not in skills_index:

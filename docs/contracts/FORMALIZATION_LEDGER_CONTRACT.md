@@ -55,7 +55,8 @@ Required review fields for auditable entities:
 - `formalization_bindings` must track claim-level Lean target and dependency status.
 - `clause_atoms` + `lean_anchors` + `atom_mappings` define clause/atom-to-Lean alignment.
 - `lean_reverse_links` must support reverse lookup from Lean location back to clause/span ids.
-- committed source enrichment may augment clause links with equation/citation evidence derived from LaTeX/PDF sources.
+- committed source enrichment may augment clause links with equation/citation evidence derived from parsed LaTeX/Bib sources collected from a bounded source root.
+- PDF roots may still be supplied as bounded source inputs for audit coverage, but raw PDF bytes are not the authoritative citation/equation extraction input for the committed helper and do not trigger sibling TeX/Bib discovery.
 - committed reverse-link resync may rebuild `AUTO_FROM_ANNOTATION` reverse links from `LEAN_LINK` annotations after Lean source edits.
 - committed review todo generation may prioritize clause/atom/anchor review work without mutating canonical ids.
 

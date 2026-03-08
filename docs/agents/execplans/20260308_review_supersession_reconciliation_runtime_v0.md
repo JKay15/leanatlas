@@ -20,7 +20,7 @@ This plan closes that gap with the full review supersession / reconciliation run
 ## Glossary
 - `supersession`: a newer review round explicitly covers or invalidates an older round for the same review scope.
 - `reconciliation runtime`: the deterministic engine that ingests review findings and emits authoritative finding dispositions.
-- `authoritative finding ledger`: append-only evidence describing each known finding and whether it is `CONFIRMED`, `DISMISSED`, or `SUPERSEDED`.
+- `authoritative finding ledger`: immutable by-digest evidence describing each known finding and whether it is `CONFIRMED`, `DISMISSED`, or `SUPERSEDED`, paired with an append-only persistence journal.
 - `medium trial`: this wave's policy of using only `medium` reviewer for implementation closeout, without escalating to `STRICT / xhigh`.
 
 ## Scope
@@ -69,7 +69,7 @@ Out of scope:
 2) Land the deterministic reconciliation runtime
 - Deliverables:
   - stable finding identity / lineage
-  - append-only reconciliation artifact
+  - immutable by-digest reconciliation ledger plus append-only journal
   - final closeout consumes reconciled findings
   - staged review follow-up can read authoritative dispositions instead of ad hoc/manual merge results
 - Acceptance:
@@ -120,4 +120,5 @@ Out of scope:
   - round1 medium surfaced 3 real issues (authoritative timestamp determinism, unrelated-scope grouping, older-superseder acceptance)
   - round2 medium surfaced 1 real issue (immutable ledger path still tied to `run_key`)
   - round3 medium returned `No findings.` on the post-fix implementation state
-- Practical result: `medium` closed the implementation phase of this core reconciliation feature with four real findings across two implementation rounds and a clean implementation-state review; later closeout-docs reviews caught and corrected wording overclaims before final closeout, which is still enough to justify continued `medium` evaluation on small-scope high-risk LOOP features without reopening `STRICT / xhigh` as the default path.
+- Historical implementation closeout authority for this wave remains the stable alias `artifacts/loop_runtime/by_execplan/docs__agents__execplans__20260308_review_supersession_reconciliation_runtime_v0.md__6f0765683810/MaintainerCloseoutRef.json`.
+- Practical result: `medium` closed the implementation phase of this core reconciliation feature with four real findings across two implementation rounds and a clean implementation-state review. Later wording/authority repairs on current head belong to the active 20260308 repair wave rather than the historical closeout alias above, so any current-head reviewer-policy conclusion must wait on that repair wave's reduced xhigh recheck rather than being inferred from this historical closeout note alone.

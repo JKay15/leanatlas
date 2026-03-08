@@ -56,7 +56,7 @@ Out of scope:
 ## Outcomes & retrospective (fill when done)
 - Completed:
   - committed executable review-orchestration helpers in [review_orchestration.py](/Users/xiongjiangkai/xjk_papers/leanatlas/tools/loop/review_orchestration.py) on top of [review_strategy.py](/Users/xiongjiangkai/xjk_papers/leanatlas/tools/loop/review_strategy.py)
-  - materialized `FAST` partition fan-out, `DEEP` nested follow-up, and authoritative integrated `STRICT` closeout as a deterministic bundle/graph surface
+  - materialized `FAST` partition fan-out, `DEEP` nested follow-up, and an authoritative integrated `MEDIUM` closeout by default, with explicit `STRICT` exception closeout support, as a deterministic bundle/graph surface
   - exported the orchestration helpers from [tools/loop/__init__.py](/Users/xiongjiangkai/xjk_papers/leanatlas/tools/loop/__init__.py)
   - tightened authoritative replay invariants so compilation now rejects:
     - malformed or non-canonical helper-derived `partition_id` values
@@ -75,13 +75,14 @@ Out of scope:
     - `uv run --locked python tests/run.py --profile nightly`
     - `lake build`
     - `git diff --check`
-  - verify artifacts:
+  - historical implementation-wave artifacts from the initial 2026-03-07 landing (superseded as settled-state evidence for current bytes once later replay/policy repairs changed the scoped files):
     - [round25](/Users/xiongjiangkai/xjk_papers/leanatlas/artifacts/verify/20260307_review_orchestration_automation_v0_verify_round25.md)
-  - latest code-scope strict review:
     - [round46 prompt](/Users/xiongjiangkai/xjk_papers/leanatlas/artifacts/reviews/20260307_review_orchestration_automation_review_round46_strict_prompt.md)
     - [round46 response](/Users/xiongjiangkai/xjk_papers/leanatlas/artifacts/reviews/20260307_review_orchestration_automation_review_round46_strict_response.md)
-  - stable settled-state closeout alias:
-    - [MaintainerCloseoutRef.json](/Users/xiongjiangkai/xjk_papers/leanatlas/artifacts/loop_runtime/by_execplan/docs__agents__execplans__20260307_review_orchestration_automation_v0.md__62646d9128b5/MaintainerCloseoutRef.json)
+    - [initial-wave MaintainerCloseoutRef.json](/Users/xiongjiangkai/xjk_papers/leanatlas/artifacts/loop_runtime/by_execplan/docs__agents__execplans__20260307_review_orchestration_automation_v0.md__62646d9128b5/MaintainerCloseoutRef.json)
+  - current post-landing authoritative status is tracked through later revalidation/repair work rather than the initial-wave closeout:
+    - [20260308_xhigh_revalidation_matrix_v0.md](/Users/xiongjiangkai/xjk_papers/leanatlas/docs/agents/execplans/20260308_xhigh_revalidation_matrix_v0.md)
+    - [20260308_xhigh_revalidation_repair_wave_v0.md](/Users/xiongjiangkai/xjk_papers/leanatlas/docs/agents/execplans/20260308_xhigh_revalidation_repair_wave_v0.md)
 - Residual risks:
   - live provider execution automation for every review stage is still out of scope; this plan only compiled the deterministic orchestration/bundle layer
   - reviewer supersession/reconciliation runtime remains follow-on work under the batch master plan

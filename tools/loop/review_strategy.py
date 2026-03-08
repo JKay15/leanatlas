@@ -19,6 +19,8 @@ from .user_preferences import (
     DEFAULT_STRICT_EXCEPTION_POLICY,
 )
 
+_SUPPORTED_REVIEW_TIER_POLICIES = frozenset({"LOW_ONLY", "LOW_PLUS_MEDIUM"})
+
 
 def _resolve_repo_file(repo_root: Path, raw: str | Path) -> Path:
     path = Path(raw)
@@ -84,6 +86,34 @@ def _scope_fingerprint(*, repo_root: Path, scope_paths: Sequence[str]) -> str:
     return compute_review_scope_fingerprint(repo_root=repo_root, scope_paths=scope_paths)
 
 
+def _canonical_partitioning_policy_for_strategy_fingerprint(strategy: dict[str, Any]) -> dict[str, Any]:
+    policy = dict(strategy.get("partitioning_policy") or {})
+    if not policy or str(policy.get("group_by") or "") != "TOP_LEVEL_SCOPE_PREFIX":
+        return policy
+    full_scope_paths = [str(path) for path in strategy.get("full_scope_paths") or []]
+    partitions = [dict(part) for part in strategy.get("partitions") or []]
+    if not full_scope_paths or not partitions:
+        return policy
+
+    expected_chunks = [[str(path) for path in part.get("scope_paths") or []] for part in partitions]
+    grouped_scope_paths: dict[str, list[str]] = {}
+    for rel in full_scope_paths:
+        grouped_scope_paths.setdefault(str(rel).split("/", 1)[0], []).append(str(rel))
+
+    for max_files_per_partition in range(1, len(full_scope_paths) + 1):
+        candidate_chunks: list[list[str]] = []
+        for group in sorted(grouped_scope_paths):
+            files = grouped_scope_paths[group]
+            for start in range(0, len(files), max_files_per_partition):
+                candidate_chunks.append(files[start : start + max_files_per_partition])
+        if candidate_chunks == expected_chunks:
+            return {
+                "group_by": "TOP_LEVEL_SCOPE_PREFIX",
+                "max_files_per_partition": max_files_per_partition,
+            }
+    return policy
+
+
 def _strategy_fingerprint_payload(strategy: dict[str, Any]) -> dict[str, Any]:
     partition_keys = ("partition_id", "scope_paths", "scope_fingerprint")
     stage_keys = {
@@ -124,7 +154,7 @@ def _strategy_fingerprint_payload(strategy: dict[str, Any]) -> dict[str, Any]:
         "agent_provider_id": str(strategy.get("agent_provider_id") or ""),
         "bounded_medium_profile": str(strategy.get("bounded_medium_profile") or ""),
         "strict_exception_profile": str(strategy.get("strict_exception_profile") or ""),
-        "partitioning_policy": dict(strategy.get("partitioning_policy") or {}),
+        "partitioning_policy": _canonical_partitioning_policy_for_strategy_fingerprint(strategy),
         "full_scope_paths": [str(path) for path in strategy.get("full_scope_paths") or []],
         "full_scope_fingerprint": str(strategy.get("full_scope_fingerprint") or ""),
         "partitions": [
@@ -231,6 +261,7 @@ def build_pyramid_review_plan(
     deep_profile: str,
     strict_profile: str,
     final_closeout_tier: str = "MEDIUM",
+    review_tier_policy: str = DEFAULT_REVIEW_TIER_POLICY,
     agent_provider_id: str = "codex_cli",
     max_files_per_partition: int = 4,
     followup_partition_ids: Sequence[str] | None = None,
@@ -238,8 +269,13 @@ def build_pyramid_review_plan(
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
     final_closeout_tier = str(final_closeout_tier or "").strip().upper()
-    if final_closeout_tier not in {"MEDIUM", "STRICT"}:
-        raise ValueError("final_closeout_tier must be MEDIUM or STRICT")
+    if final_closeout_tier not in {"LOW", "MEDIUM", "STRICT"}:
+        raise ValueError("final_closeout_tier must be LOW, MEDIUM, or STRICT")
+    review_tier_policy = str(review_tier_policy or "").strip().upper()
+    if review_tier_policy not in _SUPPORTED_REVIEW_TIER_POLICIES:
+        raise ValueError("review_tier_policy must be LOW_ONLY or LOW_PLUS_MEDIUM")
+    if review_tier_policy == "LOW_ONLY" and final_closeout_tier != "LOW":
+        raise ValueError("LOW_ONLY review_tier_policy requires final_closeout_tier=LOW")
     normalized_scope = _normalize_scope_paths(repo_root=repo_root, scope_paths=scope_paths)
     partitions = partition_review_scope_paths(
         repo_root=repo_root,
@@ -327,8 +363,21 @@ def build_pyramid_review_plan(
                     effective_scope_source = "MANUAL_EFFECTIVE_SCOPE_OVERRIDE"
                     deep_scope_source = effective_scope_source
 
+    if final_closeout_tier == "LOW" and review_tier_policy != "LOW_ONLY":
+        raise ValueError("LOW final_closeout_tier requires review_tier_policy=LOW_ONLY")
+    if final_closeout_tier == "LOW" and selected_partition_ids:
+        raise ValueError(
+            "LOW final_closeout_tier requires the explicit no-escalation path "
+            "(deep follow-up must be empty; pass followup_partition_ids=[] to encode that state)"
+        )
+
     deep_stage_scope = list(effective_scope if selected_partition_ids else [])
-    final_closeout_agent_profile = deep_profile if final_closeout_tier == "MEDIUM" else strict_profile
+    if final_closeout_tier == "LOW":
+        final_closeout_agent_profile = fast_profile
+    elif final_closeout_tier == "MEDIUM":
+        final_closeout_agent_profile = deep_profile
+    else:
+        final_closeout_agent_profile = strict_profile
 
     strategy = {
         "version": "1",
@@ -389,6 +438,7 @@ def build_pyramid_review_plan(
             "final_stage_id": "final_integrated_closeout",
             "intermediate_rounds_are_advisory": True,
             "requires_integrated_scope_closeout": True,
+            "review_tier_policy": review_tier_policy,
         },
     }
     strategy["strategy_fingerprint"] = _canonical_hash(_strategy_fingerprint_payload(strategy))

@@ -3,7 +3,7 @@
 >Purpose: To prevent discussion drift and “the next step is forgotten”. This document should be updated as the phases progress.
 > Read by Codex and maintainers by default: short, executable, and verifiable.
 
-## Where are we now (as of 2026-02-24)
+## Where are we now (as of 2026-03-08)
 
 ### LOOP mainline (project-level update, 2026-03-07)
 - LOOP is now a committed mainline system in LeanAtlas rather than a `.cache`-only experiment.
