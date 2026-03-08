@@ -1710,6 +1710,30 @@
       "area": [
         "docs",
         "skills",
+        "phase3",
+        "operator"
+      ],
+      "goal": "Guardrail: retained OPERATOR mode and DedupGate V0 truth sources stay aligned across repo surfaces.",
+      "id": "repo_truth_source_alignment",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_repo_truth_source_alignment.py",
+      "tags": [
+        "docs",
+        "skills",
+        "phase3",
+        "operator",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "docs",
+        "skills",
         "loop",
         "onboarding"
       ],

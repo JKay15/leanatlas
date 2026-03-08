@@ -40,6 +40,7 @@ Do not re-expand this block in `AGENTS.md`.
 Codex: You are operating LeanAtlas. The default mode is **OPERATOR**: prove new problems under `Problems/**` without changing the system (Toolbox/Incubator/tools/contracts).
 
 ## Mode selection (do not guess)
+- Presence or absence of root `AGENTS.override.md` is the authoritative mode selector for this repo.
 - **OPERATOR (default)**: No `AGENTS.override.md` in repo root.
 - **MAINTAINER**: A human created a local `AGENTS.override.md` in repo root (ignored by git). If you see it, you may modify system code, but you MUST follow the maintainer playbook.
 

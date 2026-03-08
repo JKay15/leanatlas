@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """LeanAtlas DedupGate (phase3).
 
-Phase-3 V0: source-backed scan for duplicate `instance` declarations.
+Phase-3 V0 currently uses a source-backed scan for duplicate `instance`
+declarations.
 
 This tool is deterministic and repo-safe (read-only). It produces a schema-valid
 `DedupReport.json` and optional `DedupReport.md`.

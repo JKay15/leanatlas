@@ -309,7 +309,7 @@
       "id": "nightly_dedup_instances",
       "status": "active",
       "mode": "MAINTAINER",
-      "purpose": "Nightly: scan environment for duplicate instances using permutation-invariant key; open PR if duplicates detected.",
+      "purpose": "Nightly: run the source-backed DedupGate V0 instance scan and open a PR if duplicates are detected.",
       "trigger": {
         "type": "schedule",
         "cadence": "nightly"

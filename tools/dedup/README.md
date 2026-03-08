@@ -3,11 +3,11 @@
 This directory implements DedupGate (deduplication gate) and related report generation.
 
 ## Current status (Phase3 bootstrap)
-- V0 goal: detect **hard duplicates** for **typeclass instances** only.
-  - main target: duplicates caused by permuting independent binders
-- Key decision: reuse the mathlib-style duplicate-declaration canonicalization approach:
-  - scan declarations in the **compiled environment**
-  - compute a dependency-aware binder canonicalization key
+- Current V0 implementation: deterministic source-backed scan for duplicate `instance` declarations in `LeanAtlas/**`.
+- Current V0 output: schema-valid `DedupReport.{json,md}` written by `tools/dedup/dedup.py`.
+- Follow-on goal: replace the source-backed scan with compiled-environment scanning plus stronger canonicalization.
+- When that follow-on lands, the scanner should:
+  - compute dependency-aware binder canonicalization keys
   - detect definitional aliases (avoid treating aliases as duplicate implementations)
 
 Single source of truth plan:

@@ -20,16 +20,9 @@ To restore full always-on guidance:
 
 ## Mode selection (explicit)
 
-LeanAtlas mode is a local file (gitignored):
-
-- `.cache/leanatlas/mode.json`
-
-Rules:
-
-- missing file → **OPERATOR**
-- `{"mode": "MAINTAINER"}` → **MAINTAINER**
-
-Do not infer mode from the existence of this file.
+Copying this file to repository root as `AGENTS.override.md` enables MAINTAINER mode.
+Deleting the root `AGENTS.override.md` restores OPERATOR mode.
+Do not create or modify the root override unless a human explicitly asked.
 
 ## Onboarding (only when needed)
 

@@ -107,6 +107,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `docs/agents/execplans/20260308_loop_skills_decoupling_and_project_skills_governance_v0.md`
 - `docs/agents/execplans/20260308_loop_user_preferences_and_onboarding_defaults_v0.md`
 - `docs/agents/execplans/20260308_onboarding_review_exhaustiveness_discoverability_v0.md`
+- `docs/agents/execplans/20260308_parallel_ror_retained_findings_repair_v0.md`
 - `docs/agents/execplans/20260308_parallel_ror_whole_project_audit_v0.md`
 - `docs/agents/execplans/20260308_review_default_profile_policy_v0.md`
 - `docs/agents/execplans/20260308_review_supersession_reconciliation_runtime_v0.md`
@@ -491,6 +492,7 @@ Use this index only when detailed file-level discovery is needed; do not preload
 - `tests/contract/check_phase3_e2e_scenarios.py`
 - `tests/contract/check_problem_state_reconcile.py`
 - `tests/contract/check_problem_template_state.py`
+- `tests/contract/check_repo_truth_source_alignment.py`
 - `tests/contract/check_reports_layout.py`
 - `tests/contract/check_retrievaltrace_invariants.py`
 - `tests/contract/check_run_cmd_timeout_hardening.py`

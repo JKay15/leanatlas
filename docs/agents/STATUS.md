@@ -38,8 +38,8 @@
 ### Phase 3 (in progress): Library Growth System minimum closed loop (Dedup / Promotion / GC)
 - Already have: JSON Schema + fixtures for `DedupReport / PromotionReport / GCReport`
 - Already have: JSON Schema + fixtures for `PromotionPlan` (promotion proposal input)
-- Finalized (and documented):
-- DedupGate V0: Give priority to reusing the canonicalization project route of the mathlib community's duplicate-declaration linter (its properties meet the "B" we previously decided on, but we will not reinvent the wheel)
+- DedupGate V0 current implementation: source-backed instance scan via `tools/dedup/dedup.py`.
+- Compiled-environment DedupGate scanning remains follow-on work.
 - PromotionGate V0: Feed back "advanced experience" - Rule-of-Three default strategy, deprecated alias/module compat, min_imports / directoryDependency / upstreamableDecl structure signal
 
 ### When will V1/V2 be considered?
@@ -50,8 +50,8 @@
 
 ### Next 3.1: DedupGate V0 (instances deduplication, hard access control)
 - ExecPlan: `docs/agents/execplans/phase3_dedup_gate_v0.md` (written, added "bad duplication vs good duplication" alignment clause)
-- Goal: Output `DedupReport.{json,md}` and serve as a strong frontend for Promotion
-- Current progress: The Dedup implementation entrance has been connected (`tools/dedup/dedup.py`), `nightly_dedup_instances` of `automations/registry.json` has been activated, and the document closed loop has been synchronized
+- Goal: keep the current `DedupReport.{json,md}` path reliable while Phase3 still uses the source-backed V0 scanner
+- Current progress: the source-backed scanner entrypoint exists at `tools/dedup/dedup.py`, `nightly_dedup_instances` in `automations/registry.json` is active, and compiled-environment scanning remains follow-on work
 
 ### Next 3.2: PromotionGate V0 (minimum promotion closed loop)
 - Contract: `docs/contracts/PROMOTION_GATE_CONTRACT.md` (upgraded to v0.2: advanced experience feedback)

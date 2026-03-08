@@ -2,7 +2,8 @@
 
 This is the **use-phase** manual: after someone clones LeanAtlas, Codex should follow this workflow by default.
 
-Default mode is OPERATOR. Mode is controlled by the local file `.cache/leanatlas/mode.json` (gitignored).
+Default mode is OPERATOR.
+MAINTAINER is enabled only when a human has created a local root `AGENTS.override.md` (gitignored).
 
 Current LOOP mainline entry and boundary reference:
 - `docs/agents/LOOP_MAINLINE.md`
