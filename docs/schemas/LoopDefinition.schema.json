@@ -1,0 +1,168 @@
+{
+  "$defs": {
+    "intRange": {
+      "additionalProperties": false,
+      "properties": {
+        "max": {
+          "type": "integer"
+        },
+        "min": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "component_refs": {
+      "additionalProperties": false,
+      "properties": {
+        "judge": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "metrics": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "proposer": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "reviewer": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "stop_rule": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "updater": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "proposer",
+        "reviewer",
+        "judge"
+      ],
+      "type": "object"
+    },
+    "default_budgets": {
+      "additionalProperties": false,
+      "properties": {
+        "max_dynamic_recovery_rounds_per_exception": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_dynamic_recovery_total_minutes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_parallel_branches": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_retry_per_node": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "max_temp_graph_depth": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "max_temp_graph_nodes": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_retry_per_node",
+        "max_dynamic_recovery_rounds_per_exception",
+        "max_dynamic_recovery_total_minutes",
+        "max_temp_graph_nodes",
+        "max_temp_graph_depth",
+        "max_parallel_branches"
+      ],
+      "type": "object"
+    },
+    "description": {
+      "type": "string"
+    },
+    "graph_compat": {
+      "items": {
+        "enum": [
+          "SERIAL",
+          "PARALLEL",
+          "NESTED",
+          "RACE",
+          "QUORUM",
+          "BARRIER"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "input_contract": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "loop_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "output_contract": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "tuning_band": {
+      "additionalProperties": false,
+      "properties": {
+        "rounds": {
+          "$ref": "#/$defs/intRange"
+        },
+        "temp_graph_nodes": {
+          "$ref": "#/$defs/intRange"
+        },
+        "total_minutes": {
+          "$ref": "#/$defs/intRange"
+        }
+      },
+      "required": [
+        "rounds",
+        "total_minutes",
+        "temp_graph_nodes"
+      ],
+      "type": "object"
+    },
+    "version": {
+      "const": "1",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "loop_id",
+    "component_refs",
+    "default_budgets",
+    "tuning_band",
+    "input_contract",
+    "output_contract"
+  ],
+  "title": "LoopDefinition",
+  "type": "object"
+}

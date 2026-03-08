@@ -1,0 +1,19 @@
+id: core_loop_repair_exhausted
+tier: core
+execution:
+  enabled: true
+  budgets:
+    limits:
+      max_attempts: 1
+expected:
+  final_status: TRIAGED
+  triage_level: FIXABLE
+  category:
+    family: BUDGET
+    code: MAX_ATTEMPTS
+  judge_reason_code: BUDGET_EXHAUSTED
+coverage_tags:
+- family:BUDGET
+- stage:decide
+patch_sequence:
+- patches/001

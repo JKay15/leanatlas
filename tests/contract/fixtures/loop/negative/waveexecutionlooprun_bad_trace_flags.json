@@ -1,0 +1,159 @@
+{
+  "assurance_level": "STRICT",
+  "agent_invocation": {
+    "agent_provider_id": "codex_cli",
+    "instruction_scope_refs": [
+      "/Users/xiongjiangkai/xjk_papers/leanatlas/AGENTS.md"
+    ],
+    "resolved_invocation": [
+      "codex",
+      "exec",
+      "review"
+    ]
+  },
+  "budgets": {
+    "max_ai_review_rounds": 8,
+    "max_same_fingerprint_rounds": 2,
+    "max_wave_wall_clock_minutes": 120,
+    "used_ai_review_rounds": 9,
+    "used_wall_clock_minutes": 14
+  },
+  "derived_metrics": {
+    "max_consecutive_same_fingerprint": 1,
+    "replay_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "dirty_tree": {
+    "changed_entry_count": 0,
+    "checked": true,
+    "disposition": "CLEAN",
+    "head_commit": "1111111111111111111111111111111111111111",
+    "in_git_repo": true,
+    "is_clean": true,
+    "status_porcelain_sample": [],
+    "tracked_entry_count": 0,
+    "untracked_entry_count": 0
+  },
+  "evidence": {
+    "ai_review_log_path": "artifacts/loop_runtime/by_key/aaa/wave_execution/ai_review.jsonl",
+    "ai_review_prompt_ref": "artifacts/waveA/review_prompt_round2.md",
+    "ai_review_response_ref": "artifacts/waveA/review_response_round2.md",
+    "ai_review_summary_ref": "artifacts/waveA/review_summary_round2.json",
+    "final_decision_path": "artifacts/loop_runtime/by_key/aaa/wave_execution/final_decision.json",
+    "iteration_trace_path": "artifacts/loop_runtime/by_key/aaa/wave_execution/iteration_trace.json"
+  },
+  "review_history_consistency": {
+    "contradiction_count": 0,
+    "contradiction_refs": [],
+    "nitpick_refs": [],
+    "potential_nitpick_count": 0
+  },
+  "execution": {
+    "current_state": "PASSED",
+    "transitions": [
+      {
+        "at_utc": "2026-03-05T00:00:00Z",
+        "from": "PENDING",
+        "reason_code": "WAVE_START",
+        "to": "RUNNING"
+      },
+      {
+        "at_utc": "2026-03-05T00:01:00Z",
+        "from": "RUNNING",
+        "reason_code": "IMPLEMENTATION_SUBMITTED_FOR_REVIEW",
+        "to": "AI_REVIEW"
+      },
+      {
+        "at_utc": "2026-03-05T00:02:00Z",
+        "from": "AI_REVIEW",
+        "reason_code": "REVIEW_REPAIR_LOOP",
+        "to": "RUNNING"
+      },
+      {
+        "at_utc": "2026-03-05T00:03:00Z",
+        "from": "RUNNING",
+        "reason_code": "IMPLEMENTATION_SUBMITTED_FOR_REVIEW",
+        "to": "AI_REVIEW"
+      },
+      {
+        "at_utc": "2026-03-05T00:04:00Z",
+        "from": "AI_REVIEW",
+        "reason_code": "REVIEW_PASS",
+        "to": "PASSED"
+      }
+    ]
+  },
+  "final_decision": {
+    "at_utc": "2026-03-05T00:04:00Z",
+    "reason_code": "REVIEW_PASS",
+    "state": "PASSED"
+  },
+  "iterations": [
+    {
+      "ai_review": {
+        "confidence": 0.73,
+        "engine": "codex exec review",
+        "finding_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "findings": [
+          {
+            "evidence_refs": [
+              "artifacts/waveA/diff_round1.patch"
+            ],
+            "finding_id": "finding.waveA.round1.001",
+            "repairable": true,
+            "severity": "S2_MAJOR",
+            "summary": "Missing strict stop-rule citation in contract text."
+          }
+        ],
+        "prompt_ref": "artifacts/waveA/review_prompt_round1.md",
+        "response_ref": "artifacts/waveA/review_response_round1.md",
+        "verdict": "REPAIRABLE"
+      },
+      "iteration_index": 1,
+      "history_context_refs": [
+        "artifacts/waveA/review_history_until_round0.json"
+      ],
+      "transition": {
+        "at_utc": "2026-03-05T00:02:00Z",
+        "from": "AI_REVIEW",
+        "reason_code": "REVIEW_REPAIR_LOOP",
+        "to": "RUNNING"
+      },
+      "wall_clock_used_minutes": 6
+    },
+    {
+      "ai_review": {
+        "confidence": 0.95,
+        "engine": "codex exec review",
+        "finding_fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "findings": [
+          {
+            "evidence_refs": [
+              "artifacts/waveA/diff_round2.patch"
+            ],
+            "finding_id": "finding.waveA.round2.001",
+            "repairable": false,
+            "severity": "S3_MINOR",
+            "summary": "No blocking issues remain."
+          }
+        ],
+        "prompt_ref": "artifacts/waveA/review_prompt_round2.md",
+        "response_ref": "artifacts/waveA/review_response_round2.md",
+        "verdict": "PASS"
+      },
+      "iteration_index": 2,
+      "history_context_refs": [
+        "artifacts/waveA/review_history_until_round1.json"
+      ],
+      "transition": {
+        "at_utc": "2026-03-05T00:04:00Z",
+        "from": "AI_REVIEW",
+        "reason_code": "REVIEW_PASS",
+        "to": "PASSED"
+      },
+      "wall_clock_used_minutes": 14
+    }
+  ],
+  "run_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "version": "1",
+  "wave_id": "loop.wave_a.execution.v0"
+}

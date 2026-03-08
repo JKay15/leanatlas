@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from dataclasses import dataclass
@@ -41,6 +42,7 @@ if str(ROOT) not in sys.path:
 
 from tools.workflow.env_stamp import get_environment_stamp
 from tools.workflow.run_cmd import run_cmd
+from tools.agent_eval.agent_provider import apply_env_map, resolve_agent_invocation
 
 
 REGISTRY = ROOT / "automations" / "registry.json"
@@ -60,6 +62,53 @@ def _normalize_cmd(cmd: List[str]) -> List[str]:
     if not cmd or cmd[0] not in {"python", "python3"}:
         return cmd
     return [_repo_python(), *cmd[1:]]
+
+
+def _parse_timeout(raw: Any, *, default: int) -> int:
+    try:
+        v = int(raw)
+    except Exception:
+        v = default
+    if v <= 0:
+        return default
+    return v
+
+
+def _advisor_idle_timeout_s(*, advisor: Dict[str, Any], hard_timeout_s: int) -> Optional[int]:
+    """Inactivity timeout for advisor agent commands."""
+    env_raw = os.environ.get("LEANATLAS_ADVISOR_IDLE_TIMEOUT_S", "").strip()
+    cfg_raw = advisor.get("idle_timeout_s")
+    if env_raw:
+        raw: Any = env_raw
+    elif cfg_raw is not None:
+        raw = cfg_raw
+    else:
+        raw = 300
+    try:
+        v = int(raw)
+    except Exception:
+        v = 300
+    if v <= 0:
+        return None
+    return max(1, min(v, hard_timeout_s))
+
+
+def _advisor_reconnect_policy(provider_id: Optional[str]) -> tuple[Optional[int], int]:
+    """Bounded reconnect grace policy for advisor agent execution."""
+    default_on = (provider_id or "").strip() == "codex_cli"
+    raw_grace = os.environ.get("LEANATLAS_ADVISOR_RECONNECT_GRACE_S", "").strip()
+    raw_max = os.environ.get("LEANATLAS_ADVISOR_RECONNECT_MAX_EVENTS", "").strip()
+    try:
+        grace = int(raw_grace) if raw_grace else (240 if default_on else 0)
+    except Exception:
+        grace = 240 if default_on else 0
+    try:
+        max_events = int(raw_max) if raw_max else (5 if default_on else 0)
+    except Exception:
+        max_events = 5 if default_on else 0
+    if grace <= 0 or max_events <= 0:
+        return (None, 0)
+    return (grace, max_events)
 
 
 @dataclass
@@ -225,6 +274,47 @@ def _write_advisor_handoff(
     return out
 
 
+def _write_advisor_prompt(
+    *,
+    run_dir: Path,
+    automation: Automation,
+    handoff_rel: str,
+) -> Path:
+    prompt = run_dir / "advisor" / "PROMPT.md"
+    text = (
+        f"# Automation Advisor Prompt\n\n"
+        f"- automation_id: `{automation.id}`\n"
+        f"- purpose: {automation.purpose}\n"
+        f"- handoff: `{handoff_rel}`\n\n"
+        f"Read the handoff JSON and execute the advisor workflow for this automation.\n"
+        f"If no findings are present, return a short no-op summary.\n"
+    )
+    prompt.write_text(text, encoding="utf-8")
+    return prompt
+
+
+def _select_advisor_bridge(
+    *,
+    automation: Automation,
+    agent_provider: str,
+    agent_profile: str,
+) -> Dict[str, str]:
+    provider_cli = agent_provider.strip()
+    profile_cli = agent_profile.strip()
+    provider_registry = str(automation.advisor.get("agent_provider") or "").strip()
+    profile_registry = str(automation.advisor.get("agent_profile") or "").strip()
+
+    provider_selected = provider_cli or provider_registry
+    profile_selected = profile_cli or profile_registry
+
+    return {
+        "provider_selected": provider_selected,
+        "profile_selected": profile_selected,
+        "provider_source": "cli" if provider_cli else ("registry" if provider_registry else "none"),
+        "profile_source": "cli" if profile_cli else ("registry" if profile_registry else "none"),
+    }
+
+
 def _run_advisor(
     *,
     automation: Automation,
@@ -233,6 +323,8 @@ def _run_advisor(
     logs_dir: Path,
     det_ok: bool,
     advisor_mode: str,
+    agent_provider: str,
+    agent_profile: str,
 ) -> Dict[str, Any]:
     result: Dict[str, Any] = {
         "enabled": bool(automation.advisor.get("enabled")),
@@ -305,6 +397,70 @@ def _run_advisor(
         result["decision"] = "SKIPPED"
         return result
 
+    sel = _select_advisor_bridge(
+        automation=automation,
+        agent_provider=agent_provider,
+        agent_profile=agent_profile,
+    )
+    provider_sel = sel["provider_selected"]
+    profile_sel = sel["profile_selected"]
+    result["provider_selected"] = provider_sel
+    result["profile_selected"] = profile_sel
+    result["provider_source"] = sel["provider_source"]
+    result["profile_source"] = sel["profile_source"]
+
+    advisor_timeout_s = _parse_timeout(automation.advisor.get("timeout_s"), default=900)
+    advisor_idle_timeout_s = _advisor_idle_timeout_s(advisor=automation.advisor, hard_timeout_s=advisor_timeout_s)
+
+    if provider_sel or profile_sel:
+        resolved = resolve_agent_invocation(
+            repo_root=repo_root,
+            mode="run",
+            agent_cmd=None,
+            agent_provider=provider_sel or None,
+            agent_profile=profile_sel or None,
+        )
+        if resolved is None:
+            result["decision"] = "HANDOFF_ONLY"
+            result["reason"] = f"{reason}; provider/profile did not resolve"
+            return result
+
+        prompt_path = _write_advisor_prompt(
+            run_dir=run_dir,
+            automation=automation,
+            handoff_rel=handoff.relative_to(run_dir).as_posix(),
+        )
+        env = os.environ.copy()
+        env["LEANATLAS_EVAL_PROMPT"] = str(prompt_path)
+        env["LEANATLAS_PROMPT_PATH"] = str(prompt_path)
+        env["LEANATLAS_CONTEXT_PATH"] = str(handoff)
+        env["LEANATLAS_AUTOMATION_ID"] = automation.id
+        env.setdefault("LEANATLAS_ADVISOR_TIMEOUT_S", str(advisor_timeout_s))
+        env.setdefault("LEANATLAS_ADVISOR_IDLE_TIMEOUT_S", str(advisor_idle_timeout_s or 0))
+        advisor_reconnect_grace_s, advisor_reconnect_max_events = _advisor_reconnect_policy(resolved.provider_id)
+        env.setdefault("LEANATLAS_ADVISOR_RECONNECT_GRACE_S", str(advisor_reconnect_grace_s or 0))
+        env.setdefault("LEANATLAS_ADVISOR_RECONNECT_MAX_EVENTS", str(advisor_reconnect_max_events))
+        env = apply_env_map(resolved=resolved, env=env)
+
+        res = run_cmd(
+            cmd=["bash", "-lc", resolved.agent_cmd],
+            cwd=repo_root,
+            log_dir=logs_dir,
+            label="advisor_00_exec",
+            timeout_s=advisor_timeout_s,
+            idle_timeout_s=advisor_idle_timeout_s,
+            reconnect_grace_s=advisor_reconnect_grace_s,
+            reconnect_max_events=advisor_reconnect_max_events,
+            env=env,
+            capture_text=False,
+        )
+        rc = int(res.span.get("exit_code", 1))
+        result["decision"] = "EXECUTED" if rc == 0 else "FAILED"
+        result["exit_code"] = rc
+        result["invocation"] = resolved.to_metadata()
+        result["evidence"] = res.span
+        return result
+
     exec_cmd = automation.advisor.get("exec_cmd")
     if not isinstance(exec_cmd, list) or not exec_cmd or not all(isinstance(x, str) for x in exec_cmd):
         # No local executor configured: we still emit the handoff to Codex App.
@@ -317,7 +473,8 @@ def _run_advisor(
         cwd=repo_root,
         log_dir=logs_dir,
         label="advisor_00_exec",
-        timeout_s=900,
+        timeout_s=advisor_timeout_s,
+        idle_timeout_s=advisor_idle_timeout_s,
         capture_text=False,
     )
     rc = int(res.span.get("exit_code", 1))
@@ -340,6 +497,16 @@ def main() -> int:
             "Advisor execution mode. off: emit handoff only; "
             "auto: run when findings policy is met; force: run regardless of findings."
         ),
+    )
+    ap.add_argument(
+        "--agent-provider",
+        default="",
+        help="Optional provider id for advisor execution (overrides advisor.agent_provider).",
+    )
+    ap.add_argument(
+        "--agent-profile",
+        default="",
+        help="Optional profile path for advisor execution (overrides advisor.agent_profile).",
     )
     ap.add_argument("--dry-run", action="store_true", help="Print steps only; do not execute")
     ap.add_argument("--allow-planned", action="store_true", help="Allow running automations with status=planned")
@@ -373,6 +540,15 @@ def main() -> int:
         if a.advisor.get("probe"):
             print(f"  - probe={a.advisor.get('probe')}")
         print(f"  - mode(requested)={args.advisor_mode}")
+        sel = _select_advisor_bridge(
+            automation=a,
+            agent_provider=args.agent_provider,
+            agent_profile=args.agent_profile,
+        )
+        print(f"  - provider(selected)={sel['provider_selected'] or '<none>'} [source={sel['provider_source']}]")
+        print(f"  - profile(selected)={sel['profile_selected'] or '<none>'} [source={sel['profile_source']}]")
+        if a.advisor.get("exec_cmd") is not None:
+            print(f"  - exec_cmd(configured)={a.advisor.get('exec_cmd')}")
         if args.verify:
             print("\nverify steps:")
             for s in a.verify_steps:
@@ -411,6 +587,8 @@ def main() -> int:
         logs_dir=logs_dir,
         det_ok=ok,
         advisor_mode=args.advisor_mode,
+        agent_provider=args.agent_provider,
+        agent_profile=args.agent_profile,
     )
     manifest["advisor"] = advisor_res
     if advisor_res.get("decision") == "FAILED":

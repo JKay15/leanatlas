@@ -28,6 +28,8 @@ def main() -> int:
         "nightly_reporting_integrity",
         "--advisor-mode",
         "off",
+        "--agent-provider",
+        "codex_cli",
         "--verify",
         "--dry-run",
     ]
@@ -46,6 +48,7 @@ def main() -> int:
     runner_idx = argv.index(runner)
     _require("--id" in argv and "nightly_reporting_integrity" in argv, "wrapper must forward automation id")
     _require("--advisor-mode" in argv and "off" in argv, "wrapper must forward advisor mode")
+    _require("--agent-provider" in argv and "codex_cli" in argv, "wrapper must forward agent provider")
     _require("--verify" in argv, "wrapper must forward --verify")
 
     venv_python = str(ROOT / ".venv" / "bin" / "python")

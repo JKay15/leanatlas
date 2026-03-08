@@ -1,7 +1,7 @@
 ---
 title: Manifest Completeness + Shared Cache Strategy + Warehouse Topology Contract Reconstruction
 owner: LeanAtlas Maintainer
-status: active
+status: done
 created: 2026-02-28
 ---
 
@@ -104,4 +104,24 @@ Don’t do:
 - Verify successful rollback: `python tests/contract/check_test_registry.py` + `python tests/run.py --profile core`.
 
 ## Outcomes & Retrospective
-Will be added after implementation.
+- Completed:
+  - Milestone 1/2/3 completed:
+    - `tests/contract/check_manifest_completeness.py` and `tests/contract/check_shared_cache_policy.py` are in place and passing.
+    - shared cache strategy is centralized and consumed by runner entrypoints.
+    - executable assets are registered with `expands_spec/expands` contract checks.
+  - Milestone 4 completed:
+    - repository topology and module-visualization contract/docs updated and executable.
+  - Milestone 5 regression verification completed:
+    - core + smoke runtime paths and runner-plan checks executed under `uv run --locked`.
+- Verification summary:
+  - `uv run --locked python tests/contract/check_manifest_completeness.py` PASS
+  - `uv run --locked python tests/contract/check_shared_cache_policy.py` PASS
+  - `uv run --locked python tests/e2e/run_cases.py --profile smoke` PASS
+  - `uv run --locked python tests/e2e/run_cases.py --profile core` PASS
+  - `uv run --locked python tests/e2e/run_scenarios.py --profile core --lake-timeout-s 600 --step-timeout-s 600` PASS
+  - `uv run --locked python tests/run.py --profile core` PASS
+  - `uv run --locked python tests/run.py --profile nightly` PASS
+- Evidence:
+  - `artifacts/reviews/stage2_refactor_manifest_cache_run_cases_smoke_20260306.log`
+  - `artifacts/reviews/20260306_stage3_run_cases_core.log`
+  - `artifacts/reviews/20260306_stage3_run_scenarios_core.log`

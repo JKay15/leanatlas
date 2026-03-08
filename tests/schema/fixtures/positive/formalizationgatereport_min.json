@@ -1,0 +1,31 @@
+{
+  "checks": [],
+  "counts": {
+    "blockers": 0
+  },
+  "formalization_gate": {
+    "checks": [],
+    "counts": {
+      "blockers": 0
+    },
+    "issues": [],
+    "pass": true
+  },
+  "gate_pass": true,
+  "generated_at_utc": "2026-03-05T00:00:00Z",
+  "issues": [],
+  "mapping_gate": {
+    "checks": [],
+    "counts": {
+      "blockers": 0
+    },
+    "issues": [],
+    "pass": true
+  },
+  "policy_version": "v0.1",
+  "scope_categories": [
+    "formalization",
+    "mapping"
+  ],
+  "stage": "candidate"
+}

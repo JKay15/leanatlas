@@ -53,10 +53,12 @@ bash scripts/doctor.sh --strict
 ```
 
 Notes:
-- `bootstrap`/`doctor` require a real-agent command for Phase6 nightly checks.
-- Recommended value when using Codex CLI:
+- `bootstrap`/`doctor` require real-agent configuration for Phase6 nightly checks.
+- Preferred (provider mode): set `LEANATLAS_REAL_AGENT_PROVIDER` (for example `codex_cli`), and optionally `LEANATLAS_REAL_AGENT_PROFILE`.
+- Backward-compatible (command mode): set `LEANATLAS_REAL_AGENT_CMD` directly.
+- Command-mode example for Codex CLI:
   `codex exec - < "$LEANATLAS_EVAL_PROMPT"`.
-- The configured command is persisted at
+- The configured real-agent settings are persisted at
   `.cache/leanatlas/onboarding/real_agent_cmd.env`.
 - After `bootstrap` + `doctor` + `real_agent_cmd` all pass, onboarding state is written to
   `.cache/leanatlas/onboarding/state.json`.
@@ -110,7 +112,29 @@ After creating them in Codex App:
 - Missing `lake`: install Lean toolchain first (`lean-toolchain` is the source of truth).
 - Git hooks missing/stale: run `bash scripts/install_repo_git_hooks.sh`.
 - Domain MCP not installed: verify `tools/deps/pins.json` has `lean_domain_mcp.run.uvx_from`, or set `LEANATLAS_DOMAIN_MCP_UVX_FROM` and rerun bootstrap.
-- `LEANATLAS_REAL_AGENT_CMD` missing: rerun `bootstrap` or set it manually, for example:
+- Real-agent config missing: rerun `bootstrap`, or set provider/profile manually:
+  `export LEANATLAS_REAL_AGENT_PROVIDER='codex_cli'`
+  `export LEANATLAS_REAL_AGENT_PROFILE='tests/agent_eval/profiles/dummy_agent.profile.json'`  (example profile path)
+- Legacy command mode is still supported:
   `export LEANATLAS_REAL_AGENT_CMD='codex exec - < "$LEANATLAS_EVAL_PROMPT"'`.
 - `uv run --locked` fails with TLS/network handshake: if `./.venv/bin/python` already works, use local `.venv` commands and skip redundant sync; then fix proxy/network before forced resync.
 - Network-restricted environment: configure terminal proxy first, then retry `uv sync --locked`.
+
+## 6) Post-onboarding LOOP defaults
+
+After the environment is ready, the bounded LOOP preference presets use this reserved local path when they are explicitly staged:
+
+- `.cache/leanatlas/onboarding/loop_preferences.json`
+
+Recommended presets:
+- `Budget Saver`
+  - default reviewer path: `FAST + low`
+  - default reviewer tier policy: `LOW_PLUS_MEDIUM`
+  - `medium` is the standard bounded escalation tier
+  - use `medium` only for small-scope high-risk core logic
+- `Balanced`
+- `Auditable`
+
+`STRICT / xhigh` remains available for exceptional audit-heavy cases, but it is not the default operating mode.
+
+These are post-onboarding operating defaults, not bootstrap requirements. The current mainline commits the preset surface and artifact format, but not automatic onboarding-time persistence. Per-run LOOP settings may still override any staged defaults without mutating the committed preference artifact.

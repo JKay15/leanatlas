@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "review_id": "review.bad",
+  "attempt_index": 1,
+  "generated_at_utc": "2026-03-06T00:00:00Z",
+  "agent_provider_id": "codex_cli",
+  "provider_adapter_id": "codex_cli_v2",
+  "status": "SUCCEEDED",
+  "reason_code": "OK",
+  "response_ref": "artifacts/reviews/review.bad_response.md",
+  "response_exists": true,
+  "response_bytes": 14
+}

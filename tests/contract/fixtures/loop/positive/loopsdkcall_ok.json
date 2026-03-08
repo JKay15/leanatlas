@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "call_id": "sdk_call_001",
+  "api_group": "loop/runs",
+  "operation": "start",
+  "idempotency_key": "idem-001",
+  "actor_identity": "agent.codex",
+  "request": {
+    "loop_id": "loop.demo.v1"
+  },
+  "response": {
+    "status": "OK",
+    "at_utc": "2026-03-05T00:00:00Z",
+    "result_ref": "artifacts/loop_runtime/by_key/aaa/LoopRunSummary.json"
+  }
+}

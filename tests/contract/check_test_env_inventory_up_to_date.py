@@ -33,7 +33,7 @@ def main() -> int:
     if actual != expected:
         print("[test-env][FAIL] TEST_ENV_INVENTORY.md is out of date.", file=sys.stderr)
         print("[test-env] Regenerate with:", file=sys.stderr)
-        print("  ./.venv/bin/python tools/tests/generate_test_env_inventory.py --write", file=sys.stderr)
+        print("  uv run --locked python tools/tests/generate_test_env_inventory.py --write", file=sys.stderr)
         return 2
 
     print("[test-env] OK")

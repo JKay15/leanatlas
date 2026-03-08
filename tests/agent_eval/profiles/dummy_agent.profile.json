@@ -1,0 +1,19 @@
+{
+  "schema": "leanatlas.agent_profile",
+  "schema_version": "0.2.0",
+  "provider_id": "dummy_local",
+  "agent_cmd": "python tools/agent_eval/dummy_agent.py",
+  "prompt_transport": "env_path",
+  "prompt_arg": "",
+  "env": {
+    "DUMMY_AGENT_FLAG": "1"
+  },
+  "env_map": {
+    "LEANATLAS_PROMPT_PATH": "LEANATLAS_EVAL_PROMPT"
+  },
+  "capabilities": {
+    "supports_tool_calls": false,
+    "supports_streaming": false,
+    "supports_json_mode": false
+  }
+}

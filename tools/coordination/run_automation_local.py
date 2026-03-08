@@ -36,6 +36,10 @@ def _python_prefix(repo_root: Path) -> List[str]:
 def _build_cmd(args: argparse.Namespace) -> List[str]:
     prefix = _python_prefix(ROOT)
     cmd: List[str] = [*prefix, str(RUNNER), "--id", args.automation_id, "--advisor-mode", args.advisor_mode]
+    if args.agent_provider:
+        cmd.extend(["--agent-provider", args.agent_provider])
+    if args.agent_profile:
+        cmd.extend(["--agent-profile", args.agent_profile])
     if args.verify:
         cmd.append("--verify")
     if args.allow_planned:
@@ -60,6 +64,16 @@ def main() -> int:
         choices=["off", "auto", "force"],
         default="off",
         help="Pass --advisor-mode to runner",
+    )
+    ap.add_argument(
+        "--agent-provider",
+        default="",
+        help="Pass --agent-provider to runner",
+    )
+    ap.add_argument(
+        "--agent-profile",
+        default="",
+        help="Pass --agent-profile to runner",
     )
     args = ap.parse_args()
 

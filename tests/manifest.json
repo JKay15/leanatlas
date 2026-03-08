@@ -93,7 +93,7 @@
         ],
         "kind": "agent_eval_packs_explicit"
       },
-      "goal": "Nightly real-agent smoke: run one pack case in run mode via external --agent-cmd and verify runtime artifacts.",
+      "goal": "Nightly real-agent smoke: run one pack case in run mode via provider/profile (or legacy --agent-cmd) and verify runtime artifacts.",
       "id": "agent_eval_pack_real_agent_nightly",
       "kind": "python_script",
       "phase": [
@@ -102,6 +102,27 @@
       "profile": "nightly",
       "runtime_budget_sec": 1800,
       "script": "tests/agent_eval/exec_pack_real_agent_nightly.py"
+    },
+    {
+      "area": [
+        "agent_eval",
+        "contracts",
+        "real_agent"
+      ],
+      "goal": "Contract: nightly real-agent entrypoints support provider/profile resolver path plus legacy command override.",
+      "id": "agent_eval_real_agent_provider_contract",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/agent_eval/check_real_agent_provider_contract.py",
+      "tags": [
+        "agent_eval",
+        "contract",
+        "real_agent"
+      ]
     },
     {
       "area": [
@@ -281,7 +302,7 @@
         ],
         "kind": "agent_eval_scenarios_explicit"
       },
-      "goal": "Nightly real-agent smoke: run one interleaving scenario in run mode via external --agent-cmd and verify runtime artifacts.",
+      "goal": "Nightly real-agent smoke: run one interleaving scenario in run mode via provider/profile (or legacy --agent-cmd) and verify runtime artifacts.",
       "id": "agent_eval_scenario_real_agent_nightly",
       "kind": "python_script",
       "phase": [
@@ -490,6 +511,22 @@
       "profile": "core",
       "runtime_budget_sec": 5,
       "script": "tests/automation/check_run_automation_local.py"
+    },
+    {
+      "area": [
+        "automation",
+        "execution",
+        "advisor"
+      ],
+      "goal": "Ensure run_automation dry-run reports advisor provider selection source (registry default vs CLI override).",
+      "id": "automation_provider_visibility",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/automation/check_run_automation_provider_visibility.py"
     },
     {
       "area": [
@@ -913,6 +950,9 @@
       "expands": {
         "cases": [
           "core_budget_exhausted",
+          "core_loop_audit_block_s1",
+          "core_loop_repair_exhausted",
+          "core_loop_repair_success",
           "core_name_notation",
           "core_statement_false",
           "core_tactic_failure",
@@ -972,7 +1012,9 @@
       ],
       "expands": {
         "scenarios": [
-          "scenario_chain_core_3"
+          "scenario_chain_core_3",
+          "scenario_loop_exception_recovery_chain",
+          "scenario_loop_resume_after_interrupt"
         ]
       },
       "expands_spec": {
@@ -1054,6 +1096,9 @@
       "expands": {
         "cases": [
           "core_budget_exhausted",
+          "core_loop_audit_block_s1",
+          "core_loop_repair_exhausted",
+          "core_loop_repair_success",
           "core_name_notation",
           "core_statement_false",
           "core_tactic_failure",
@@ -1089,6 +1134,8 @@
           "scenario_chain_core_3",
           "scenario_chain_core_all",
           "scenario_cleanup_idempotence",
+          "scenario_loop_exception_recovery_chain",
+          "scenario_loop_resume_after_interrupt",
           "scenario_phase3_gc_apply_smoke",
           "scenario_toolbox_regression"
         ]
@@ -1115,6 +1162,9 @@
       "expands": {
         "cases": [
           "core_budget_exhausted",
+          "core_loop_audit_block_s1",
+          "core_loop_repair_exhausted",
+          "core_loop_repair_success",
           "core_name_notation",
           "core_statement_false",
           "core_tactic_failure",
@@ -1148,6 +1198,8 @@
           "scenario_chain_core_3",
           "scenario_chain_core_all",
           "scenario_cleanup_idempotence",
+          "scenario_loop_exception_recovery_chain",
+          "scenario_loop_resume_after_interrupt",
           "scenario_phase3_gc_apply_smoke",
           "scenario_toolbox_regression"
         ]
@@ -1548,6 +1600,582 @@
     },
     {
       "area": [
+        "docs",
+        "execplan"
+      ],
+      "goal": "Guardrail: stale active 2026-03-06 LOOP execplans must be closed out once outcomes are recorded.",
+      "id": "execplan_closeout_hygiene",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_execplan_closeout_hygiene.py",
+      "tags": [
+        "docs",
+        "contract",
+        "execplan"
+      ]
+    },
+    {
+      "area": [
+        "docs",
+        "execplan"
+      ],
+      "goal": "Guardrail: execplan README must stay a non-authoritative index and must not present a hand-maintained current-plan source.",
+      "id": "execplan_readme_authority",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_execplan_readme_authority.py",
+      "tags": [
+        "docs",
+        "contract",
+        "execplan"
+      ]
+    },
+    {
+      "area": [
+        "docs",
+        "execplan",
+        "loop"
+      ],
+      "goal": "Guardrail: the LOOP productization/mainline wave must stay LOOP-first rather than drift into a generic project-wide docs sweep.",
+      "id": "loop_mainline_productization_scope",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_loop_mainline_productization_scope.py",
+      "tags": [
+        "docs",
+        "contract",
+        "execplan",
+        "loop"
+      ]
+    },
+    {
+      "area": [
+        "docs",
+        "skills",
+        "loop"
+      ],
+      "goal": "Guardrail: LOOP mainline productization must expose a canonical mainline doc plus project-level entrypoint and skill routing.",
+      "id": "loop_mainline_docs",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_loop_mainline_docs_integration.py",
+      "tags": [
+        "docs",
+        "skills",
+        "contract",
+        "loop"
+      ]
+    },
+    {
+      "area": [
+        "docs",
+        "skills",
+        "loop",
+        "onboarding"
+      ],
+      "goal": "Guardrail: LOOP post-onboarding user preference presets stay aligned across module surface, onboarding docs, and mainline/review skills.",
+      "id": "loop_user_preferences_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_loop_user_preferences_policy.py",
+      "tags": [
+        "docs",
+        "skills",
+        "loop",
+        "onboarding",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "contracts"
+      ],
+      "goal": "Ensure LOOP Wave-A contract docs exist and include required non-blocking audit + execution-loop semantics.",
+      "id": "loop_contract_docs",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_contract_docs.py"
+    },
+    {
+      "area": [
+        "loop",
+        "schemas"
+      ],
+      "goal": "Validate LOOP Wave-A schemas using positive/negative fixtures and policy-critical required fields.",
+      "id": "loop_schema_validity",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_schema_validity.py"
+    },
+    {
+      "area": [
+        "loop",
+        "runtime",
+        "determinism"
+      ],
+      "goal": "Validate Wave-B M1 runtime skeleton determinism: run_key stability, execution transition policy hooks, and append-only store behavior.",
+      "id": "loop_runtime_determinism",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_runtime_determinism.py"
+    },
+    {
+      "area": [
+        "loop",
+        "runtime",
+        "resume"
+      ],
+      "goal": "Verify LOOP runtime can resume from append-only checkpoints without duplicating accepted review iterations.",
+      "id": "loop_resume_recovery",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_resume_recovery.py"
+    },
+    {
+      "area": [
+        "loop",
+        "resource",
+        "arbiter"
+      ],
+      "goal": "Verify LOOP resource arbiter enforces lease + CAS + append-only journal/conflict evidence for MUTABLE_CONTROLLED writes.",
+      "id": "loop_resource_arbiter_cas",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_resource_arbiter_cas.py"
+    },
+    {
+      "area": [
+        "loop",
+        "graph",
+        "dynamic_exception"
+      ],
+      "goal": "Enforce dynamic exception graph entry policy and verify successful system-mode recovery returns control to static flow.",
+      "id": "loop_dynamic_exception_entry_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_dynamic_exception_entry_policy.py"
+    },
+    {
+      "area": [
+        "loop",
+        "graph",
+        "compositions"
+      ],
+      "goal": "Validate host-local LOOP composition presets for task bootstrap, formalization, dynamic recovery, and maintainer graphs.",
+      "id": "loop_composition_presets",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_composition_presets.py",
+      "tags": [
+        "loop",
+        "graph",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "maintainer",
+        "contracts"
+      ],
+      "goal": "Require non-trivial maintainer work to materialize and close through a maintainer LOOP graph.",
+      "id": "maintainer_loop_requirement",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_maintainer_loop_requirement.py",
+      "tags": [
+        "loop",
+        "maintainer",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "maintainer",
+        "session"
+      ],
+      "goal": "Require non-trivial maintainer work to materialize an upfront session and append-only node journal before closeout.",
+      "id": "loop_maintainer_session",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_maintainer_session.py",
+      "tags": [
+        "loop",
+        "maintainer",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "maintainer",
+        "tooling"
+      ],
+      "goal": "Harden maintainer AI review execution with deterministic scope, timeout, and response-artifact evidence.",
+      "id": "loop_review_runner",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_review_runner.py",
+      "tags": [
+        "loop",
+        "review",
+        "tooling"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "graph",
+        "merge_semantics"
+      ],
+      "goal": "Validate deterministic RACE/QUORUM merge semantics and arbitration winner evidence in LOOP graph runtime.",
+      "id": "loop_graph_merge_semantics",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_graph_merge_semantics.py"
+    },
+    {
+      "area": [
+        "loop",
+        "graph",
+        "parallel_nested_runtime"
+      ],
+      "goal": "Distinguish real parallel execution from graph-only semantics and require nested lineage evidence in LOOP graph runtime.",
+      "id": "loop_graph_parallel_nested_runtime",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_graph_parallel_nested_runtime.py",
+      "tags": [
+        "loop",
+        "graph",
+        "parallel",
+        "nested"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "assurance",
+        "policy"
+      ],
+      "goal": "Enforce assurance-level completion gate: STRICT must carry AI-review evidence for PASSED, while FAST/LIGHT remain non-blocking.",
+      "id": "loop_assurance_gate_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_assurance_gate_policy.py"
+    },
+    {
+      "area": [
+        "loop",
+        "policy"
+      ],
+      "goal": "Verify deterministic LOOP execution/audit state-machine policy edges and promotion-block rules.",
+      "id": "loop_state_machine_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_state_machine_policy.py"
+    },
+    {
+      "area": [
+        "loop",
+        "scenarios"
+      ],
+      "goal": "Run deterministic sequence scenarios for repair loops, audit routing, and dynamic exception entry/exit behavior.",
+      "id": "loop_state_machine_sequences",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_state_machine_sequences.py"
+    },
+    {
+      "area": [
+        "loop",
+        "execution",
+        "policy"
+      ],
+      "goal": "Enforce Wave execution meta-loop strict AI-review transition and stop-rule semantics.",
+      "id": "loop_wave_execution_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_wave_execution_policy.py",
+      "tags": [
+        "loop",
+        "execution",
+        "policy",
+        "ai_review"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "sdk",
+        "contracts"
+      ],
+      "goal": "Ensure LOOP Python SDK contract surface is aligned with MCP API groups and deterministic error envelope semantics.",
+      "id": "loop_python_sdk_contract_surface",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_python_sdk_contract_surface.py"
+    },
+    {
+      "area": [
+        "loop",
+        "sdk",
+        "runtime"
+      ],
+      "goal": "Validate LOOP SDK runtime error envelope fields and checkpoint-missing mapping with deterministic evidence refs.",
+      "id": "loop_sdk_error_envelope_runtime",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_sdk_error_envelope_runtime.py"
+    },
+    {
+      "area": [
+        "loop",
+        "review_history",
+        "runtime"
+      ],
+      "goal": "Verify SDK run path materializes deterministic review-history consistency summary evidence when review_history is provided.",
+      "id": "loop_review_history_runtime",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_review_history_runtime.py"
+    },
+    {
+      "area": [
+        "loop",
+        "review",
+        "strategy"
+      ],
+      "goal": "Ensure staged narrowing and pyramid-review planning helpers remain deterministic and keep integrated closeout authority.",
+      "id": "loop_review_strategy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_review_strategy.py",
+      "tags": [
+        "loop",
+        "review",
+        "strategy"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "review",
+        "orchestration"
+      ],
+      "goal": "Compile staged review strategies into executable LOOP review-orchestration graphs with parallel fast scans and nested deep follow-up evidence.",
+      "id": "loop_review_orchestration",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_review_orchestration.py",
+      "tags": [
+        "loop",
+        "review",
+        "orchestration",
+        "nested",
+        "parallel"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "review",
+        "reconciliation"
+      ],
+      "goal": "Ensure staged review supersession and authoritative finding reconciliation runtime settle advisory findings deterministically.",
+      "id": "loop_review_reconciliation_runtime",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_loop_review_reconciliation_runtime.py",
+      "tags": [
+        "loop",
+        "review",
+        "reconciliation",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "policy",
+        "stress"
+      ],
+      "goal": "Stress-check LOOP policy transition validator determinism under fixed-seed randomized transition volume.",
+      "id": "loop_policy_stress",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_policy_stress.py"
+    },
+    {
+      "area": [
+        "loop",
+        "runtime",
+        "wave_execution"
+      ],
+      "goal": "Execute deterministic RUNNING<->AI_REVIEW loop via SDK run() and require emitted WaveExecutionLoopRun artifact to satisfy schema.",
+      "id": "loop_wave_execution_runtime",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_wave_execution_runtime.py"
+    },
+    {
+      "area": [
+        "loop",
+        "gate",
+        "wave_execution"
+      ],
+      "goal": "Enforce blocking wave gate invariants (schema + trace consistency + history propagation + terminal coherence).",
+      "id": "loop_wave_blocking_gate",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_wave_blocking_gate.py"
+    },
+    {
+      "area": [
+        "workflow",
+        "runtime",
+        "timeouts"
+      ],
+      "goal": "Enforce command-runner convergence: hard timeout must kill child process trees and idle timeout must terminate silent hangs.",
+      "id": "workflow_run_cmd_timeout_hardening",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 20,
+      "script": "tests/contract/check_run_cmd_timeout_hardening.py",
+      "tags": [
+        "workflow",
+        "run_cmd",
+        "timeout",
+        "hang_recovery"
+      ]
+    },
+    {
+      "area": [
         "setup",
         "docs"
       ],
@@ -1569,6 +2197,9 @@
       "expands": {
         "cases": [
           "core_budget_exhausted",
+          "core_loop_audit_block_s1",
+          "core_loop_repair_exhausted",
+          "core_loop_repair_success",
           "core_name_notation",
           "core_statement_false",
           "core_tactic_failure",
@@ -1590,6 +2221,38 @@
       "profile": "soak",
       "runtime_budget_sec": 5400,
       "script": "tests/stress/soak.py"
+    },
+    {
+      "area": [
+        "stress",
+        "loop",
+        "runtime"
+      ],
+      "goal": "Wave-C runtime stress: short deterministic shuffled core soak for LOOP runtime paths.",
+      "id": "stress_loop_runtime",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 2400,
+      "script": "tests/stress/loop_runtime_stress.py"
+    },
+    {
+      "area": [
+        "stress",
+        "loop",
+        "resource"
+      ],
+      "goal": "Wave-C resource contention stress: run core soak with per-iteration full build to pressure shared cache/state.",
+      "id": "stress_loop_resource_contention",
+      "kind": "python_script",
+      "phase": [
+        "phase2"
+      ],
+      "profile": "soak",
+      "runtime_budget_sec": 2400,
+      "script": "tests/stress/loop_resource_contention_stress.py"
     },
     {
       "area": [
@@ -1718,6 +2381,94 @@
         "deps",
         "policy",
         "commands"
+      ]
+    },
+    {
+      "area": [
+        "formalization",
+        "frontier",
+        "ingress",
+        "mapping"
+      ],
+      "goal": "Productize committed formalization front-end helpers: ExternalSourcePack/human ingress, source enrichment, review todo, and reverse-link resync.",
+      "id": "formalization_frontier_absorption",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 15,
+      "script": "tests/contract/check_formalization_frontier_absorption.py",
+      "tags": [
+        "formalization",
+        "frontier",
+        "contract",
+        "determinism"
+      ]
+    },
+    {
+      "area": [
+        "formalization",
+        "contracts",
+        "schemas"
+      ],
+      "goal": "Enforce formalization schema/contract alignment for completion states, closeout policy, dual-gate semantics, and ledger required fields.",
+      "id": "formalization_schema_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_formalization_schema_policy.py",
+      "tags": [
+        "formalization",
+        "schema",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "formalization",
+        "workflow",
+        "runtime"
+      ],
+      "goal": "Exercise deterministic formalization toolchain runtime: upgrade adapter, worklist build, decision apply, anti-cheat, strong validation.",
+      "id": "formalization_toolchain_runtime",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 20,
+      "script": "tests/contract/check_formalization_toolchain_runtime.py",
+      "tags": [
+        "formalization",
+        "runtime",
+        "toolchain",
+        "determinism"
+      ]
+    },
+    {
+      "area": [
+        "formalization",
+        "workflow",
+        "governor"
+      ],
+      "goal": "Enforce deterministic dual-gate formalization governor decisions and contract-aligned reason codes.",
+      "id": "formalization_governor_policy",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_formalization_governor_policy_contract.py",
+      "tags": [
+        "formalization",
+        "governor",
+        "determinism",
+        "policy"
       ]
     }
   ],

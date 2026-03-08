@@ -13,6 +13,8 @@ FORCE_UV_SYNC=0
 DOMAIN_MCP_FROM="${LEANATLAS_DOMAIN_MCP_UVX_FROM:-}"
 DOMAIN_MCP_CMD="${LEANATLAS_DOMAIN_MCP_COMMAND:-}"
 REAL_AGENT_CMD="${LEANATLAS_REAL_AGENT_CMD:-}"
+REAL_AGENT_PROVIDER="${LEANATLAS_REAL_AGENT_PROVIDER:-}"
+REAL_AGENT_PROFILE="${LEANATLAS_REAL_AGENT_PROFILE:-}"
 ONBOARDING_DIR=".cache/leanatlas/onboarding"
 REAL_AGENT_ENV_FILE="$ONBOARDING_DIR/real_agent_cmd.env"
 
@@ -69,53 +71,76 @@ recover_skills_submodule() {
   return 0
 }
 
-load_real_agent_cmd() {
-  if [[ -n "$REAL_AGENT_CMD" ]]; then
+load_real_agent_config() {
+  if [[ -n "$REAL_AGENT_CMD" || -n "$REAL_AGENT_PROVIDER" || -n "$REAL_AGENT_PROFILE" ]]; then
     return 0
   fi
   if [[ -f "$REAL_AGENT_ENV_FILE" ]]; then
     # shellcheck source=/dev/null
     source "$REAL_AGENT_ENV_FILE"
     REAL_AGENT_CMD="${LEANATLAS_REAL_AGENT_CMD:-}"
+    REAL_AGENT_PROVIDER="${LEANATLAS_REAL_AGENT_PROVIDER:-}"
+    REAL_AGENT_PROFILE="${LEANATLAS_REAL_AGENT_PROFILE:-}"
   fi
 }
 
-persist_real_agent_cmd() {
+persist_real_agent_config() {
   mkdir -p "$ONBOARDING_DIR"
   # Persist for future doctor/nightly runs.
-  printf 'export LEANATLAS_REAL_AGENT_CMD=%q\n' "$REAL_AGENT_CMD" > "$REAL_AGENT_ENV_FILE"
+  {
+    printf 'export LEANATLAS_REAL_AGENT_CMD=%q\n' "$REAL_AGENT_CMD"
+    printf 'export LEANATLAS_REAL_AGENT_PROVIDER=%q\n' "$REAL_AGENT_PROVIDER"
+    printf 'export LEANATLAS_REAL_AGENT_PROFILE=%q\n' "$REAL_AGENT_PROFILE"
+  } > "$REAL_AGENT_ENV_FILE"
 }
 
-configure_real_agent_cmd() {
-  load_real_agent_cmd
+configure_real_agent_config() {
+  load_real_agent_config
 
-  if [[ -z "$REAL_AGENT_CMD" ]]; then
+  if [[ -z "$REAL_AGENT_CMD" && -z "$REAL_AGENT_PROVIDER" ]]; then
     if [[ -t 0 ]]; then
-      log "real agent command is required for Phase6 nightly real-agent tests."
-      printf "Use Codex CLI as LEANATLAS_REAL_AGENT_CMD? [Y/n]: "
-      read -r use_codex
-      if [[ -z "$use_codex" || "$use_codex" =~ ^[Yy]$ ]]; then
-        REAL_AGENT_CMD='codex exec - < "$LEANATLAS_EVAL_PROMPT"'
+      log "real agent config is required for Phase6 nightly real-agent tests."
+      printf "Use provider mode with codex_cli? [Y/n]: "
+      read -r use_provider
+      if [[ -z "$use_provider" || "$use_provider" =~ ^[Yy]$ ]]; then
+        REAL_AGENT_PROVIDER="codex_cli"
+        REAL_AGENT_PROFILE=""
       else
-        printf "Enter LEANATLAS_REAL_AGENT_CMD (must not reference dummy_agent.py): "
-        read -r REAL_AGENT_CMD
+        printf "Enter LEANATLAS_REAL_AGENT_PROVIDER (leave empty to use command mode): "
+        read -r REAL_AGENT_PROVIDER
+        if [[ -n "$REAL_AGENT_PROVIDER" ]]; then
+          printf "Enter LEANATLAS_REAL_AGENT_PROFILE (optional path, press Enter to skip): "
+          read -r REAL_AGENT_PROFILE
+        else
+          printf "Enter LEANATLAS_REAL_AGENT_CMD (must not reference dummy_agent.py): "
+          read -r REAL_AGENT_CMD
+        fi
       fi
     else
-      fail "LEANATLAS_REAL_AGENT_CMD is required. Set it (recommended: codex exec - < \"\\$LEANATLAS_EVAL_PROMPT\") and rerun bootstrap."
+      fail "real agent config is required. Set LEANATLAS_REAL_AGENT_PROVIDER (optional LEANATLAS_REAL_AGENT_PROFILE) or LEANATLAS_REAL_AGENT_CMD, then rerun bootstrap."
     fi
   fi
 
-  if [[ -z "$REAL_AGENT_CMD" ]]; then
-    fail "LEANATLAS_REAL_AGENT_CMD cannot be empty."
-  fi
-  if [[ "$REAL_AGENT_CMD" == *"dummy_agent.py"* ]]; then
+  if [[ -n "$REAL_AGENT_CMD" && "$REAL_AGENT_CMD" == *"dummy_agent.py"* ]]; then
     fail "LEANATLAS_REAL_AGENT_CMD cannot point to dummy_agent.py."
+  fi
+  if [[ -z "$REAL_AGENT_CMD" && -z "$REAL_AGENT_PROVIDER" ]]; then
+    fail "either LEANATLAS_REAL_AGENT_PROVIDER or LEANATLAS_REAL_AGENT_CMD must be set."
+  fi
+  if [[ -n "$REAL_AGENT_PROFILE" && ! -f "$REAL_AGENT_PROFILE" && ! -f "$ROOT_DIR/$REAL_AGENT_PROFILE" ]]; then
+    fail "LEANATLAS_REAL_AGENT_PROFILE does not exist: $REAL_AGENT_PROFILE"
   fi
 
   export LEANATLAS_REAL_AGENT_CMD="$REAL_AGENT_CMD"
-  persist_real_agent_cmd
+  export LEANATLAS_REAL_AGENT_PROVIDER="$REAL_AGENT_PROVIDER"
+  export LEANATLAS_REAL_AGENT_PROFILE="$REAL_AGENT_PROFILE"
+  persist_real_agent_config
   "$PY_BIN" tools/onboarding/finalize_onboarding.py --step real_agent_cmd
-  log "real agent command configured and persisted: $REAL_AGENT_ENV_FILE"
+  if [[ -n "$REAL_AGENT_CMD" ]]; then
+    log "real agent command configured and persisted: $REAL_AGENT_ENV_FILE"
+  else
+    log "real agent provider/profile configured and persisted: $REAL_AGENT_ENV_FILE"
+  fi
 }
 
 while (($# > 0)); do
@@ -296,7 +321,7 @@ else
   warn "Fallback dev check: python tools/lean_domain_mcp/domain_mcp_server.py --msc2020-mini --smoke"
 fi
 
-configure_real_agent_cmd
+configure_real_agent_config
 
 "$PY_BIN" tools/onboarding/finalize_onboarding.py --step bootstrap
 log "bootstrap completed"

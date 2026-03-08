@@ -134,12 +134,15 @@ After the run:
 This is the "inner loop" evaluation (runner spawns a real agent).
 
 ```text
-Run a Phase6 pack evaluation where the agent command is Codex.
+Run a Phase6 pack evaluation where the agent is Codex.
 
 Steps:
 1) Pick a small pack (limit=1).
 2) Run:
-   `.venv/bin/python tools/agent_eval/run_pack.py --mode run --limit 1 --agent-cmd 'codex exec - < "$LEANATLAS_EVAL_PROMPT"' --pack <PACK_ID>`
+   `.venv/bin/python tools/agent_eval/run_pack.py --mode run --limit 1 --agent-provider codex_cli --pack <PACK_ID>`
+
+Compatibility fallback (legacy command path):
+- `.venv/bin/python tools/agent_eval/run_pack.py --mode run --limit 1 --agent-cmd 'codex exec - < "$LEANATLAS_EVAL_PROMPT"' --pack <PACK_ID>`
 
 After it finishes:
 - Open the produced RunReport.json.

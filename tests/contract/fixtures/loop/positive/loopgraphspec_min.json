@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "graph_id": "graph.demo.v1",
+  "graph_mode": "STATIC_USER_MODE",
+  "nodes": [
+    {"node_id": "n1", "loop_id": "loop.demo.v1"},
+    {"node_id": "n2", "loop_id": "loop.demo.v2"}
+  ],
+  "edges": [
+    {"from": "n1", "to": "n2", "kind": "SERIAL"}
+  ],
+  "scheduler": {
+    "max_parallel_branches": 2
+  }
+}

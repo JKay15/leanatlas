@@ -1,0 +1,14 @@
+id: scenario_loop_resume_after_interrupt
+tier: core
+execution:
+  enabled: true
+  workspace: shared
+steps:
+- kind: run_case
+  case_id: core_loop_repair_success
+- kind: clean
+- kind: run_case
+  case_id: core_loop_repair_success
+- kind: lake_build
+  target: Problems.core_loop_repair_success.Proof
+  expect_rc: 0

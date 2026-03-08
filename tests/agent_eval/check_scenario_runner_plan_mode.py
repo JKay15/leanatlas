@@ -33,6 +33,8 @@ def main() -> int:
         str(out_root),
         "--eval-id",
         "_smoke",
+        "--agent-provider",
+        "codex_cli",
     ]
     r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     if r.returncode != 0:

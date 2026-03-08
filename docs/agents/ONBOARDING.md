@@ -55,6 +55,10 @@ Minimal expected fields:
 }
 ```
 
+Separate post-onboarding LOOP defaults use this reserved gitignored path when they are explicitly staged:
+
+* `.cache/leanatlas/onboarding/loop_preferences.json`
+
 Notes:
 
 * `completed=true` means environment setup is done.
@@ -106,11 +110,25 @@ On first prompt (any content, including a simple `hi`), Codex should:
    - write the state file
    - once `bootstrap` + `doctor` + `real_agent_cmd` all pass, compact root `AGENTS.md` onboarding block
      (verbose archive remains in `docs/agents/archive/AGENTS_ONBOARDING_VERBOSE.md`)
-5) End with:
+  5) End with:
    - a short summary
    - where artifacts were written
    - mandatory operational gate: install/verify all `status=active` automations in Codex App
    - what remains optional (for example: Phase6 real-agent eval)
+     - after the environment is operational-ready, explain the bounded post-onboarding LOOP presets and the reserved local artifact path
+       `.cache/leanatlas/onboarding/loop_preferences.json`
+       using the bounded presets:
+     - `Budget Saver`
+       - current default: `FAST + low`
+       - current default reviewer tier policy: `LOW_PLUS_MEDIUM`
+       - use this unless there is a reason to spend more review budget
+     - `Balanced`
+     - `Auditable`
+     - `LOW_PLUS_MEDIUM` is the committed default reviewer tier policy
+     - `medium` is the standard bounded escalation tier
+     - `medium` is a bounded escalation only for small-scope high-risk core logic
+     - `STRICT / xhigh` is exceptional, not the default
+     - do not imply that onboarding already auto-writes or auto-applies this preference artifact unless that wiring has landed
 
 ### Required operational gate: install active automations in Codex App
 
@@ -156,6 +174,7 @@ Required behavior:
 * Never reinstall dependencies blindly when preflight says the environment is already ready.
 * Always report what was skipped vs executed.
 * Run verification gates even when install steps are skipped.
+* Treat LOOP preferences as post-onboarding defaults; do not turn them into bootstrap blockers.
 
 ## Override activation rule (hard rule)
 

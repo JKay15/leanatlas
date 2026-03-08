@@ -1,0 +1,137 @@
+{
+  "$defs": {
+    "item": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "entity_id": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "issue_codes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "issue_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "parent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pointers": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "risk_score": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "state": {
+          "enum": [
+            "NEW",
+            "CODEX_ATTEMPTED",
+            "GPT52PRO_ESCALATED",
+            "TRIAGED_UNPROVABLE_CANDIDATE",
+            "COMPLETED"
+          ],
+          "type": "string"
+        },
+        "suggested_action": {
+          "type": "string"
+        },
+        "uncertainty_score": {
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "confidence",
+        "entity_id",
+        "entity_type",
+        "issue_codes",
+        "issue_count",
+        "risk_score",
+        "state",
+        "suggested_action",
+        "uncertainty_score"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://leanatlas.local/schemas/ProofCompletionWorklist.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "count": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "counts": {
+      "additionalProperties": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "type": "object"
+    },
+    "focus_entity_types": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "generated_at_utc": {
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/item"
+      },
+      "type": "array"
+    },
+    "params": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "threshold": {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+    }
+  },
+  "required": [
+    "schema_version",
+    "generated_at_utc",
+    "items",
+    "count",
+    "threshold"
+  ],
+  "title": "ProofCompletionWorklist",
+  "type": "object"
+}

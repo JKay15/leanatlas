@@ -1,0 +1,1466 @@
+{
+  "$defs": {
+    "agentInvocation": {
+      "additionalProperties": false,
+      "properties": {
+        "agent_profile": {
+          "type": "string"
+        },
+        "agent_provider_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "instruction_scope_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "invocation_source": {
+          "enum": [
+            "cli.agent_cmd",
+            "cli.agent_provider",
+            "cli.agent_profile",
+            "automation.registry",
+            "loop.runtime.default"
+          ],
+          "type": "string"
+        },
+        "resolved_command_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "resolved_invocation": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "agent_provider_id",
+        "resolved_invocation",
+        "instruction_scope_refs"
+      ],
+      "type": "object"
+    },
+    "assuranceLevel": {
+      "enum": [
+        "FAST",
+        "LIGHT",
+        "STRICT"
+      ],
+      "type": "string"
+    },
+    "decisionReason": {
+      "enum": [
+        "WAVE_START",
+        "IMPLEMENTATION_SUBMITTED_FOR_REVIEW",
+        "REVIEW_PASS",
+        "REVIEW_REPAIR_LOOP",
+        "REVIEW_BUDGET_EXHAUSTED",
+        "REVIEW_STAGNATION",
+        "REVIEW_UNRESOLVED_BLOCKER",
+        "REVIEW_NON_RETRYABLE_FAULT",
+        "REVIEW_INVALID_VERDICT",
+        "REVIEW_WALL_CLOCK_BUDGET_EXHAUSTED"
+      ],
+      "type": "string"
+    },
+    "dirtyTree": {
+      "additionalProperties": false,
+      "properties": {
+        "changed_entry_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "checked": {
+          "const": true,
+          "type": "boolean"
+        },
+        "disposition": {
+          "enum": [
+            "CLEAN",
+            "COMMITTED",
+            "IGNORED_ONLY",
+            "DIRTY_PENDING",
+            "NO_GIT_CONTEXT"
+          ],
+          "type": "string"
+        },
+        "head_commit": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{40}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "in_git_repo": {
+          "type": "boolean"
+        },
+        "is_clean": {
+          "type": "boolean"
+        },
+        "status_porcelain_sample": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tracked_entry_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "untracked_entry_count": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "checked",
+        "in_git_repo",
+        "is_clean",
+        "disposition",
+        "head_commit",
+        "tracked_entry_count",
+        "untracked_entry_count",
+        "changed_entry_count",
+        "status_porcelain_sample"
+      ],
+      "type": "object"
+    },
+    "executionState": {
+      "enum": [
+        "PENDING",
+        "RUNNING",
+        "AI_REVIEW",
+        "PASSED",
+        "FAILED",
+        "TRIAGED"
+      ],
+      "type": "string"
+    },
+    "finding": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "finding_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "repairable": {
+          "type": "boolean"
+        },
+        "severity": {
+          "enum": [
+            "S1_CRITICAL",
+            "S2_MAJOR",
+            "S3_MINOR"
+          ],
+          "type": "string"
+        },
+        "summary": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "finding_id",
+        "severity",
+        "repairable",
+        "summary",
+        "evidence_refs"
+      ],
+      "type": "object"
+    },
+    "reviewHistoryConsistency": {
+      "additionalProperties": false,
+      "properties": {
+        "consulted_iteration_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "contradiction_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "contradiction_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "nitpick_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "potential_nitpick_count": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "contradiction_count",
+        "potential_nitpick_count",
+        "contradiction_refs",
+        "nitpick_refs"
+      ],
+      "type": "object"
+    },
+    "reviewRecord": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "properties": {
+            "transition": {
+              "properties": {
+                "from": {
+                  "const": "AI_REVIEW"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "transition": {
+                "properties": {
+                  "reason_code": {
+                    "const": "REVIEW_WALL_CLOCK_BUDGET_EXHAUSTED"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "wall_clock_used_minutes": {
+                "const": 120
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ai_review": {
+                "properties": {
+                  "verdict": {
+                    "const": "PASS"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "transition": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "reason_code": {
+                        "const": "REVIEW_PASS"
+                      },
+                      "to": {
+                        "const": "PASSED"
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "reason_code": {
+                        "enum": [
+                          "REVIEW_STAGNATION",
+                          "REVIEW_WALL_CLOCK_BUDGET_EXHAUSTED"
+                        ]
+                      },
+                      "to": {
+                        "const": "TRIAGED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ai_review": {
+                "properties": {
+                  "verdict": {
+                    "const": "UNRESOLVED_BLOCKER"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "transition": {
+                "properties": {
+                  "reason_code": {
+                    "enum": [
+                      "REVIEW_UNRESOLVED_BLOCKER",
+                      "REVIEW_STAGNATION"
+                    ]
+                  },
+                  "to": {
+                    "const": "TRIAGED"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ai_review": {
+                "properties": {
+                  "verdict": {
+                    "const": "NON_RETRYABLE"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "transition": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "reason_code": {
+                        "const": "REVIEW_NON_RETRYABLE_FAULT"
+                      },
+                      "to": {
+                        "const": "FAILED"
+                      }
+                    }
+                  },
+                  {
+                    "properties": {
+                      "reason_code": {
+                        "const": "REVIEW_STAGNATION"
+                      },
+                      "to": {
+                        "const": "TRIAGED"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "ai_review": {
+                "properties": {
+                  "verdict": {
+                    "const": "REPAIRABLE"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "allOf": [
+              {
+                "properties": {
+                  "transition": {
+                    "properties": {
+                      "to": {
+                        "enum": [
+                          "RUNNING",
+                          "TRIAGED"
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "transition": {
+                      "properties": {
+                        "to": {
+                          "const": "RUNNING"
+                        }
+                      }
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "transition": {
+                      "properties": {
+                        "reason_code": {
+                          "const": "REVIEW_REPAIR_LOOP"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "transition": {
+                      "properties": {
+                        "to": {
+                          "const": "TRIAGED"
+                        }
+                      }
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "transition": {
+                      "properties": {
+                        "reason_code": {
+                          "enum": [
+                            "REVIEW_BUDGET_EXHAUSTED",
+                            "REVIEW_STAGNATION",
+                            "REVIEW_WALL_CLOCK_BUDGET_EXHAUSTED"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "transition": {
+                      "properties": {
+                        "reason_code": {
+                          "const": "REVIEW_WALL_CLOCK_BUDGET_EXHAUSTED"
+                        }
+                      }
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "wall_clock_used_minutes": {
+                      "const": 120
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "transition": {
+                      "properties": {
+                        "to": {
+                          "const": "TRIAGED"
+                        }
+                      }
+                    },
+                    "wall_clock_used_minutes": {
+                      "const": 120
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "transition": {
+                      "properties": {
+                        "reason_code": {
+                          "enum": [
+                            "REVIEW_STAGNATION",
+                            "REVIEW_WALL_CLOCK_BUDGET_EXHAUSTED"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "properties": {
+        "ai_review": {
+          "additionalProperties": false,
+          "properties": {
+            "confidence": {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "engine": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "finding_fingerprint": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            "findings": {
+              "items": {
+                "$ref": "#/$defs/finding"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "prompt_ref": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "response_ref": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "verdict": {
+              "$ref": "#/$defs/reviewVerdict"
+            }
+          },
+          "required": [
+            "engine",
+            "prompt_ref",
+            "response_ref",
+            "verdict",
+            "confidence",
+            "finding_fingerprint",
+            "findings"
+          ],
+          "type": "object"
+        },
+        "history_context_refs": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "iteration_index": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "transition": {
+          "$ref": "#/$defs/transition"
+        },
+        "wall_clock_used_minutes": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "iteration_index",
+        "ai_review",
+        "history_context_refs",
+        "transition",
+        "wall_clock_used_minutes"
+      ],
+      "type": "object"
+    },
+    "reviewVerdict": {
+      "enum": [
+        "PASS",
+        "REPAIRABLE",
+        "UNRESOLVED_BLOCKER",
+        "NON_RETRYABLE"
+      ],
+      "type": "string"
+    },
+    "timeoutCommandSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "exit_code": {
+          "const": 124,
+          "type": "integer"
+        },
+        "stderr_path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "stdout_path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "timed_out": {
+          "const": true,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "timed_out",
+        "exit_code",
+        "stdout_path",
+        "stderr_path"
+      ],
+      "type": "object"
+    },
+    "transition": {
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "from": {
+              "const": "PENDING"
+            },
+            "reason_code": {
+              "const": "WAVE_START"
+            },
+            "to": {
+              "const": "RUNNING"
+            }
+          }
+        },
+        {
+          "properties": {
+            "from": {
+              "const": "RUNNING"
+            },
+            "reason_code": {
+              "const": "IMPLEMENTATION_SUBMITTED_FOR_REVIEW"
+            },
+            "to": {
+              "const": "AI_REVIEW"
+            }
+          }
+        },
+        {
+          "properties": {
+            "from": {
+              "const": "AI_REVIEW"
+            },
+            "reason_code": {
+              "const": "REVIEW_REPAIR_LOOP"
+            },
+            "to": {
+              "const": "RUNNING"
+            }
+          }
+        },
+        {
+          "properties": {
+            "from": {
+              "const": "AI_REVIEW"
+            },
+            "reason_code": {
+              "const": "REVIEW_PASS"
+            },
+            "to": {
+              "const": "PASSED"
+            }
+          }
+        },
+        {
+          "properties": {
+            "from": {
+              "const": "AI_REVIEW"
+            },
+            "reason_code": {
+              "enum": [
+                "REVIEW_NON_RETRYABLE_FAULT",
+                "REVIEW_INVALID_VERDICT"
+              ]
+            },
+            "to": {
+              "const": "FAILED"
+            }
+          }
+        },
+        {
+          "properties": {
+            "from": {
+              "const": "AI_REVIEW"
+            },
+            "reason_code": {
+              "enum": [
+                "REVIEW_BUDGET_EXHAUSTED",
+                "REVIEW_STAGNATION",
+                "REVIEW_UNRESOLVED_BLOCKER",
+                "REVIEW_WALL_CLOCK_BUDGET_EXHAUSTED"
+              ]
+            },
+            "to": {
+              "const": "TRIAGED"
+            }
+          }
+        }
+      ],
+      "properties": {
+        "at_utc": {
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "type": "string"
+        },
+        "from": {
+          "$ref": "#/$defs/executionState"
+        },
+        "reason_code": {
+          "$ref": "#/$defs/decisionReason"
+        },
+        "to": {
+          "$ref": "#/$defs/executionState"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "reason_code",
+        "at_utc"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "assurance_level": {
+            "const": "STRICT"
+          },
+          "final_decision": {
+            "properties": {
+              "state": {
+                "const": "PASSED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          }
+        },
+        "required": [
+          "assurance_level",
+          "final_decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "evidence": {
+            "properties": {
+              "ai_review_prompt_ref": {
+                "minLength": 1
+              },
+              "ai_review_response_ref": {
+                "minLength": 1
+              },
+              "ai_review_summary_ref": {
+                "minLength": 1
+              }
+            },
+            "required": [
+              "ai_review_prompt_ref",
+              "ai_review_response_ref",
+              "ai_review_summary_ref"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "final_decision": {
+            "properties": {
+              "state": {
+                "const": "PASSED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution": {
+            "properties": {
+              "current_state": {
+                "const": "PASSED"
+              }
+            }
+          },
+          "final_decision": {
+            "properties": {
+              "reason_code": {
+                "const": "REVIEW_PASS"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "final_decision": {
+            "properties": {
+              "state": {
+                "const": "FAILED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution": {
+            "properties": {
+              "current_state": {
+                "const": "FAILED"
+              }
+            }
+          },
+          "final_decision": {
+            "properties": {
+              "reason_code": {
+                "enum": [
+                  "REVIEW_NON_RETRYABLE_FAULT",
+                  "REVIEW_INVALID_VERDICT"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "final_decision": {
+            "properties": {
+              "state": {
+                "const": "TRIAGED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution": {
+            "properties": {
+              "current_state": {
+                "const": "TRIAGED"
+              }
+            }
+          },
+          "final_decision": {
+            "properties": {
+              "reason_code": {
+                "enum": [
+                  "REVIEW_BUDGET_EXHAUSTED",
+                  "REVIEW_STAGNATION",
+                  "REVIEW_UNRESOLVED_BLOCKER",
+                  "REVIEW_WALL_CLOCK_BUDGET_EXHAUSTED"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "derived_metrics": {
+            "properties": {
+              "max_consecutive_same_fingerprint": {
+                "minimum": 2
+              }
+            },
+            "required": [
+              "max_consecutive_same_fingerprint"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution": {
+            "properties": {
+              "current_state": {
+                "const": "TRIAGED"
+              }
+            }
+          },
+          "final_decision": {
+            "properties": {
+              "reason_code": {
+                "const": "REVIEW_STAGNATION"
+              },
+              "state": {
+                "const": "TRIAGED"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "budgets": {
+            "properties": {
+              "used_wall_clock_minutes": {
+                "const": 120
+              }
+            },
+            "required": [
+              "used_wall_clock_minutes"
+            ]
+          },
+          "final_decision": {
+            "properties": {
+              "state": {
+                "const": "PASSED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          }
+        },
+        "required": [
+          "budgets",
+          "final_decision"
+        ]
+      },
+      "then": false
+    },
+    {
+      "if": {
+        "properties": {
+          "final_decision": {
+            "properties": {
+              "reason_code": {
+                "const": "REVIEW_WALL_CLOCK_BUDGET_EXHAUSTED"
+              }
+            },
+            "required": [
+              "reason_code"
+            ]
+          }
+        },
+        "required": [
+          "final_decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "budgets": {
+            "properties": {
+              "used_wall_clock_minutes": {
+                "const": 120
+              }
+            },
+            "required": [
+              "used_wall_clock_minutes"
+            ]
+          },
+          "evidence": {
+            "required": [
+              "timeout_command_span"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "final_decision": {
+            "properties": {
+              "reason_code": {
+                "const": "REVIEW_STAGNATION"
+              }
+            },
+            "required": [
+              "reason_code"
+            ]
+          }
+        },
+        "required": [
+          "final_decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "derived_metrics": {
+            "properties": {
+              "max_consecutive_same_fingerprint": {
+                "minimum": 2
+              }
+            },
+            "required": [
+              "max_consecutive_same_fingerprint"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "budgets": {
+            "properties": {
+              "used_wall_clock_minutes": {
+                "const": 120
+              }
+            },
+            "required": [
+              "used_wall_clock_minutes"
+            ]
+          },
+          "final_decision": {
+            "properties": {
+              "reason_code": {
+                "const": "REVIEW_BUDGET_EXHAUSTED"
+              }
+            },
+            "required": [
+              "reason_code"
+            ]
+          }
+        },
+        "required": [
+          "budgets",
+          "final_decision"
+        ]
+      },
+      "then": false
+    },
+    {
+      "if": {
+        "properties": {
+          "final_decision": {
+            "properties": {
+              "reason_code": {
+                "const": "REVIEW_BUDGET_EXHAUSTED"
+              }
+            },
+            "required": [
+              "reason_code"
+            ]
+          }
+        },
+        "required": [
+          "final_decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "budgets": {
+            "properties": {
+              "used_ai_review_rounds": {
+                "const": 8
+              }
+            },
+            "required": [
+              "used_ai_review_rounds"
+            ]
+          },
+          "final_decision": {
+            "properties": {
+              "state": {
+                "const": "TRIAGED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "review_history_consistency": {
+            "properties": {
+              "contradiction_count": {
+                "minimum": 1
+              }
+            },
+            "required": [
+              "contradiction_count"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "review_history_consistency": {
+            "properties": {
+              "contradiction_refs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "review_history_consistency": {
+            "properties": {
+              "potential_nitpick_count": {
+                "minimum": 1
+              }
+            },
+            "required": [
+              "potential_nitpick_count"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "review_history_consistency": {
+            "properties": {
+              "nitpick_refs": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "dirty_tree": {
+            "properties": {
+              "in_git_repo": {
+                "const": false
+              }
+            },
+            "required": [
+              "in_git_repo"
+            ]
+          }
+        },
+        "required": [
+          "dirty_tree"
+        ]
+      },
+      "then": {
+        "properties": {
+          "dirty_tree": {
+            "properties": {
+              "changed_entry_count": {
+                "const": 0
+              },
+              "disposition": {
+                "const": "NO_GIT_CONTEXT"
+              },
+              "head_commit": {
+                "type": "null"
+              },
+              "is_clean": {
+                "const": true
+              },
+              "status_porcelain_sample": {
+                "maxItems": 0
+              },
+              "tracked_entry_count": {
+                "const": 0
+              },
+              "untracked_entry_count": {
+                "const": 0
+              }
+            },
+            "required": [
+              "is_clean",
+              "disposition",
+              "head_commit",
+              "tracked_entry_count",
+              "untracked_entry_count",
+              "changed_entry_count",
+              "status_porcelain_sample"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "dirty_tree": {
+            "properties": {
+              "in_git_repo": {
+                "const": true
+              }
+            },
+            "required": [
+              "in_git_repo"
+            ]
+          },
+          "final_decision": {
+            "properties": {
+              "state": {
+                "const": "PASSED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          }
+        },
+        "required": [
+          "final_decision",
+          "dirty_tree"
+        ]
+      },
+      "then": {
+        "properties": {
+          "dirty_tree": {
+            "properties": {
+              "disposition": {
+                "enum": [
+                  "CLEAN",
+                  "COMMITTED",
+                  "IGNORED_ONLY"
+                ]
+              },
+              "is_clean": {
+                "const": true
+              }
+            },
+            "required": [
+              "is_clean",
+              "disposition"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "agent_invocation": {
+      "$ref": "#/$defs/agentInvocation"
+    },
+    "assurance_level": {
+      "$ref": "#/$defs/assuranceLevel"
+    },
+    "budgets": {
+      "additionalProperties": false,
+      "properties": {
+        "max_ai_review_rounds": {
+          "const": 8,
+          "default": 8,
+          "type": "integer"
+        },
+        "max_same_fingerprint_rounds": {
+          "const": 2,
+          "default": 2,
+          "type": "integer"
+        },
+        "max_wave_wall_clock_minutes": {
+          "const": 120,
+          "default": 120,
+          "type": "integer"
+        },
+        "used_ai_review_rounds": {
+          "maximum": 8,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "used_wall_clock_minutes": {
+          "maximum": 120,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "max_ai_review_rounds",
+        "max_same_fingerprint_rounds",
+        "max_wave_wall_clock_minutes",
+        "used_ai_review_rounds",
+        "used_wall_clock_minutes"
+      ],
+      "type": "object"
+    },
+    "derived_metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "max_consecutive_same_fingerprint": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "replay_digest": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "max_consecutive_same_fingerprint",
+        "replay_digest"
+      ],
+      "type": "object"
+    },
+    "dirty_tree": {
+      "$ref": "#/$defs/dirtyTree"
+    },
+    "evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "ai_review_log_path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "ai_review_prompt_ref": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "ai_review_response_ref": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "ai_review_summary_ref": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "final_decision_path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "iteration_trace_path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "timeout_command_span": {
+          "$ref": "#/$defs/timeoutCommandSpan"
+        }
+      },
+      "required": [
+        "ai_review_log_path",
+        "iteration_trace_path",
+        "final_decision_path"
+      ],
+      "type": "object"
+    },
+    "execution": {
+      "additionalProperties": false,
+      "properties": {
+        "current_state": {
+          "$ref": "#/$defs/executionState"
+        },
+        "transitions": {
+          "items": {
+            "$ref": "#/$defs/transition"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "current_state",
+        "transitions"
+      ],
+      "type": "object"
+    },
+    "final_decision": {
+      "additionalProperties": false,
+      "properties": {
+        "at_utc": {
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "type": "string"
+        },
+        "reason_code": {
+          "$ref": "#/$defs/decisionReason"
+        },
+        "state": {
+          "enum": [
+            "PASSED",
+            "FAILED",
+            "TRIAGED"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "state",
+        "reason_code",
+        "at_utc"
+      ],
+      "type": "object"
+    },
+    "iterations": {
+      "items": {
+        "$ref": "#/$defs/reviewRecord"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "review_history_consistency": {
+      "$ref": "#/$defs/reviewHistoryConsistency"
+    },
+    "run_key": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "version": {
+      "const": "1",
+      "type": "string"
+    },
+    "wave_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "wave_id",
+    "run_key",
+    "assurance_level",
+    "agent_invocation",
+    "budgets",
+    "derived_metrics",
+    "dirty_tree",
+    "review_history_consistency",
+    "execution",
+    "iterations",
+    "final_decision",
+    "evidence"
+  ],
+  "title": "WaveExecutionLoopRun",
+  "type": "object"
+}

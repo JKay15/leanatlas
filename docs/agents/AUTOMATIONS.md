@@ -28,6 +28,7 @@ Each automation is split into:
 - Enabled only when `advisor.enabled=true`.
 - Triggered by findings (`advisor.when=findings`) plus explicit probe signals.
 - Produces auditable handoff/patch evidence.
+- Registry should provide default advisor executor config (`advisor.agent_provider` + optional `advisor.agent_profile`, or legacy `advisor.exec_cmd`) so prompts do not need per-run executor flags.
 
 3. Verify step (required)
 - `lake lint`, `lake test`, or `lake build` as needed.
@@ -77,6 +78,12 @@ Common usage:
 ./.venv/bin/python tools/coordination/run_automation.py --id weekly_kb_suggestions
 ./.venv/bin/python tools/coordination/run_automation.py --id weekly_kb_suggestions --verify
 ./.venv/bin/python tools/coordination/run_automation.py --id weekly_kb_suggestions --advisor-mode auto --verify
+```
+
+Optional override (only when you intentionally switch provider for one run):
+
+```bash
+./.venv/bin/python tools/coordination/run_automation.py --id weekly_kb_suggestions --advisor-mode auto --agent-provider claude_code --verify
 ```
 
 Codex App prompt usage (must force local repo execution even if thread cwd is a worktree):

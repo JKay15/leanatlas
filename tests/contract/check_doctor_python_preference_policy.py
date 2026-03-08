@@ -51,6 +51,16 @@ def main() -> int:
         "pins.json extraction snippet must run via $PY_BIN",
         errors,
     )
+    _require(
+        "LEANATLAS_REAL_AGENT_PROVIDER" in text,
+        "doctor must support LEANATLAS_REAL_AGENT_PROVIDER for provider-based real-agent config",
+        errors,
+    )
+    _require(
+        "LEANATLAS_REAL_AGENT_PROFILE" in text,
+        "doctor must support LEANATLAS_REAL_AGENT_PROFILE for profile-based real-agent config",
+        errors,
+    )
 
     # Guard against reverting to hardcoded `python tests/...` in execution lines.
     for i, line in enumerate(text.splitlines(), start=1):

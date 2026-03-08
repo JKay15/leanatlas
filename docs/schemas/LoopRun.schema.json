@@ -1,0 +1,204 @@
+{
+  "$defs": {
+    "auditState": {
+      "enum": [
+        "AUDIT_PENDING",
+        "AUDIT_CONFIRMED",
+        "AUDIT_FLAGGED_OPEN",
+        "AUDIT_MITIGATED",
+        "AUDIT_VERIFIED",
+        "AUDIT_CLOSED",
+        "AUDIT_ACCEPTED_RISK"
+      ],
+      "type": "string"
+    },
+    "executionState": {
+      "enum": [
+        "PENDING",
+        "RUNNING",
+        "AI_REVIEW",
+        "PASSED",
+        "FAILED",
+        "TRIAGED"
+      ],
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "audit": {
+      "additionalProperties": false,
+      "properties": {
+        "flags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "last_flagged_at_utc": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/auditState"
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts_path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "final_decision_path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "input_projection_hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "instruction_resolution_report_path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "reproducibility": {
+          "additionalProperties": false,
+          "properties": {
+            "dependency_pin_set_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "instruction_chain_hash": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "dependency_pin_set_id",
+            "instruction_chain_hash"
+          ],
+          "type": "object"
+        },
+        "resource_snapshot_hash": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "input_projection_hash",
+        "resource_snapshot_hash",
+        "instruction_resolution_report_path",
+        "attempts_path",
+        "final_decision_path",
+        "reproducibility"
+      ],
+      "type": "object"
+    },
+    "execution": {
+      "additionalProperties": false,
+      "properties": {
+        "current_state": {
+          "$ref": "#/$defs/executionState"
+        },
+        "retry_budget": {
+          "additionalProperties": false,
+          "properties": {
+            "max_retry_per_node": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "used_retry_count": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "max_retry_per_node",
+            "used_retry_count"
+          ],
+          "type": "object"
+        },
+        "transitions": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "at_utc": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "from": {
+                "$ref": "#/$defs/executionState"
+              },
+              "reason_code": {
+                "type": "string"
+              },
+              "to": {
+                "$ref": "#/$defs/executionState"
+              }
+            },
+            "required": [
+              "from",
+              "to",
+              "at_utc"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "current_state",
+        "retry_budget",
+        "transitions"
+      ],
+      "type": "object"
+    },
+    "graph_mode": {
+      "enum": [
+        "STATIC_USER_MODE",
+        "SYSTEM_EXCEPTION_MODE"
+      ],
+      "type": "string"
+    },
+    "loop_id": {
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "type": "string"
+    },
+    "quality_gate_tags": {
+      "items": {
+        "enum": [
+          "PROMOTION_BLOCKED_BY_AUDIT"
+        ],
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "run_key": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "version": {
+      "const": "1",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "run_key",
+    "loop_id",
+    "graph_mode",
+    "execution",
+    "audit",
+    "evidence"
+  ],
+  "title": "LoopRun",
+  "type": "object"
+}

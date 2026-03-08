@@ -66,11 +66,20 @@ Runner behavior:
 - `--mode plan`: validate schemas and pack composition; output `Plan.json` (fast; CI/core).
 - `--mode materialize`: for each (task,variant), create an isolated workspace (repo copy + fixture copy) and write `PROMPT.md`.
   - also writes `BaselineToolSurface.json` captured by the runner; used to score tool reuse deterministically.
-- `--mode run`: on top of materialize, executes an external agent command via `tools/workflow/run_cmd.py` (requires `--agent-cmd`).
+- `--mode run`: on top of materialize, executes an external agent command via `tools/workflow/run_cmd.py`.
+  - invocation options (choose one):
+    - `--agent-cmd "<shell command>"` (legacy-compatible direct command)
+    - `--agent-profile <path/to/profile.json>` (recommended for provider switching)
+    - `--agent-provider <provider_id>` (built-in defaults, currently `codex_cli`, `claude_code`)
+  - profile v0.2 optional fields:
+    - `prompt_transport`: `stdin | env_path | arg`
+    - `prompt_arg`: argument flag used when `prompt_transport=arg`
+    - `env_map`: source->target env propagation map
+    - `capabilities`: provider capability hints for audit/routing
 
 Notes:
 - `PROMPT.md` enables a strict non-interactive run that still follows LeanAtlas workflow/contracts.
-- **Framework auth is agent-specific**: runners require `--agent-cmd`; any API keys are only needed if your chosen agent implementation requires them.
+- **Framework auth is agent-specific**: any API keys are only needed if your selected provider/profile requires them.
 - grading depends strictly on artifacts. Missing required evidence ⇒ FAIL.
   - `pins_used.json` is **runner-owned** and MUST be present (runner ensures this).
 

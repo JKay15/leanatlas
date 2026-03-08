@@ -18,6 +18,24 @@ An ExecPlan should be sufficient for someone unfamiliar with the repo to reprodu
 4) **TDD first**: write/update tests first, then implement, then update docs.
 5) **Clean artifacts**: do not commit temporary logs/artifacts; update `.gitignore` and cleaning scripts when needed.
 
+## Maintainer LOOP rule
+For non-trivial maintainer work on system surfaces, the plan is not the whole process. non-trivial maintainer work MUST materialize a maintainer LOOP graph and close through that graph.
+
+Required sequence:
+- `ExecPlan -> graph_spec -> test node -> implement node -> verify node -> AI review node -> LOOP closeout`
+
+Implications:
+- `ExecPlan` freezes scope and acceptance before code changes.
+- maintainer session materialization must happen before implementation begins; observers should be able to see `GraphSpec.json` plus append-only maintainer session/node-journal artifacts even before closeout.
+- preferred maintainer path: use the Python maintainer facade (`MaintainerLoopSession` or an equivalent canonical helper), not a post-hoc summary-only flow.
+- `test node` must exist before `implement node`; TDD still applies.
+- when an ExecPlan needs to cite settled-state maintainer closeout in its own `Outcomes & retrospective`, it must use the stable execplan-addressable closeout alias (`artifacts/loop_runtime/by_execplan/<stable_execplan_id>/MaintainerCloseoutRef.json`)
+- an ExecPlan must not cite a run-key-specific `GraphSummary.jsonl` path inside its own body for settled-state closeout, because doing so perturbs the plan's own `execplan_hash`
+- maintainer closeout must happen while the frozen ExecPlan and other frozen inputs still match the materialized session; stale execplan bytes are not allowed to rewrite the stable closeout alias.
+- if multiple maintainer sessions exist for the same `execplan_ref`, the stable closeout alias must stay pinned to the newest authoritative session rather than being overwritten by an older same-plan session that closes later.
+- once `ai_review_node` is recorded, maintainer closeout must also preserve the reviewed scope itself; mutate-and-restore scope drift after `ai_review_node` must be rejected using reviewed-scope evidence such as `scope_fingerprint` / `scope_observed_stamp`.
+- routine `manual closeout` is not an ordinary maintainer path; it is an exception path only.
+
 ## Where ExecPlans live
 - New plans: `docs/agents/execplans/<YYYYMMDD>_<short_name>.md`
 - One plan solves one thing; split large tasks into multiple plans.
