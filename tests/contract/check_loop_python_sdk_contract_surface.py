@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools.loop import (
+    build_default_tiered_review_policy,
     build_pyramid_review_plan,
     build_review_orchestration_bundle,
     build_review_orchestration_graph,
@@ -60,8 +61,11 @@ def main() -> int:
         "instruction_scope_refs",
         "resolved_invocation_signature",
         "build_default_review_policy(...)",
+        "build_default_tiered_review_policy(...)",
         "`Budget Saver` is the committed default preset",
         "`FAST + low` is the default reviewer path",
+        "`LOW_PLUS_MEDIUM` is the committed default reviewer tier policy",
+        "`medium` is the standard bounded escalation tier",
         "`medium` is a bounded escalation for small-scope high-risk core logic",
         "`STRICT / xhigh` is exceptional",
         "partition_review_scope_paths(...)",
@@ -106,6 +110,14 @@ def main() -> int:
         "`persist_review_reconciliation(...)`",
         "`ReviewSupersessionReconciliation.schema.json`",
         "authoritative finding ledger",
+        "`final_integrated_closeout.review_tier` MUST be `MEDIUM`",
+        "`final_integrated_closeout.agent_profile` MUST reuse the bounded medium escalation profile",
+        "`strategy_plan.bounded_medium_profile` MUST be non-empty",
+        "`final_integrated_closeout.agent_profile` MUST match `strategy_plan.bounded_medium_profile` exactly",
+        "`strategy_plan.strict_exception_profile` MUST be non-empty",
+        "Explicit exception plans MAY set `final_integrated_closeout.review_tier = STRICT`",
+        "`final_integrated_closeout.agent_profile` MUST reuse the explicit strict/xhigh exception profile",
+        "`final_integrated_closeout.agent_profile` MUST match `strategy_plan.strict_exception_profile` exactly",
         "run-key-independent artifact path",
         "final integrated closeout sink MUST remain executable after post-dedupe advisory stages",
         "In explicit no-followup runs, `finding_dedupe` is still a hard gate",
@@ -185,6 +197,7 @@ def main() -> int:
             return _fail(f"LOOP_PYTHON_SDK_CONTRACT missing `{s}`")
 
     for helper_name, helper in (
+        ("build_default_tiered_review_policy", build_default_tiered_review_policy),
         ("partition_review_scope_paths", partition_review_scope_paths),
         ("merge_partition_scope_paths", merge_partition_scope_paths),
         ("build_pyramid_review_plan", build_pyramid_review_plan),

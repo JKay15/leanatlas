@@ -120,9 +120,12 @@ On first prompt (any content, including a simple `hi`), Codex should:
        using the bounded presets:
      - `Budget Saver`
        - current default: `FAST + low`
+       - current default reviewer tier policy: `LOW_PLUS_MEDIUM`
        - use this unless there is a reason to spend more review budget
      - `Balanced`
      - `Auditable`
+     - `LOW_PLUS_MEDIUM` is the committed default reviewer tier policy
+     - `medium` is the standard bounded escalation tier
      - `medium` is a bounded escalation only for small-scope high-risk core logic
      - `STRICT / xhigh` is exceptional, not the default
      - do not imply that onboarding already auto-writes or auto-applies this preference artifact unless that wiring has landed

@@ -77,7 +77,6 @@ _STAGE_STATIC_FIELDS = {
         "selection_policy": "PARTITIONS_WITH_FINDINGS_OR_MANUAL_SELECTION",
     },
     "final_integrated_closeout": {
-        "review_tier": "STRICT",
         "closeout_eligible": True,
         "finding_policy": "TERMINAL_DECISION_AUTHORITY",
         "selection_policy": "INTEGRATED_MAIN_SCOPE",
@@ -107,6 +106,7 @@ _FINGERPRINT_STAGE_KEYS = {
     ),
     "final_integrated_closeout": (
         "stage_id",
+        "review_tier",
         "agent_profile",
         "scope_paths",
         "scope_fingerprint",
@@ -202,6 +202,8 @@ def _expected_strategy_fingerprint(plan: dict[str, Any]) -> str:
             "version": str(plan.get("version") or ""),
             "strategy_id": str(plan.get("strategy_id") or ""),
             "agent_provider_id": str(plan.get("agent_provider_id") or ""),
+            "bounded_medium_profile": str(plan.get("bounded_medium_profile") or ""),
+            "strict_exception_profile": str(plan.get("strict_exception_profile") or ""),
             "partitioning_policy": dict(plan.get("partitioning_policy") or {}),
             "full_scope_paths": [str(path) for path in plan.get("full_scope_paths") or []],
             "full_scope_fingerprint": str(plan.get("full_scope_fingerprint") or ""),
@@ -372,6 +374,13 @@ def _validate_stage_descriptor(stage_id: str, stage: dict[str, Any]) -> None:
             raise ValueError(
                 f"strategy_plan.{stage_id}.{field_name} must remain `{expected_value}` in authoritative replay plans"
             )
+    if stage_id == "final_integrated_closeout":
+        review_tier = str(stage.get("review_tier") or "")
+        if review_tier not in {"MEDIUM", "STRICT"}:
+            raise ValueError(
+                "strategy_plan.final_integrated_closeout.review_tier must be `MEDIUM` by default or "
+                "`STRICT` for an explicit exception closeout"
+            )
 
 
 def _set_stage(strategy_plan: dict[str, Any], stage: dict[str, Any]) -> None:
@@ -535,6 +544,12 @@ def _validate_strategy_plan(*, repo_root: str | Path, strategy_plan: dict[str, A
         raise ValueError(f"strategy_plan.strategy_id must be `{_PYRAMID_STRATEGY_ID}`")
     if not str(plan.get("agent_provider_id") or "").strip():
         raise ValueError("strategy_plan.agent_provider_id must be non-empty")
+    bounded_medium_profile = str(plan.get("bounded_medium_profile") or "").strip()
+    if not bounded_medium_profile:
+        raise ValueError("strategy_plan.bounded_medium_profile must be non-empty")
+    strict_exception_profile = str(plan.get("strict_exception_profile") or "").strip()
+    if not strict_exception_profile:
+        raise ValueError("strategy_plan.strict_exception_profile must be non-empty")
     full_scope_paths = _validate_distinct_scope_paths(
         repo_root=repo_root,
         field_name="strategy_plan.full_scope_paths",
@@ -829,6 +844,19 @@ def _validate_strategy_plan(*, repo_root: str | Path, strategy_plan: dict[str, A
     final_stage = _required_stage(plan, "final_integrated_closeout")
     if not str(final_stage.get("agent_profile") or "").strip():
         raise ValueError("strategy_plan.final_integrated_closeout.agent_profile must be non-empty")
+    final_review_tier = str(final_stage.get("review_tier") or "")
+    final_agent_profile = str(final_stage.get("agent_profile") or "")
+    if final_review_tier == "MEDIUM" and bounded_medium_profile and final_agent_profile != bounded_medium_profile:
+        raise ValueError(
+            "strategy_plan.final_integrated_closeout.agent_profile must match the bounded medium "
+            "escalation profile exactly when review_tier is `MEDIUM`"
+        )
+    if final_review_tier == "STRICT":
+        if final_agent_profile != strict_exception_profile:
+            raise ValueError(
+                "strategy_plan.final_integrated_closeout.agent_profile must match "
+                "strategy_plan.strict_exception_profile exactly when review_tier is `STRICT`"
+            )
     final_scope_paths = _validate_distinct_scope_paths(
         repo_root=repo_root,
         field_name="strategy_plan.final_integrated_closeout.scope_paths",
@@ -1096,7 +1124,7 @@ def _stage_manifest(*, repo_root: Path, plan: dict[str, Any]) -> list[dict[str, 
     final_manifest_entry = {
         "node_id": "final_integrated_closeout",
         "stage_id": "final_integrated_closeout",
-        "review_tier": "STRICT",
+        "review_tier": str(final_stage.get("review_tier") or ""),
         "agent_provider_id": agent_provider_id,
         "agent_profile": str(final_stage.get("agent_profile") or ""),
         "scope_paths": [str(path) for path in final_stage.get("scope_paths") or []],

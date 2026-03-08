@@ -58,6 +58,7 @@ def _strategy_fingerprint_payload(plan: dict) -> dict:
         ),
         "final_integrated_closeout": (
             "stage_id",
+            "review_tier",
             "agent_profile",
             "scope_paths",
             "scope_fingerprint",
@@ -82,6 +83,8 @@ def _strategy_fingerprint_payload(plan: dict) -> dict:
         "version": str(plan.get("version") or ""),
         "strategy_id": str(plan.get("strategy_id") or ""),
         "agent_provider_id": str(plan.get("agent_provider_id") or ""),
+        "bounded_medium_profile": str(plan.get("bounded_medium_profile") or ""),
+        "strict_exception_profile": str(plan.get("strict_exception_profile") or ""),
         "partitioning_policy": dict(plan.get("partitioning_policy") or {}),
         "full_scope_paths": [str(path) for path in plan.get("full_scope_paths") or []],
         "full_scope_fingerprint": str(plan.get("full_scope_fingerprint") or ""),
@@ -296,6 +299,10 @@ def _assert_compiled_graph_shape() -> None:
             stage_manifest["final_integrated_closeout"]["allow_terminal_predecessors"] is True,
             "final closeout manifest must record sink execution after terminal advisory stages",
         )
+        _assert(
+            stage_manifest["final_integrated_closeout"]["review_tier"] == "MEDIUM",
+            "final integrated closeout manifest must align with the default medium closeout tier",
+        )
         reconciliation = dict(bundle.get("reconciliation_contract") or {})
         _assert(
             reconciliation.get("resource_id") == "review.reconciliation_state",
@@ -336,6 +343,43 @@ def _assert_compiled_graph_shape() -> None:
                 "effective_scope_fingerprint",
             ],
             "bundle must require machine-readable finding-dedupe lineage",
+        )
+
+        strict_strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=[
+                "docs/contracts/alpha.md",
+                "docs/contracts/beta.md",
+                "tests/contract/test_alpha.py",
+                "tools/loop/review_a.py",
+                "tools/loop/review_b.py",
+                "tools/loop/review_c.py",
+            ],
+            fast_profile="gpt-5.4-low",
+            deep_profile="gpt-5.4-medium",
+            strict_profile="gpt-5.4-xhigh",
+            final_closeout_tier="STRICT",
+            max_files_per_partition=2,
+            followup_partition_ids=["part_02_tests", "part_03_tools_01"],
+        )
+        strict_bundle = build_review_orchestration_bundle(
+            repo_root=repo,
+            review_id="review_orchestration_strict_exception",
+            strategy_plan=strict_strategy,
+            max_parallel_branches=3,
+        )
+        _assert(
+            strict_strategy["strict_exception_profile"] == "gpt-5.4-xhigh",
+            "strict exception plans must persist the dedicated strict exception profile in the strategy payload",
+        )
+        strict_manifest = _stage_manifest_map(strict_bundle)
+        _assert(
+            strict_manifest["final_integrated_closeout"]["review_tier"] == "STRICT",
+            "explicit strict exception bundles must preserve a STRICT integrated closeout tier",
+        )
+        _assert(
+            strict_manifest["final_integrated_closeout"]["agent_profile"] == "gpt-5.4-xhigh",
+            "explicit strict exception bundles must preserve the strict/xhigh closeout profile",
         )
 
         manually_narrowed_strategy = build_pyramid_review_plan(
@@ -545,7 +589,7 @@ def _assert_compiled_graph_shape() -> None:
         except ValueError as exc:
             _assert(
                 "final_integrated_closeout.scope_paths must match the effective main scope exactly" in str(exc),
-                "invalid final closeout scope should explain that STRICT closeout cannot widen or shrink beyond the effective main scope",
+                "invalid final closeout scope should explain that integrated closeout cannot widen or shrink beyond the effective main scope",
             )
         else:
             raise AssertionError(
@@ -609,6 +653,106 @@ def _assert_compiled_graph_shape() -> None:
             )
         else:
             raise AssertionError("review orchestration bundle must reject blank final stage agent_profile")
+
+        invalid_final_tier_strategy = json.loads(json.dumps(strategy))
+        invalid_final_tier_strategy["stages"][2]["review_tier"] = "FAST"
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_invalid_final_tier",
+                strategy_plan=invalid_final_tier_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "final_integrated_closeout.review_tier must be `MEDIUM` by default or `STRICT`" in str(exc),
+                "authoritative bundle compilation must reject unsupported final closeout tiers",
+            )
+        else:
+            raise AssertionError("review orchestration bundle must reject unsupported final closeout tiers")
+
+        invalid_medium_low_profile_strategy = json.loads(json.dumps(strategy))
+        invalid_medium_low_profile_strategy["stages"][2]["agent_profile"] = invalid_medium_low_profile_strategy["stages"][0]["agent_profile"]
+        invalid_medium_low_profile_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(invalid_medium_low_profile_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_invalid_medium_low_profile",
+                strategy_plan=invalid_medium_low_profile_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "final_integrated_closeout.agent_profile must match the bounded medium escalation profile exactly" in str(exc),
+                "authoritative bundle compilation must reject medium closeout plans that swap in a non-medium profile",
+            )
+        else:
+            raise AssertionError("review orchestration bundle must reject medium closeout plans that bypass the bounded medium profile")
+
+        invalid_strict_medium_profile_strategy = json.loads(json.dumps(strategy))
+        invalid_strict_medium_profile_strategy["stages"][2]["review_tier"] = "STRICT"
+        invalid_strict_medium_profile_strategy["stages"][2]["agent_profile"] = invalid_strict_medium_profile_strategy["stages"][1]["agent_profile"]
+        invalid_strict_medium_profile_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(invalid_strict_medium_profile_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_invalid_strict_medium_profile",
+                strategy_plan=invalid_strict_medium_profile_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "final_integrated_closeout.agent_profile must match strategy_plan.strict_exception_profile exactly" in str(exc),
+                "authoritative bundle compilation must reject strict closeout plans that silently reuse the medium profile",
+            )
+        else:
+            raise AssertionError("review orchestration bundle must reject strict closeout plans that reuse the medium profile")
+
+        invalid_strict_low_profile_strategy = json.loads(json.dumps(strategy))
+        invalid_strict_low_profile_strategy["stages"][2]["review_tier"] = "STRICT"
+        invalid_strict_low_profile_strategy["stages"][2]["agent_profile"] = invalid_strict_low_profile_strategy["stages"][0]["agent_profile"]
+        invalid_strict_low_profile_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(invalid_strict_low_profile_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_invalid_strict_low_profile",
+                strategy_plan=invalid_strict_low_profile_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "final_integrated_closeout.agent_profile must match strategy_plan.strict_exception_profile exactly" in str(exc),
+                "authoritative bundle compilation must reject strict closeout plans that silently reuse the baseline fast profile",
+            )
+        else:
+            raise AssertionError("review orchestration bundle must reject strict closeout plans that reuse the baseline fast profile")
+
+        invalid_strict_arbitrary_profile_strategy = json.loads(json.dumps(strategy))
+        invalid_strict_arbitrary_profile_strategy["stages"][2]["review_tier"] = "STRICT"
+        invalid_strict_arbitrary_profile_strategy["stages"][2]["agent_profile"] = "gpt-5.4-high"
+        invalid_strict_arbitrary_profile_strategy["strategy_fingerprint"] = _canonical_hash(
+            _strategy_fingerprint_payload(invalid_strict_arbitrary_profile_strategy)
+        )
+        try:
+            build_review_orchestration_bundle(
+                repo_root=repo,
+                review_id="review_orchestration_invalid_strict_arbitrary_profile",
+                strategy_plan=invalid_strict_arbitrary_profile_strategy,
+                max_parallel_branches=3,
+            )
+        except ValueError as exc:
+            _assert(
+                "final_integrated_closeout.agent_profile must match strategy_plan.strict_exception_profile exactly" in str(exc),
+                "authoritative bundle compilation must reject arbitrary non-exception strict closeout profiles",
+            )
+        else:
+            raise AssertionError("review orchestration bundle must reject strict closeout plans that bypass the dedicated strict exception profile")
 
         invalid_blank_partition_fingerprint_strategy = json.loads(json.dumps(strategy))
         invalid_blank_partition_fingerprint_strategy["partitions"][0]["scope_fingerprint"] = ""
@@ -1405,7 +1549,7 @@ def _assert_compiled_graph_shape() -> None:
                 "strategy_fingerprint must match the canonical hash of the authoritative strategy-plan content that executable orchestration artifacts actually consume"
                 in str(exc)
                 or "effective_scope_source must match final_integrated_closeout.scope_source" in str(exc),
-                "authoritative bundle compilation should reject top-level provenance drift before strict closeout metadata is compiled",
+                "authoritative bundle compilation should reject top-level provenance drift before integrated closeout metadata is compiled",
             )
         else:
             raise AssertionError("review orchestration bundle must reject stale top-level provenance metadata")
@@ -1877,7 +2021,7 @@ def _assert_advisory_failures_do_not_block_authoritative_closeout() -> None:
             if node_id.startswith("deep_partition_followup__"):
                 return {"state": "TRIAGED", "reason_code": "DEEP_STAGE_FAILED"}
             if node_id == "final_integrated_closeout":
-                return {"state": "PASSED", "reason_code": "STRICT_CLOSEOUT_EXECUTED"}
+                return {"state": "PASSED", "reason_code": "INTEGRATED_CLOSEOUT_EXECUTED"}
             return {"state": "PASSED", "reason_code": f"NODE_{node_id}_PASS"}
 
         rt = LoopGraphRuntime(repo_root=repo, run_key="d" * 64)
@@ -1888,7 +2032,7 @@ def _assert_advisory_failures_do_not_block_authoritative_closeout() -> None:
             "final integrated closeout must still execute when advisory deep follow-up nodes are terminal failures",
         )
         _assert(
-            decisions["final_integrated_closeout"]["reason_code"] == "STRICT_CLOSEOUT_EXECUTED",
+            decisions["final_integrated_closeout"]["reason_code"] == "INTEGRATED_CLOSEOUT_EXECUTED",
             "final integrated closeout must preserve its own executed reason_code in the negative path",
         )
         _assert(
@@ -1926,7 +2070,7 @@ def _assert_fast_stage_failures_block_authoritative_closeout() -> None:
             if node_id == "fast_partition_scan__part_01_docs":
                 return {"state": "TRIAGED", "reason_code": "FAST_STAGE_FAILED"}
             if node_id == "final_integrated_closeout":
-                return {"state": "PASSED", "reason_code": "STRICT_CLOSEOUT_SHOULD_NOT_RUN"}
+                return {"state": "PASSED", "reason_code": "INTEGRATED_CLOSEOUT_SHOULD_NOT_RUN"}
             return {"state": "PASSED", "reason_code": f"NODE_{node_id}_PASS"}
 
         rt = LoopGraphRuntime(repo_root=repo, run_key="e" * 64)
@@ -2100,7 +2244,7 @@ def _assert_no_followup_reconciliation_failures_block_authoritative_closeout() -
             if node_id == "finding_dedupe":
                 return {"state": "TRIAGED", "reason_code": "RECONCILIATION_FAILED"}
             if node_id == "final_integrated_closeout":
-                return {"state": "PASSED", "reason_code": "STRICT_CLOSEOUT_SHOULD_NOT_RUN"}
+                return {"state": "PASSED", "reason_code": "INTEGRATED_CLOSEOUT_SHOULD_NOT_RUN"}
             return {"state": "PASSED", "reason_code": f"NODE_{node_id}_PASS"}
 
         rt = LoopGraphRuntime(repo_root=repo, run_key="f" * 64)
@@ -2148,7 +2292,7 @@ def _assert_no_followup_success_executes_authoritative_closeout() -> None:
         def _executor(node: dict) -> dict:
             node_id = str(node["node_id"])
             if node_id == "final_integrated_closeout":
-                return {"state": "PASSED", "reason_code": "STRICT_CLOSEOUT_EXECUTED"}
+                return {"state": "PASSED", "reason_code": "INTEGRATED_CLOSEOUT_EXECUTED"}
             return {"state": "PASSED", "reason_code": f"NODE_{node_id}_PASS"}
 
         rt = LoopGraphRuntime(repo_root=repo, run_key="1" * 64)
@@ -2159,7 +2303,7 @@ def _assert_no_followup_success_executes_authoritative_closeout() -> None:
             "no-followup success path must still execute reconciliation before authoritative closeout",
         )
         _assert(
-            decisions["final_integrated_closeout"]["reason_code"] == "STRICT_CLOSEOUT_EXECUTED",
+            decisions["final_integrated_closeout"]["reason_code"] == "INTEGRATED_CLOSEOUT_EXECUTED",
             "no-followup success path must execute the final integrated closeout stage",
         )
         _assert(

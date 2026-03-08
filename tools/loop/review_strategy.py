@@ -10,6 +10,14 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from .review_runner import compute_review_scope_fingerprint
+from .user_preferences import (
+    DEFAULT_ASSURANCE_PRESET,
+    DEFAULT_FAST_REVIEWER_PROFILE,
+    DEFAULT_MEDIUM_ESCALATION_POLICY,
+    DEFAULT_MEDIUM_ESCALATION_PROFILE,
+    DEFAULT_REVIEW_TIER_POLICY,
+    DEFAULT_STRICT_EXCEPTION_POLICY,
+)
 
 
 def _resolve_repo_file(repo_root: Path, raw: str | Path) -> Path:
@@ -89,6 +97,7 @@ def _strategy_fingerprint_payload(strategy: dict[str, Any]) -> dict[str, Any]:
         ),
         "final_integrated_closeout": (
             "stage_id",
+            "review_tier",
             "agent_profile",
             "scope_paths",
             "scope_fingerprint",
@@ -113,6 +122,8 @@ def _strategy_fingerprint_payload(strategy: dict[str, Any]) -> dict[str, Any]:
         "version": str(strategy.get("version") or ""),
         "strategy_id": str(strategy.get("strategy_id") or ""),
         "agent_provider_id": str(strategy.get("agent_provider_id") or ""),
+        "bounded_medium_profile": str(strategy.get("bounded_medium_profile") or ""),
+        "strict_exception_profile": str(strategy.get("strict_exception_profile") or ""),
         "partitioning_policy": dict(strategy.get("partitioning_policy") or {}),
         "full_scope_paths": [str(path) for path in strategy.get("full_scope_paths") or []],
         "full_scope_fingerprint": str(strategy.get("full_scope_fingerprint") or ""),
@@ -126,6 +137,20 @@ def _strategy_fingerprint_payload(strategy: dict[str, Any]) -> dict[str, Any]:
         "effective_scope_source": str(strategy.get("effective_scope_source") or ""),
         "stages": authoritative_stages,
         "closeout_policy": dict(strategy.get("closeout_policy") or {}),
+    }
+
+
+def build_default_tiered_review_policy() -> dict[str, Any]:
+    return {
+        "policy_id": "review.low_plus_medium_default.v1",
+        "review_tier_policy": DEFAULT_REVIEW_TIER_POLICY,
+        "baseline_assurance_preset": DEFAULT_ASSURANCE_PRESET,
+        "baseline_assurance_level": "FAST",
+        "baseline_reviewer_profile": DEFAULT_FAST_REVIEWER_PROFILE,
+        "medium_escalation_profile": DEFAULT_MEDIUM_ESCALATION_PROFILE,
+        "medium_escalation_policy": DEFAULT_MEDIUM_ESCALATION_POLICY,
+        "strict_exception_policy": DEFAULT_STRICT_EXCEPTION_POLICY,
+        "large_scope_default_strategy": "PARTITION_LOW_THEN_MEDIUM_IF_HIGH_RISK",
     }
 
 
@@ -205,12 +230,16 @@ def build_pyramid_review_plan(
     fast_profile: str,
     deep_profile: str,
     strict_profile: str,
+    final_closeout_tier: str = "MEDIUM",
     agent_provider_id: str = "codex_cli",
     max_files_per_partition: int = 4,
     followup_partition_ids: Sequence[str] | None = None,
     effective_scope_paths: Sequence[str | Path] | None = None,
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
+    final_closeout_tier = str(final_closeout_tier or "").strip().upper()
+    if final_closeout_tier not in {"MEDIUM", "STRICT"}:
+        raise ValueError("final_closeout_tier must be MEDIUM or STRICT")
     normalized_scope = _normalize_scope_paths(repo_root=repo_root, scope_paths=scope_paths)
     partitions = partition_review_scope_paths(
         repo_root=repo_root,
@@ -299,11 +328,14 @@ def build_pyramid_review_plan(
                     deep_scope_source = effective_scope_source
 
     deep_stage_scope = list(effective_scope if selected_partition_ids else [])
+    final_closeout_agent_profile = deep_profile if final_closeout_tier == "MEDIUM" else strict_profile
 
     strategy = {
         "version": "1",
         "strategy_id": "review.pyramid_partition.v1",
         "agent_provider_id": agent_provider_id,
+        "bounded_medium_profile": deep_profile,
+        "strict_exception_profile": strict_profile,
         "partitioning_policy": {
             "group_by": "TOP_LEVEL_SCOPE_PREFIX",
             "max_files_per_partition": int(max_files_per_partition),
@@ -343,8 +375,8 @@ def build_pyramid_review_plan(
             },
             {
                 "stage_id": "final_integrated_closeout",
-                "review_tier": "STRICT",
-                "agent_profile": strict_profile,
+                "review_tier": final_closeout_tier,
+                "agent_profile": final_closeout_agent_profile,
                 "scope_paths": effective_scope,
                 "scope_fingerprint": _scope_fingerprint(repo_root=repo_root, scope_paths=effective_scope),
                 "closeout_eligible": True,

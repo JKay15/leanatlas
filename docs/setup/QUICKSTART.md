@@ -129,6 +129,8 @@ After the environment is ready, the bounded LOOP preference presets use this res
 Recommended presets:
 - `Budget Saver`
   - default reviewer path: `FAST + low`
+  - default reviewer tier policy: `LOW_PLUS_MEDIUM`
+  - `medium` is the standard bounded escalation tier
   - use `medium` only for small-scope high-risk core logic
 - `Balanced`
 - `Auditable`
