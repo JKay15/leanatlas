@@ -89,6 +89,20 @@ def main() -> int:
         if snippet not in onboard_skill:
             return _fail(f".agents/skills/leanatlas-onboard/SKILL.md must surface reviewer exhaustiveness via `{snippet}`")
 
+    ingress_snippets = [
+        "repository-external paper",
+        ".cache/leanatlas/tmp/<paper_id>/source/**",
+        "Problems/<slug>/",
+    ]
+    onboarding_lower = onboarding_doc.lower()
+    onboard_skill_lower = onboard_skill.lower()
+    for snippet in ingress_snippets:
+        snippet_lower = snippet.lower()
+        if snippet_lower not in onboarding_lower:
+            return _fail(f"docs/agents/ONBOARDING.md must surface repository-external ingress guidance via `{snippet}`")
+        if snippet_lower not in onboard_skill_lower:
+            return _fail(f".agents/skills/leanatlas-onboard/SKILL.md must surface repository-external ingress guidance via `{snippet}`")
+
     agents_readme = _read("docs/agents/README.md")
     if ".agents/skills/leanatlas-dedup|promote|gc/SKILL.md" in agents_readme:
         return _fail("docs/agents/README.md must not advertise the non-resolvable combined Phase3 skill path")

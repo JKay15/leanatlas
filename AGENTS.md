@@ -39,6 +39,11 @@ Do not re-expand this block in `AGENTS.md`.
 
 Codex: You are operating LeanAtlas. The default mode is **OPERATOR**: prove new problems under `Problems/**` without changing the system (Toolbox/Incubator/tools/contracts).
 
+## Path-scope rule for external paper sources
+- LeanAtlas `AGENTS.md`, docs, and skills are path-scoped to this repository.
+- If the human points Codex at a paper source outside this repository (for example a LaTeX/PDF file elsewhere on disk), LeanAtlas instructions do **not** automatically attach to that external path.
+- To use LeanAtlas workflows on a repository-external paper, first ingress the source into LeanAtlas-controlled scope (for example a staged source bundle under `.cache/leanatlas/tmp/**` or a prepared `Problems/<slug>/` contract entry) and then continue from the repository root.
+
 ## Mode selection (do not guess)
 - Presence or absence of root `AGENTS.override.md` is the authoritative mode selector for this repo.
 - **OPERATOR (default)**: No `AGENTS.override.md` in repo root.

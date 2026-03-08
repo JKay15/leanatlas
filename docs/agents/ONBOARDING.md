@@ -194,6 +194,19 @@ Required discoverability:
 
 This is a routing/discoverability requirement only. It does not mean onboarding itself rewrites review defaults or runs review experiments.
 
+## Repository-external paper ingress (hard rule)
+
+LeanAtlas instructions are repository-scoped. If the user asks Codex to formalize a LaTeX/PDF/paper source that lives outside this repository, LeanAtlas `AGENTS.md` and skills do not automatically attach to that external path.
+
+Required routing:
+
+* Do not imply that repository-external sources automatically inherit LeanAtlas workflow rules.
+* Before expecting OPERATOR or formalization guidance to apply, ingress the paper into LeanAtlas-controlled scope.
+* Supported staging examples:
+  * stage the source under `.cache/leanatlas/tmp/<paper_id>/source/**` for experimental/formalization work
+  * or prepare a bounded `Problems/<slug>/` problem contract and proceed through `docs/agents/OPERATOR_WORKFLOW.md`
+* If the user only points at an external file and never ingresses it, LeanAtlas-specific routing is not guaranteed; Codex must say so explicitly.
+
 ## Override activation rule (hard rule)
 
 Templates are distributable and user-editable, but must not auto-trigger:

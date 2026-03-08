@@ -21,7 +21,7 @@ The goal of LeanAtlas is not to write a piece of Lean code, but to make Codex wo
 | Tasks | Which documents to read first (in order) |
 |---|---|
 | First-run onboarding (welcome + consented setup) | `docs/agents/ONBOARDING.md` → `.agents/skills/leanatlas-onboard/SKILL.md` → `INIT_FOR_CODEX.md` → `docs/setup/QUICKSTART.md` |
-| Prove a problem (natural language → SUCCESS/TRIAGED) | `docs/agents/OPERATOR_WORKFLOW.md` → `docs/contracts/WORKFLOW_CONTRACT.md` → `docs/contracts/RUNREPORT_CONTRACT.md` → `docs/contracts/RETRIEVAL_TRACE_CONTRACT.md` → `.agents/skills/leanatlas-operator-proof-loop/SKILL.md` |
+| Prove a problem (natural language → SUCCESS/TRIAGED) | `docs/agents/OPERATOR_WORKFLOW.md` → `docs/contracts/WORKFLOW_CONTRACT.md` → `docs/contracts/RUNREPORT_CONTRACT.md` → `docs/contracts/RETRIEVAL_TRACE_CONTRACT.md` → `.agents/skills/leanatlas-operator-proof-loop/SKILL.md` ; if the paper source is outside the repo, ingress it into LeanAtlas scope first |
 | Understand/use the current mainline LOOP system | `docs/agents/LOOP_MAINLINE.md` → `.agents/skills/leanatlas-loop-mainline/SKILL.md` → `.agents/skills/loop-review-reconciliation/SKILL.md` when the task is authoritative finding settlement → `docs/agents/MAINTAINER_WORKFLOW.md` or `docs/agents/OPERATOR_WORKFLOW.md` depending on mode |
 | Update/extend domain dictionary (MSC2020/LOCAL) | `docs/contracts/MCP_MSC2020_CONTRACT.md` → `docs/setup/external/msc2020.md` → `tools/lean_domain_mcp/**` → `.agents/skills/leanatlas-domain-mcp/SKILL.md` |
 | Run automations (backend Advisor) | `docs/agents/AUTOMATIONS.md` → `docs/contracts/AUTOMATION_CONTRACT.md` → `automations/registry.json` → `.agents/skills/leanatlas-automations/SKILL.md` |

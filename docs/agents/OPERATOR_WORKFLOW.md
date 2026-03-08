@@ -40,6 +40,15 @@ OPERATOR assumes a problem directory already exists:
 
 Codex in OPERATOR mode must **not** edit Spec/README. If the Spec is wrong or missing assumptions, the correct outcome is TRIAGED.
 
+### Repository-external paper ingress (hard rule)
+LeanAtlas OPERATOR workflow does not automatically attach to paper sources outside this repository. If the human points Codex at a LaTeX/PDF file elsewhere on disk, treat that as an external source, not as an in-repo LeanAtlas problem yet.
+
+Before running the OPERATOR loop:
+- either ingress the paper into LeanAtlas-controlled scope such as `.cache/leanatlas/tmp/<paper_id>/source/**`
+- or translate it into a prepared `Problems/<problem_slug>/` problem contract inside the repository
+
+If neither has happened, do not silently act as if LeanAtlas `AGENTS.md` / skills already govern that external file; say that ingress is required first.
+
 ### Goal
 Given `Problems/<problem_slug>/`:
 - either produce **SUCCESS**: `Proof.lean` (and any required `Cache/**`) compiles, with no `sorry`
