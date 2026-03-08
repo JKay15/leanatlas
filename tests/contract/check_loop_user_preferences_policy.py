@@ -36,6 +36,8 @@ def main() -> int:
             DEFAULT_FAST_REVIEWER_PROFILE,
             DEFAULT_MEDIUM_ESCALATION_POLICY,
             DEFAULT_PREFERENCE_ARTIFACT_REL,
+            DEFAULT_REVIEW_TIER_POLICIES,
+            DEFAULT_REVIEW_TIER_POLICY,
             DEFAULT_STRICT_EXCEPTION_POLICY,
             build_default_review_policy,
             build_preference_record,
@@ -55,6 +57,10 @@ def main() -> int:
         return _fail("unexpected FAST reviewer profiles")
     if DEFAULT_FAST_REVIEWER_PROFILE != "low":
         return _fail("default FAST reviewer profile must be low")
+    if DEFAULT_REVIEW_TIER_POLICIES != ("LOW_ONLY", "LOW_PLUS_MEDIUM"):
+        return _fail("unexpected review tier policy enum")
+    if DEFAULT_REVIEW_TIER_POLICY != "LOW_PLUS_MEDIUM":
+        return _fail("default review tier policy must be LOW_PLUS_MEDIUM")
     if DEFAULT_AGENT_PROVIDER_ID != "codex_cli":
         return _fail("default provider should stay codex_cli")
     if DEFAULT_PREFERENCE_ARTIFACT_REL != ".cache/leanatlas/onboarding/loop_preferences.json":
@@ -71,6 +77,8 @@ def main() -> int:
         return _fail("default review policy must recommend FAST assurance")
     if default_policy["fast_reviewer_profile"] != "low":
         return _fail("default review policy must recommend low FAST reviewer profile")
+    if default_policy["review_tier_policy"] != "LOW_PLUS_MEDIUM":
+        return _fail("default review policy must expose LOW_PLUS_MEDIUM as the committed tier policy")
     if default_policy["medium_escalation_profile"] != "medium":
         return _fail("default review policy must expose medium as the bounded escalation profile")
 
@@ -87,6 +95,8 @@ def main() -> int:
             "post-onboarding",
             "Budget Saver",
             "FAST + low",
+            "LOW_PLUS_MEDIUM",
+            "default reviewer tier policy",
             "small-scope high-risk core logic",
             "STRICT / xhigh",
             "exception",
@@ -97,6 +107,7 @@ def main() -> int:
             ".cache/leanatlas/onboarding/loop_preferences.json",
             "Budget Saver",
             "FAST + low",
+            "LOW_PLUS_MEDIUM",
             "medium",
             "STRICT / xhigh",
             "Balanced",
@@ -106,6 +117,8 @@ def main() -> int:
             "User preference presets",
             "Budget Saver",
             "FAST + low",
+            "LOW_PLUS_MEDIUM",
+            "default reviewer tier policy",
             "small-scope high-risk core logic",
             "STRICT / xhigh",
             "Balanced",
@@ -129,10 +142,14 @@ def main() -> int:
         return _fail("onboarding skill must treat LOOP defaults as post-onboarding")
     if "FAST + low" not in onboard_skill:
         return _fail("onboarding skill must identify FAST + low as the default reviewer path")
+    if "LOW_PLUS_MEDIUM" not in onboard_skill:
+        return _fail("onboarding skill must name the committed default reviewer tier policy")
     if "STRICT / xhigh" not in onboard_skill:
         return _fail("onboarding skill must mark STRICT / xhigh as exceptional")
     if "Budget Saver" not in mainline_skill or "FAST + low" not in mainline_skill:
-        return _fail("mainline skill must route users through the FAST + low default")
+        return _fail("mainline skill must route users through the FAST + low baseline")
+    if "LOW_PLUS_MEDIUM" not in mainline_skill:
+        return _fail("mainline skill must name the committed default reviewer tier policy")
     if "STRICT / xhigh" not in mainline_skill:
         return _fail("mainline skill must mark STRICT / xhigh as exceptional")
     if "Balanced" not in mainline_skill or "Auditable" not in mainline_skill:
@@ -141,6 +158,8 @@ def main() -> int:
         return _fail("review acceleration skill must explain large-scope pyramid preference")
     if "FAST + low" not in review_skill:
         return _fail("review acceleration skill must state the default FAST + low reviewer baseline")
+    if "LOW_PLUS_MEDIUM" not in review_skill:
+        return _fail("review acceleration skill must expose the committed default reviewer tier policy")
     if "medium" not in review_skill or "small-scope high-risk core logic" not in review_skill:
         return _fail("review acceleration skill must bound medium escalation to small high-risk scopes")
     if "STRICT / xhigh" not in review_skill:
@@ -159,6 +178,8 @@ def main() -> int:
             return _fail("stored preference record must default to Budget Saver")
         if loaded_record["defaults"]["fast_reviewer_profile"] != "low":
             return _fail("stored preference record must default to low FAST reviewer profile")
+        if loaded_record["defaults"]["review_tier_policy"] != "LOW_PLUS_MEDIUM":
+            return _fail("stored preference record must default to LOW_PLUS_MEDIUM tier policy")
 
         resolved = resolve_effective_preferences(
             repo_root=repo_root,
@@ -169,13 +190,19 @@ def main() -> int:
             return _fail("override did not supersede stored assurance preset")
         if effective["fast_reviewer_profile"] != "medium":
             return _fail("override did not supersede stored reviewer profile")
+        if effective["review_tier_policy"] != "LOW_PLUS_MEDIUM":
+            return _fail("review tier policy should remain LOW_PLUS_MEDIUM unless explicitly overridden")
 
         reloaded = json.loads(artifact_path.read_text(encoding="utf-8"))
         if reloaded["defaults"]["assurance_preset"] != "Budget Saver":
             return _fail("per-run overrides must not mutate the stored preference artifact")
+        if reloaded["defaults"]["review_tier_policy"] != "LOW_PLUS_MEDIUM":
+            return _fail("per-run overrides must not mutate the stored tier policy")
 
         if resolved["effective_runtime"]["assurance_level"] != "LIGHT":
             return _fail("Balanced override must map to LIGHT assurance_level")
+        if resolved["effective_runtime"]["review_tier_policy"] != "LOW_PLUS_MEDIUM":
+            return _fail("effective runtime must expose the committed LOW_PLUS_MEDIUM tier policy")
         if not resolved["stored_defaults"]["allow_pyramid_review_for_large_scope"]:
             return _fail("stored preference should preserve the pyramid-review toggle")
 

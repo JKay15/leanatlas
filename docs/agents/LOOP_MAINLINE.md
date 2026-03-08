@@ -44,7 +44,7 @@ Use this page when you need to answer any of these questions:
 | Review strategy helpers (partitioning / narrowing / pyramid planning) | Implemented | `tools/loop/review_strategy.py`, `.agents/skills/leanatlas-loop-review-acceleration/SKILL.md` | Deterministic planning aids are committed and tested. |
 | Review orchestration graph/bundle compilation | Implemented | `tools/loop/review_orchestration.py`, `docs/agents/execplans/20260307_review_orchestration_automation_v0.md` | The compiler/bundle layer exists in mainline. |
 | User preference presets | Partial | `tools/loop/user_preferences.py`, `docs/agents/ONBOARDING.md`, `docs/setup/QUICKSTART.md` | The preset surface and local artifact format are committed, but onboarding/runtime do not yet auto-stage or consume the defaults by themselves. |
-| Default automated review execution | Partial | `tools/loop/review_runner.py`, `tools/loop/review_orchestration.py` | Single-review execution is implemented; default staged `FAST -> DEEP -> STRICT` execution is not yet the automatic path. |
+| Default automated review execution | Partial | `tools/loop/review_runner.py`, `tools/loop/review_orchestration.py` | Single-review execution is implemented; default staged execution is not yet the automatic path. Helper-authored integrated closeout defaults to `MEDIUM`, while explicit audit-heavy exception plans may still use `STRICT / xhigh`. |
 | LOOP core vs LeanAtlas adapter layering | Implemented | `docs/contracts/LOOP_RUNTIME_CONTRACT.md`, `docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md` | Core is role-neutral; host/workflow semantics stay in adapters. |
 | Batch supervisor / autopilot | Planned | `docs/agents/execplans/20260307_batch_supervisor_autopilot_and_human_ingress_v0.md` | Parent-loop automation across child waves is not landed yet. |
 | Independent LOOP Python library extraction / packaging | Planned | `docs/agents/execplans/20260308_loop_python_library_decoupling_packaging_v0.md` | Current mainline documents core-vs-adapter boundaries, but cross-project packaging and standalone usage docs are still follow-on work. |
@@ -92,6 +92,7 @@ The committed local artifact path for post-onboarding LOOP defaults is:
 Supported presets:
 - `Budget Saver`
   - current default reviewer path: `FAST + low`
+  - current default reviewer tier policy: `LOW_PLUS_MEDIUM`
   - keep this unless the task justifies more review cost
 - `Balanced`
 - `Auditable`
@@ -101,6 +102,8 @@ These presets are post-onboarding defaults, not bootstrap blockers. Today the co
 Current default policy:
 - `Budget Saver` is the committed default preset.
 - `FAST + low` is the default reviewer path.
+- `LOW_PLUS_MEDIUM` is the committed default reviewer tier policy.
+- `medium` is the standard bounded escalation tier.
 - `medium` is a bounded escalation only for small-scope high-risk core logic.
 - `STRICT / xhigh` remains available for exceptional audit-heavy closeout, but it is not the default path.
 

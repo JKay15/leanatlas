@@ -132,6 +132,10 @@ Hard rule:
 - bounded failed attempts may terminate as `TRIAGED_TOOLING`, but only with append-only attempt evidence showing why no valid `response_ref` was accepted.
 
 Review acceleration strategies (allowed, but constrained):
+- `LOW_PLUS_MEDIUM` is the committed default reviewer tier policy.
+- `FAST + low` remains the baseline reviewer path.
+- `medium` is the standard bounded escalation tier.
+- `STRICT / xhigh` remains exceptional.
 - staged narrowing is allowed: intermediate review rounds may partition a large scope into smaller auditable review partitions to reduce latency and context burden.
 - pyramid reviewer is allowed: faster/lower-cost reviewer tiers may run before slower/higher-thinking tiers.
 - low-tier findings are provisional and MUST be treated as `ADVISORY_CONFIRM_REQUIRED` until confirmed by deterministic verification or a later higher-tier review.
@@ -166,7 +170,9 @@ Review acceleration strategies (allowed, but constrained):
 - Preferred binding order:
   - if the upstream review emitted a stable `finding_id`, `finding_key` MUST equal that `finding_id`
   - otherwise `finding_key` MUST equal the stable advisory `finding_fingerprint`
-- that reconciliation record is required before STRICT closeout may claim that advisory findings were narrowed away or merged.
+- that reconciliation record is required before the authoritative integrated closeout may claim that advisory findings were narrowed away or merged.
+- in helper-authored default staged-review strategies, the final integrated closeout tier is `MEDIUM`.
+- explicit exception review plans may still select a `STRICT / xhigh` final integrated closeout when the caller opts into an audit-heavy exception path.
 - staged narrowing is valuable even without real runtime concurrency; it must not be described as proof that LOOP runtime already executes review nodes concurrently.
 - review orchestration graphs may execute fast partition scans in parallel when runtime concurrency is available, but that does not change closeout authority.
 - deep follow-up rounds may be materialized as nested child-review nodes to preserve lineage between narrowed follow-up review and its parent dedupe/reconciliation stage.

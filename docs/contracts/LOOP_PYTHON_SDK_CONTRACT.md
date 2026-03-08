@@ -31,6 +31,7 @@ Post-onboarding default preference requirement:
 - bounded user-facing LOOP defaults MAY be persisted at `.cache/leanatlas/onboarding/loop_preferences.json`
 - committed helper surface for those defaults:
   - `build_default_review_policy(...)`
+  - `build_default_tiered_review_policy(...)`
   - `build_preference_record(...)`
   - `default_preference_artifact_path(...)`
   - `load_preference_record(...)`
@@ -40,8 +41,13 @@ Post-onboarding default preference requirement:
   - `Budget Saver`
   - `Balanced`
   - `Auditable`
+- supported reviewer tier policies:
+  - `LOW_ONLY`
+  - `LOW_PLUS_MEDIUM`
 - `Budget Saver` is the committed default preset for the current mainline path.
 - `FAST + low` is the default reviewer path for the current mainline path.
+- `LOW_PLUS_MEDIUM` is the committed default reviewer tier policy for the current mainline path.
+- `medium` is the standard bounded escalation tier.
 - `medium` is a bounded escalation for small-scope high-risk core logic.
 - `STRICT / xhigh` is exceptional and must not be treated as the normal default path.
 - preset storage is advisory and post-onboarding only; later runs may override the stored defaults without mutating the persisted preference artifact
@@ -130,7 +136,7 @@ Maintainer orchestration requirement:
 - Authoritative replay/bundle compilation must reject stale `strategy_fingerprint` values before graph/bundle materialization.
 - For the compiled pyramid-review helper surface, `strategy_plan.strategy_id` MUST remain `review.pyramid_partition.v1`; authoritative bundle compilation must reject replayed or hand-authored plans that relabel the strategy while still using the same compiler.
 - In the compiled orchestration graph, the deep follow-up stage is materialized via nested child-review nodes and the final integrated closeout sink is the only closeout-authoritative stage.
-- That final integrated closeout sink MUST remain executable after post-dedupe advisory stages (for example deep follow-up nodes) reach terminal non-pass states; later STRICT closeout auditing must not be skipped merely because a post-dedupe advisory stage failed.
+- That final integrated closeout sink MUST remain executable after post-dedupe advisory stages (for example deep follow-up nodes) reach terminal non-pass states; later integrated closeout auditing must not be skipped merely because a post-dedupe advisory stage failed.
 - In explicit no-followup runs, `finding_dedupe` is still a hard gate; authoritative closeout must remain blocked when reconciliation itself ends `FAILED` or `TRIAGED`.
 - Fast partition scan nodes still gate `finding_dedupe`; a terminal non-pass fast scan blocks reconciliation and therefore blocks authoritative closeout until that fast-stage failure is repaired or rerun.
 - `build_pyramid_review_plan(...)` SHOULD accept a narrowed follow-up partition set and/or merged `effective_scope_paths` so later stages can reflect real staged narrowing instead of forcing a full-scope re-review.
@@ -138,11 +144,11 @@ Maintainer orchestration requirement:
 - `strategy_plan.full_scope_paths` MUST preserve canonical repo-relative file order; replayed or hand-authored plans must not fork `strategy_fingerprint` or intake-stage provenance by permuting an otherwise identical full-scope file set.
 - `strategy_plan.partitions` itself MUST preserve the canonical helper-derived partition order; replayed or hand-authored plans must not permute the partition list and then rewrite fast/deep/effective/final lineage to match.
 - `strategy_plan.partitioning_policy` MUST preserve the helper-authored partitioning policy shape exactly. In authoritative replay plans, `group_by` MUST remain `TOP_LEVEL_SCOPE_PREFIX` and `max_files_per_partition` MUST remain the helper-authored integer chunk size; string/bool lookalikes such as `"2"` or `true` are not authoritative replays.
-- `strategy_plan.partitions.*.scope_paths` MUST preserve canonical repo-relative file order within each partition; replayed or hand-authored no-followup plans must not reverse files inside a partition and then mirror that reordered lineage into `finding_dedupe` / STRICT closeout scope.
+- `strategy_plan.partitions.*.scope_paths` MUST preserve canonical repo-relative file order within each partition; replayed or hand-authored no-followup plans must not reverse files inside a partition and then mirror that reordered lineage into `finding_dedupe` / final integrated closeout scope.
 - If callers replay or hand-author a narrower fast stage, `deep_partition_followup.partition_ids` MUST stay within the frozen `fast_partition_scan.partition_ids` subset; deep follow-up nodes must not be materialized for partitions that were never scanned in the current fast stage.
 - `strategy_plan.partitions` entries MUST carry unique `partition_id` values and non-empty `scope_paths`; authoritative bundle compilation must reject duplicate routing ids or empty fast-stage reviewer scopes before graph/bundle materialization.
 - `strategy_plan.stages` MUST contain exactly one each of `fast_partition_scan`, `deep_partition_followup`, and `final_integrated_closeout`; authoritative bundle compilation must reject duplicate or unknown `stage_id` entries that the compiler would otherwise ignore.
-- `strategy_plan.stages` MUST preserve the canonical helper-authored stage order exactly; replayed or hand-authored plans must not permute otherwise equivalent stage descriptors and fork `strategy_fingerprint`/STRICT closeout provenance.
+- `strategy_plan.stages` MUST preserve the canonical helper-authored stage order exactly; replayed or hand-authored plans must not permute otherwise equivalent stage descriptors and fork `strategy_fingerprint`/integrated closeout provenance.
 - Each authoritative stage descriptor MUST preserve the helper-authored stage descriptor shape exactly; replayed or hand-authored plans must not change ignored static policy metadata such as `review_tier`, `finding_policy`, `selection_policy`, or `closeout_eligible` and still expect bundle compilation to accept them.
 - `strategy_plan.partitions.*.scope_paths` MUST form an exact disjoint cover of `full_scope_paths`; authoritative bundle compilation must reject overlapping partition files, repeated files inside a partition, or omitted full-scope files that would leave part of the frozen fast-stage lineage unreviewed.
 - When a narrowed follow-up selection is known, the deep follow-up stage and the final integrated closeout stage MUST reflect that narrowed effective scope deterministically.
@@ -154,16 +160,16 @@ Maintainer orchestration requirement:
 - When `deep_partition_followup.partition_ids` is non-empty, both `strategy_plan.selected_partition_ids` and `deep_partition_followup.partition_ids` MUST preserve the frozen `fast_partition_scan.partition_ids` order exactly; replayed or hand-authored plans must not reorder the selected partitions, even if the narrowed deep/effective/final `scope_paths` are reordered consistently to match.
 - When `deep_partition_followup.partition_ids` is non-empty, `deep_partition_followup.scope_paths` MUST stay within the selected partition lineage and MUST include at least one file from every selected partition; bundle compilation MUST reject silent widening or silent partition drop.
 - When `deep_partition_followup.partition_ids` is non-empty, `deep_partition_followup.scope_paths` MUST also match the canonical selected partition lineage exactly; replayed or hand-authored plans must not reorder the narrowed deep/effective/final scope together away from the frozen partition-derived order.
-- When `deep_partition_followup.partition_ids` is non-empty, `deep_partition_followup.scope_paths`, `effective_scope_paths`, and `final_integrated_closeout.scope_paths` MUST match exactly; replayed or hand-authored strategies MUST NOT widen the authoritative STRICT closeout back to the full selected-partition union after the deep stage has narrowed scope.
+- When `deep_partition_followup.partition_ids` is non-empty, `deep_partition_followup.scope_paths`, `effective_scope_paths`, and `final_integrated_closeout.scope_paths` MUST match exactly; replayed or hand-authored strategies MUST NOT widen the authoritative integrated closeout back to the full selected-partition union after the deep stage has narrowed scope.
 - For every authoritative "`scope_paths` must match exactly" rule above, exactness is sequence-sensitive, not set-sensitive; replayed or hand-authored plans that reorder the same file set MUST be rejected because they fork deterministic lineage and `strategy_fingerprint`/bundle provenance.
-- `strategy_plan.effective_scope_source` MUST match `final_integrated_closeout.scope_source`; replayed or hand-authored plans must not be able to forge a different top-level narrowing provenance string than the one the authoritative STRICT stage actually uses.
+- `strategy_plan.effective_scope_source` MUST match `final_integrated_closeout.scope_source`; replayed or hand-authored plans must not be able to forge a different top-level narrowing provenance string than the one the authoritative integrated closeout stage actually uses.
 - `strategy_plan.effective_scope_source` / `final_integrated_closeout.scope_source` MUST use a canonical helper-authored provenance label:
   - `MERGED_SELECTED_PARTITIONS`
   - `FULL_SCOPE_AFTER_EMPTY_FOLLOWUP`
   - `INFERRED_FROM_EFFECTIVE_SCOPE`
   - `MANUAL_EFFECTIVE_SCOPE_OVERRIDE`
 - `FULL_SCOPE_AFTER_EMPTY_FOLLOWUP` is only valid when `deep_partition_followup.partition_ids=[]`; replayed or hand-authored plans must not claim the empty-followup full-scope closeout label for any narrowed deep-stage lineage.
-- When `deep_partition_followup.partition_ids` is non-empty, `final_integrated_closeout.scope_paths` MUST also stay within that same selected partition lineage; authoritative STRICT closeout must not widen beyond what the staged narrowing actually selected.
+- When `deep_partition_followup.partition_ids` is non-empty, `final_integrated_closeout.scope_paths` MUST also stay within that same selected partition lineage; authoritative integrated closeout must not widen beyond what the staged narrowing actually selected.
 - `effective_scope_paths`, `deep_partition_followup.scope_paths`, and `final_integrated_closeout.scope_paths` MUST NOT repeat the same repo file path more than once; authoritative lineage metadata must stay multiplicity-stable with the repository-byte fingerprints later consumed by review runners.
 - If `effective_scope_paths` narrows inside a selected multi-file partition, the compiled deep follow-up node manifest MUST preserve that narrowed file subset in `scope_paths` while also retaining the original partition scope in dedicated audit fields:
   - `partition_scope_paths`
@@ -179,11 +185,18 @@ Maintainer orchestration requirement:
 - `build_pyramid_review_plan(..., followup_partition_ids=[])` MUST be valid and represent the clean-fast-scan/no-escalation path explicitly; callers must not be forced to omit the parameter to encode "nothing to escalate".
 - `build_pyramid_review_plan(..., followup_partition_ids=[], effective_scope_paths=[])` MUST also be valid and represent the same explicit no-escalation path; the empty `effective_scope_paths=[]` input is shorthand for "keep the canonical full fast-scan scope" rather than a literal empty closeout scope.
 - In that explicit no-escalation path, the deep follow-up stage may have empty `partition_ids` / `scope_paths`, but the final integrated closeout stage MUST remain present and must stay integrated over the canonical effective main scope.
-- When `deep_partition_followup.partition_ids=[]`, `effective_scope_paths` and `final_integrated_closeout.scope_paths` MUST match the frozen `fast_partition_scan.partition_ids` lineage exactly. In helper-authored plans, an input `effective_scope_paths=[]` is shorthand for that canonical full-scope closeout rather than a literal empty scope. Replayed or hand-authored no-followup bundles MUST reject silent narrowing, silent widening, or scope replacement in the authoritative STRICT closeout stage.
+- When `deep_partition_followup.partition_ids=[]`, `effective_scope_paths` and `final_integrated_closeout.scope_paths` MUST match the frozen `fast_partition_scan.partition_ids` lineage exactly. In helper-authored plans, an input `effective_scope_paths=[]` is shorthand for that canonical full-scope closeout rather than a literal empty scope. Replayed or hand-authored no-followup bundles MUST reject silent narrowing, silent widening, or scope replacement in the authoritative integrated closeout stage.
 - Regardless of whether follow-up partitions are empty, `final_integrated_closeout.scope_paths` MUST match `effective_scope_paths` exactly and `final_integrated_closeout.scope_fingerprint` MUST match `effective_scope_fingerprint`; authoritative closeout must reject empty or widened scopes rather than compiling them.
 - `strategy_plan.closeout_policy` MUST preserve the helper-authored closeout policy shape exactly; replayed or hand-authored plans must not inject extra policy keys or fork authoritative closeout provenance through ignored closeout metadata.
 - `strategy_plan.closeout_policy.intermediate_rounds_are_advisory` and `strategy_plan.closeout_policy.requires_integrated_scope_closeout` MUST remain `true` in authoritative replay plans; bundle compilation must reject contradictory policy flags even when the compiled graph/bundle payload would otherwise stay unchanged.
-- `build_review_orchestration_bundle(...)` MUST also return a machine-readable reconciliation contract for the `finding_dedupe` stage so later runners/auditors know which lineage record is required before STRICT closeout.
+- `build_review_orchestration_bundle(...)` MUST also return a machine-readable reconciliation contract for the `finding_dedupe` stage so later runners/auditors know which lineage record is required before authoritative integrated closeout.
+- In helper-authored default staged-review strategies, `final_integrated_closeout.review_tier` MUST be `MEDIUM` and `final_integrated_closeout.agent_profile` MUST reuse the bounded medium escalation profile.
+- `strategy_plan.bounded_medium_profile` MUST be non-empty and MUST be included in the authoritative `strategy_fingerprint` top-level provenance surface.
+- In authoritative replay, `final_integrated_closeout.agent_profile` MUST match `strategy_plan.bounded_medium_profile` exactly when `final_integrated_closeout.review_tier = MEDIUM`.
+- `strategy_plan.strict_exception_profile` MUST be non-empty and MUST be included in the authoritative `strategy_fingerprint` top-level provenance surface.
+- Explicit exception plans MAY set `final_integrated_closeout.review_tier = STRICT`; when they do, `final_integrated_closeout.agent_profile` MUST reuse the explicit strict/xhigh exception profile instead of silently downgrading to medium.
+- In authoritative replay, `final_integrated_closeout.agent_profile` MUST match `strategy_plan.strict_exception_profile` exactly when `final_integrated_closeout.review_tier = STRICT`.
+- `STRICT / xhigh` remains an explicit exception path rather than the default integrated closeout tier.
 - That reconciliation contract MUST include a stable `resource_id` locator for the reconciliation state, so later runners/auditors know where `finding_dedupe` lineage records live.
 - That reconciliation contract MUST also pin:
   - `artifact_schema_ref = docs/schemas/ReviewSupersessionReconciliation.schema.json`

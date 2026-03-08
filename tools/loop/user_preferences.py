@@ -12,6 +12,8 @@ DEFAULT_ASSURANCE_PRESETS = ("Budget Saver", "Balanced", "Auditable")
 DEFAULT_ASSURANCE_PRESET = "Budget Saver"
 DEFAULT_FAST_REVIEWER_PROFILES = ("low", "medium")
 DEFAULT_FAST_REVIEWER_PROFILE = "low"
+DEFAULT_REVIEW_TIER_POLICIES = ("LOW_ONLY", "LOW_PLUS_MEDIUM")
+DEFAULT_REVIEW_TIER_POLICY = "LOW_PLUS_MEDIUM"
 DEFAULT_AGENT_PROVIDER_ID = "codex_cli"
 DEFAULT_PREFERENCE_ARTIFACT_REL = ".cache/leanatlas/onboarding/loop_preferences.json"
 PREFERENCE_SCHEMA = "leanatlas.loop_user_preferences"
@@ -49,6 +51,13 @@ def _normalize_fast_profile(value: Any) -> str:
     return text
 
 
+def _normalize_review_tier_policy(value: Any) -> str:
+    text = " ".join(str(value).strip().split())
+    if text not in DEFAULT_REVIEW_TIER_POLICIES:
+        raise ValueError(f"unsupported review tier policy: {value!r}")
+    return text
+
+
 def _normalize_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
@@ -75,6 +84,7 @@ def build_default_review_policy() -> dict[str, Any]:
         "assurance_level": _ASSURANCE_LEVEL_BY_PRESET[DEFAULT_ASSURANCE_PRESET],
         "agent_provider_id": DEFAULT_AGENT_PROVIDER_ID,
         "fast_reviewer_profile": DEFAULT_FAST_REVIEWER_PROFILE,
+        "review_tier_policy": DEFAULT_REVIEW_TIER_POLICY,
         "allow_pyramid_review_for_large_scope": DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE,
         "medium_escalation_profile": DEFAULT_MEDIUM_ESCALATION_PROFILE,
         "medium_escalation_policy": DEFAULT_MEDIUM_ESCALATION_POLICY,
@@ -87,12 +97,14 @@ def build_preference_record(
     assurance_preset: str = DEFAULT_ASSURANCE_PRESET,
     agent_provider_id: str = DEFAULT_AGENT_PROVIDER_ID,
     fast_reviewer_profile: str = DEFAULT_FAST_REVIEWER_PROFILE,
+    review_tier_policy: str = DEFAULT_REVIEW_TIER_POLICY,
     allow_pyramid_review_for_large_scope: bool = DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE,
 ) -> dict[str, Any]:
     defaults = {
         "assurance_preset": _normalize_preset(assurance_preset),
         "agent_provider_id": _normalize_provider(agent_provider_id),
         "fast_reviewer_profile": _normalize_fast_profile(fast_reviewer_profile),
+        "review_tier_policy": _normalize_review_tier_policy(review_tier_policy),
         "allow_pyramid_review_for_large_scope": _normalize_bool(allow_pyramid_review_for_large_scope),
     }
     return {
@@ -112,6 +124,7 @@ def load_preference_record(*, repo_root: Path) -> dict[str, Any]:
         assurance_preset=defaults.get("assurance_preset", DEFAULT_ASSURANCE_PRESET),
         agent_provider_id=defaults.get("agent_provider_id", DEFAULT_AGENT_PROVIDER_ID),
         fast_reviewer_profile=defaults.get("fast_reviewer_profile", DEFAULT_FAST_REVIEWER_PROFILE),
+        review_tier_policy=defaults.get("review_tier_policy", DEFAULT_REVIEW_TIER_POLICY),
         allow_pyramid_review_for_large_scope=defaults.get(
             "allow_pyramid_review_for_large_scope",
             DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE,
@@ -129,6 +142,10 @@ def write_preference_record(*, repo_root: Path, record: dict[str, Any]) -> Path:
         fast_reviewer_profile=record.get("defaults", {}).get(
             "fast_reviewer_profile",
             record.get("fast_reviewer_profile", DEFAULT_FAST_REVIEWER_PROFILE),
+        ),
+        review_tier_policy=record.get("defaults", {}).get(
+            "review_tier_policy",
+            record.get("review_tier_policy", DEFAULT_REVIEW_TIER_POLICY),
         ),
         allow_pyramid_review_for_large_scope=record.get("defaults", {}).get(
             "allow_pyramid_review_for_large_scope",
@@ -156,6 +173,8 @@ def resolve_effective_preferences(*, repo_root: Path, overrides: dict[str, Any] 
             effective_defaults[key] = _normalize_provider(value)
         elif key == "fast_reviewer_profile":
             effective_defaults[key] = _normalize_fast_profile(value)
+        elif key == "review_tier_policy":
+            effective_defaults[key] = _normalize_review_tier_policy(value)
         elif key == "allow_pyramid_review_for_large_scope":
             effective_defaults[key] = _normalize_bool(value)
         else:
@@ -165,6 +184,7 @@ def resolve_effective_preferences(*, repo_root: Path, overrides: dict[str, Any] 
         "assurance_level": _ASSURANCE_LEVEL_BY_PRESET[effective_defaults["assurance_preset"]],
         "agent_provider_id": effective_defaults["agent_provider_id"],
         "fast_reviewer_profile": effective_defaults["fast_reviewer_profile"],
+        "review_tier_policy": effective_defaults["review_tier_policy"],
         "allow_pyramid_review_for_large_scope": effective_defaults["allow_pyramid_review_for_large_scope"],
     }
     return {

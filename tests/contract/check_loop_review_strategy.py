@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools.loop import (
+    build_default_tiered_review_policy,
     build_pyramid_review_plan,
     merge_partition_scope_paths,
     partition_review_scope_paths,
@@ -29,6 +30,24 @@ def _write(path: Path) -> None:
 
 
 def main() -> int:
+    default_tiered = build_default_tiered_review_policy()
+    if default_tiered.get("policy_id") != "review.low_plus_medium_default.v1":
+        return _fail("default tiered review policy must expose the canonical policy_id")
+    if default_tiered.get("review_tier_policy") != "LOW_PLUS_MEDIUM":
+        return _fail("default tiered review policy must expose LOW_PLUS_MEDIUM")
+    if default_tiered.get("baseline_assurance_level") != "FAST":
+        return _fail("default tiered review policy must keep FAST as the baseline assurance level")
+    if default_tiered.get("baseline_reviewer_profile") != "low":
+        return _fail("default tiered review policy must keep low as the baseline reviewer profile")
+    if default_tiered.get("medium_escalation_profile") != "medium":
+        return _fail("default tiered review policy must expose medium as the standard escalation tier")
+    if default_tiered.get("medium_escalation_policy") != "SMALL_SCOPE_HIGH_RISK_CORE_LOGIC_ONLY":
+        return _fail("default tiered review policy must preserve the bounded medium escalation rule")
+    if default_tiered.get("strict_exception_policy") != "EXPLICIT_EXCEPTION_ONLY":
+        return _fail("default tiered review policy must preserve the strict exception rule")
+    if default_tiered.get("large_scope_default_strategy") != "PARTITION_LOW_THEN_MEDIUM_IF_HIGH_RISK":
+        return _fail("default tiered review policy must describe the committed large-scope default strategy")
+
     with tempfile.TemporaryDirectory(prefix="loop_review_strategy_") as td:
         repo = Path(td)
         for rel in (
@@ -86,6 +105,10 @@ def main() -> int:
             return _fail("plan version must be 1")
         if plan.get("strategy_id") != "review.pyramid_partition.v1":
             return _fail("unexpected strategy_id")
+        if plan.get("bounded_medium_profile") != "gpt-5.4-medium":
+            return _fail("strategy plan must expose the bounded medium escalation profile")
+        if plan.get("strict_exception_profile") != "gpt-5.4-xhigh":
+            return _fail("strategy plan must expose the dedicated strict exception profile")
         if plan.get("partitioning_policy") != {
             "group_by": "TOP_LEVEL_SCOPE_PREFIX",
             "max_files_per_partition": 2,
@@ -119,8 +142,10 @@ def main() -> int:
             return _fail("final integrated stage must be closeout-eligible")
         if stages[2].get("scope_paths") != expected_effective_scope:
             return _fail("final integrated stage must review the merged effective scope for the selected partitions")
-        if stages[2].get("review_tier") != "STRICT":
-            return _fail("final integrated stage must be STRICT")
+        if stages[2].get("review_tier") != "MEDIUM":
+            return _fail("final integrated stage must default to MEDIUM")
+        if stages[2].get("agent_profile") != "gpt-5.4-medium":
+            return _fail("final integrated stage must default to the deep/medium reviewer profile")
         if stages[2].get("scope_source") != "MERGED_SELECTED_PARTITIONS":
             return _fail("final integrated stage must record that it comes from merged selected partitions")
         if plan.get("effective_scope_paths") != expected_effective_scope:
@@ -225,6 +250,26 @@ def main() -> int:
             return _fail("empty effective_scope_paths with empty followup must still keep deep followup empty")
         if clean_fast_scan_with_empty_scope.get("effective_scope_paths") != sorted(scope):
             return _fail("empty effective_scope_paths with empty followup must keep integrated closeout on the full scope")
+
+        explicit_strict_closeout_plan = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=scope,
+            fast_profile="gpt-5.4-low",
+            deep_profile="gpt-5.4-medium",
+            strict_profile="gpt-5.4-xhigh",
+            final_closeout_tier="STRICT",
+            max_files_per_partition=2,
+            followup_partition_ids=[partitions[1]["partition_id"], partitions[2]["partition_id"]],
+        )
+        strict_stages = explicit_strict_closeout_plan.get("stages") or []
+        if strict_stages[2].get("review_tier") != "STRICT":
+            return _fail("explicit strict exception plans must preserve a STRICT integrated closeout tier")
+        if strict_stages[2].get("agent_profile") != "gpt-5.4-xhigh":
+            return _fail("explicit strict exception plans must preserve the strict/xhigh closeout profile")
+        if strict_stages[2].get("scope_paths") != expected_effective_scope:
+            return _fail("explicit strict exception plans must keep the same narrowed effective scope")
+        if explicit_strict_closeout_plan.get("strategy_fingerprint") == plan.get("strategy_fingerprint"):
+            return _fail("strict exception closeout must perturb the authoritative strategy fingerprint")
 
         large_scope: list[str] = []
         for idx in range(1, 106):

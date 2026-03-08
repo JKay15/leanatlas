@@ -40,7 +40,7 @@ Follow-on items staged by this plan but not all implemented in the first wave:
 - batch supervisor/autopilot (parent-loop orchestration across child waves)
 - review orchestration automation (pyramid reviewer + staged narrowing + supersession/reconciliation)
 - user-configurable LOOP defaults and post-onboarding preference presets
-- default reviewer policy realignment to `FAST + low`
+- default reviewer tier policy realignment to low baseline + medium escalation
 - capability publish + context refresh
 - human external input ingress + rematerialization
 - independent LOOP Python library extraction, packaging, and non-LeanAtlas usage docs
@@ -160,7 +160,7 @@ Deliverables:
   - batch supervisor/autopilot
   - review orchestration automation
   - user-configurable LOOP defaults and post-onboarding preference presets
-  - default reviewer policy realignment to `FAST + low`
+  - default reviewer tier policy realignment to low baseline + medium escalation
   - capability publish + context refresh
   - human external input ingress + rematerialization
   - independent LOOP Python library extraction, packaging, and non-LeanAtlas usage docs
@@ -173,6 +173,7 @@ Deliverables:
   - child plan: `docs/agents/execplans/20260307_loop_mainline_productization_integration_v0.md`
   - child plan: `docs/agents/execplans/20260308_loop_user_preferences_and_onboarding_defaults_v0.md`
   - child plan: `docs/agents/execplans/20260308_review_default_profile_policy_v0.md`
+  - child plan: `docs/agents/execplans/20260308_review_tiered_default_policy_v0.md`
   - child plan: `docs/agents/execplans/20260308_review_supersession_reconciliation_runtime_v0.md`
   - child plan: `docs/agents/execplans/20260308_loop_python_library_decoupling_packaging_v0.md`
   - child plan: `docs/agents/execplans/20260308_loop_skills_decoupling_and_project_skills_governance_v0.md`
