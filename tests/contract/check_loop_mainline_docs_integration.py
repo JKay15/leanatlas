@@ -76,6 +76,19 @@ def main() -> int:
     if "LOOP mainline" not in skill:
         return _fail(f"{skill_rel} must describe LOOP mainline usage explicitly")
 
+    onboarding_doc = _read("docs/agents/ONBOARDING.md")
+    onboard_skill = _read(".agents/skills/leanatlas-onboard/SKILL.md")
+    discoverability_snippets = [
+        "reviewer exhaustiveness",
+        "tools/loop/review_prompting.py",
+        "review.prompt.exhaustive.v1",
+    ]
+    for snippet in discoverability_snippets:
+        if snippet not in onboarding_doc:
+            return _fail(f"docs/agents/ONBOARDING.md must surface reviewer exhaustiveness via `{snippet}`")
+        if snippet not in onboard_skill:
+            return _fail(f".agents/skills/leanatlas-onboard/SKILL.md must surface reviewer exhaustiveness via `{snippet}`")
+
     agents_readme = _read("docs/agents/README.md")
     if ".agents/skills/leanatlas-dedup|promote|gc/SKILL.md" in agents_readme:
         return _fail("docs/agents/README.md must not advertise the non-resolvable combined Phase3 skill path")

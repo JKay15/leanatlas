@@ -110,7 +110,7 @@ On first prompt (any content, including a simple `hi`), Codex should:
    - write the state file
    - once `bootstrap` + `doctor` + `real_agent_cmd` all pass, compact root `AGENTS.md` onboarding block
      (verbose archive remains in `docs/agents/archive/AGENTS_ONBOARDING_VERBOSE.md`)
-  5) End with:
+5) End with:
    - a short summary
    - where artifacts were written
    - mandatory operational gate: install/verify all `status=active` automations in Codex App
@@ -129,6 +129,11 @@ On first prompt (any content, including a simple `hi`), Codex should:
      - `medium` is a bounded escalation only for small-scope high-risk core logic
      - `STRICT / xhigh` is exceptional, not the default
      - do not imply that onboarding already auto-writes or auto-applies this preference artifact unless that wiring has landed
+     - explicitly surface the reviewer exhaustiveness path:
+       - reviewer exhaustiveness is the anti-dribble prompt protocol for provider-invoked review
+       - canonical protocol id: `review.prompt.exhaustive.v1`
+       - implementation entrypoint: `tools/loop/review_prompting.py`
+       - route readers to `docs/agents/LOOP_MAINLINE.md` when they need the current mainline reviewer behavior and capability matrix
 
 ### Required operational gate: install active automations in Codex App
 
@@ -175,6 +180,19 @@ Required behavior:
 * Always report what was skipped vs executed.
 * Run verification gates even when install steps are skipped.
 * Treat LOOP preferences as post-onboarding defaults; do not turn them into bootstrap blockers.
+
+## Post-onboarding reviewer routing
+
+Once onboarding is environment-complete or operational-ready, Codex should not leave reviewer behavior implicit.
+
+Required discoverability:
+
+* mention that reviewer exhaustiveness is a committed mainline capability
+* name the canonical anti-dribble protocol id: `review.prompt.exhaustive.v1`
+* point directly to `tools/loop/review_prompting.py`
+* route maintainers to `docs/agents/LOOP_MAINLINE.md` for the current reviewer policy, capability matrix, and review entrypoints
+
+This is a routing/discoverability requirement only. It does not mean onboarding itself rewrites review defaults or runs review experiments.
 
 ## Override activation rule (hard rule)
 
