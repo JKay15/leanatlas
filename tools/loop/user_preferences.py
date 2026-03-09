@@ -4,70 +4,30 @@
 from __future__ import annotations
 
 import json
-from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-DEFAULT_ASSURANCE_PRESETS = ("Budget Saver", "Balanced", "Auditable")
-DEFAULT_ASSURANCE_PRESET = "Budget Saver"
-DEFAULT_FAST_REVIEWER_PROFILES = ("low", "medium")
-DEFAULT_FAST_REVIEWER_PROFILE = "low"
-DEFAULT_REVIEW_TIER_POLICIES = ("LOW_ONLY", "LOW_PLUS_MEDIUM")
-DEFAULT_REVIEW_TIER_POLICY = "LOW_PLUS_MEDIUM"
-DEFAULT_AGENT_PROVIDER_ID = "codex_cli"
+from looplib.preferences import (
+    DEFAULT_AGENT_PROVIDER_ID,
+    DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE,
+    DEFAULT_ASSURANCE_PRESET,
+    DEFAULT_ASSURANCE_PRESETS,
+    DEFAULT_FAST_REVIEWER_PROFILE,
+    DEFAULT_FAST_REVIEWER_PROFILES,
+    DEFAULT_MEDIUM_ESCALATION_POLICY,
+    DEFAULT_MEDIUM_ESCALATION_PROFILE,
+    DEFAULT_REVIEW_TIER_POLICIES,
+    DEFAULT_REVIEW_TIER_POLICY,
+    DEFAULT_STRICT_EXCEPTION_POLICY,
+    build_default_review_policy,
+    build_effective_runtime,
+    normalize_preference_defaults,
+    resolve_effective_defaults,
+)
+
 DEFAULT_PREFERENCE_ARTIFACT_REL = ".cache/leanatlas/onboarding/loop_preferences.json"
 PREFERENCE_SCHEMA = "leanatlas.loop_user_preferences"
 PREFERENCE_SCHEMA_VERSION = "0.1.0"
-DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE = True
-DEFAULT_MEDIUM_ESCALATION_PROFILE = "medium"
-DEFAULT_MEDIUM_ESCALATION_POLICY = "SMALL_SCOPE_HIGH_RISK_CORE_LOGIC_ONLY"
-DEFAULT_STRICT_EXCEPTION_POLICY = "EXPLICIT_EXCEPTION_ONLY"
-
-_ASSURANCE_LEVEL_BY_PRESET = {
-    "Budget Saver": "FAST",
-    "Balanced": "LIGHT",
-    "Auditable": "STRICT",
-}
-
-
-def _normalize_preset(value: Any) -> str:
-    text = " ".join(str(value).strip().split())
-    if text not in DEFAULT_ASSURANCE_PRESETS:
-        raise ValueError(f"unsupported assurance preset: {value!r}")
-    return text
-
-
-def _normalize_provider(value: Any) -> str:
-    text = " ".join(str(value).strip().split())
-    if not text:
-        raise ValueError("agent provider id must be non-empty")
-    return text
-
-
-def _normalize_fast_profile(value: Any) -> str:
-    text = " ".join(str(value).strip().split())
-    if text not in DEFAULT_FAST_REVIEWER_PROFILES:
-        raise ValueError(f"unsupported FAST reviewer profile: {value!r}")
-    return text
-
-
-def _normalize_review_tier_policy(value: Any) -> str:
-    text = " ".join(str(value).strip().split())
-    if text not in DEFAULT_REVIEW_TIER_POLICIES:
-        raise ValueError(f"unsupported review tier policy: {value!r}")
-    return text
-
-
-def _normalize_bool(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        lowered = value.strip().lower()
-        if lowered in {"true", "1", "yes", "enabled"}:
-            return True
-        if lowered in {"false", "0", "no", "disabled"}:
-            return False
-    raise ValueError(f"expected boolean preference value, got: {value!r}")
 
 
 def _canonical_json(data: dict[str, Any]) -> str:
@@ -75,21 +35,16 @@ def _canonical_json(data: dict[str, Any]) -> str:
 
 
 def default_preference_artifact_path(repo_root: Path) -> Path:
-    return repo_root / Path(DEFAULT_PREFERENCE_ARTIFACT_REL)
+    return Path(repo_root) / Path(DEFAULT_PREFERENCE_ARTIFACT_REL)
 
 
-def build_default_review_policy() -> dict[str, Any]:
-    return {
-        "assurance_preset": DEFAULT_ASSURANCE_PRESET,
-        "assurance_level": _ASSURANCE_LEVEL_BY_PRESET[DEFAULT_ASSURANCE_PRESET],
-        "agent_provider_id": DEFAULT_AGENT_PROVIDER_ID,
-        "fast_reviewer_profile": DEFAULT_FAST_REVIEWER_PROFILE,
-        "review_tier_policy": DEFAULT_REVIEW_TIER_POLICY,
-        "allow_pyramid_review_for_large_scope": DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE,
-        "medium_escalation_profile": DEFAULT_MEDIUM_ESCALATION_PROFILE,
-        "medium_escalation_policy": DEFAULT_MEDIUM_ESCALATION_POLICY,
-        "strict_exception_policy": DEFAULT_STRICT_EXCEPTION_POLICY,
-    }
+def ensure_preference_record(*, repo_root: Path) -> Path:
+    path = default_preference_artifact_path(repo_root)
+    if path.exists():
+        normalized = load_preference_record(repo_root=repo_root)
+        path.write_text(_canonical_json(normalized), encoding="utf-8")
+        return path
+    return write_preference_record(repo_root=repo_root, record=build_preference_record())
 
 
 def build_preference_record(
@@ -100,13 +55,13 @@ def build_preference_record(
     review_tier_policy: str = DEFAULT_REVIEW_TIER_POLICY,
     allow_pyramid_review_for_large_scope: bool = DEFAULT_ALLOW_PYRAMID_REVIEW_FOR_LARGE_SCOPE,
 ) -> dict[str, Any]:
-    defaults = {
-        "assurance_preset": _normalize_preset(assurance_preset),
-        "agent_provider_id": _normalize_provider(agent_provider_id),
-        "fast_reviewer_profile": _normalize_fast_profile(fast_reviewer_profile),
-        "review_tier_policy": _normalize_review_tier_policy(review_tier_policy),
-        "allow_pyramid_review_for_large_scope": _normalize_bool(allow_pyramid_review_for_large_scope),
-    }
+    defaults = normalize_preference_defaults(
+        assurance_preset=assurance_preset,
+        agent_provider_id=agent_provider_id,
+        fast_reviewer_profile=fast_reviewer_profile,
+        review_tier_policy=review_tier_policy,
+        allow_pyramid_review_for_large_scope=allow_pyramid_review_for_large_scope,
+    )
     return {
         "schema": PREFERENCE_SCHEMA,
         "schema_version": PREFERENCE_SCHEMA_VERSION,
@@ -163,33 +118,11 @@ def write_preference_record(*, repo_root: Path, record: dict[str, Any]) -> Path:
 
 def resolve_effective_preferences(*, repo_root: Path, overrides: dict[str, Any] | None = None) -> dict[str, Any]:
     stored = load_preference_record(repo_root=repo_root)
-    effective_defaults = deepcopy(stored["defaults"])
-    for key, value in (overrides or {}).items():
-        if value is None:
-            continue
-        if key == "assurance_preset":
-            effective_defaults[key] = _normalize_preset(value)
-        elif key == "agent_provider_id":
-            effective_defaults[key] = _normalize_provider(value)
-        elif key == "fast_reviewer_profile":
-            effective_defaults[key] = _normalize_fast_profile(value)
-        elif key == "review_tier_policy":
-            effective_defaults[key] = _normalize_review_tier_policy(value)
-        elif key == "allow_pyramid_review_for_large_scope":
-            effective_defaults[key] = _normalize_bool(value)
-        else:
-            raise ValueError(f"unsupported LOOP preference override: {key}")
-
-    effective_runtime = {
-        "assurance_level": _ASSURANCE_LEVEL_BY_PRESET[effective_defaults["assurance_preset"]],
-        "agent_provider_id": effective_defaults["agent_provider_id"],
-        "fast_reviewer_profile": effective_defaults["fast_reviewer_profile"],
-        "review_tier_policy": effective_defaults["review_tier_policy"],
-        "allow_pyramid_review_for_large_scope": effective_defaults["allow_pyramid_review_for_large_scope"],
-    }
+    effective_defaults = resolve_effective_defaults(stored_defaults=stored["defaults"], overrides=overrides)
+    effective_runtime = build_effective_runtime(effective_defaults=effective_defaults)
     return {
         "artifact_path": str(default_preference_artifact_path(repo_root)),
-        "stored_defaults": deepcopy(stored["defaults"]),
+        "stored_defaults": dict(stored["defaults"]),
         "effective_defaults": effective_defaults,
         "effective_runtime": effective_runtime,
     }

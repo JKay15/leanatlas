@@ -1687,6 +1687,54 @@
         "docs",
         "skills",
         "loop",
+        "library"
+      ],
+      "goal": "Guardrail: reusable looplib packaging, standalone docs/examples, and generic LOOP skills stay aligned.",
+      "id": "loop_library_packaging",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_loop_library_packaging.py",
+      "tags": [
+        "docs",
+        "skills",
+        "loop",
+        "library",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "docs",
+        "loop",
+        "library",
+        "ownership"
+      ],
+      "goal": "Guardrail: phase-1 repo split must move generic preference-policy logic into looplib while leaving LeanAtlas persistence in tools.loop.user_preferences.",
+      "id": "loop_library_ownership_boundary",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 5,
+      "script": "tests/contract/check_loop_library_ownership_boundary.py",
+      "tags": [
+        "docs",
+        "loop",
+        "library",
+        "ownership",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "docs",
+        "skills",
+        "loop",
         "reconciliation"
       ],
       "goal": "Guardrail: review reconciliation must expose a generic LOOP skill plus LeanAtlas routing/docs wiring.",
@@ -1935,6 +1983,50 @@
     {
       "area": [
         "loop",
+        "batch",
+        "supervisor"
+      ],
+      "goal": "Require deterministic parent-supervisor batch materialization, reroute policy, and integrated closeout evidence.",
+      "id": "loop_batch_supervisor",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_batch_supervisor.py",
+      "tags": [
+        "loop",
+        "batch",
+        "supervisor",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "publication",
+        "runtime"
+      ],
+      "goal": "Require append-only capability publication, bounded human-ingress evidence, and deterministic context rematerialization.",
+      "id": "loop_publication_runtime",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_publication_runtime.py",
+      "tags": [
+        "loop",
+        "publication",
+        "runtime",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
         "review",
         "prompting"
       ],
@@ -2156,6 +2248,28 @@
       "area": [
         "loop",
         "review",
+        "automation"
+      ],
+      "goal": "Require the committed default staged review path to auto-stage preferences and preserve integrated closeout authority.",
+      "id": "loop_review_automation_runtime",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_review_automation_runtime.py",
+      "tags": [
+        "loop",
+        "review",
+        "automation",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "review",
         "reconciliation"
       ],
       "goal": "Ensure staged review supersession and authoritative finding reconciliation runtime settle advisory findings deterministically.",
@@ -2171,6 +2285,28 @@
         "loop",
         "review",
         "reconciliation",
+        "contract"
+      ]
+    },
+    {
+      "area": [
+        "loop",
+        "worktree",
+        "adapter"
+      ],
+      "goal": "Require LeanAtlas worktree orchestration to exist as a host adapter layered on top of LOOP core.",
+      "id": "loop_worktree_adapter",
+      "kind": "python_script",
+      "phase": [
+        "crosscutting"
+      ],
+      "profile": "core",
+      "runtime_budget_sec": 10,
+      "script": "tests/contract/check_loop_worktree_adapter.py",
+      "tags": [
+        "loop",
+        "worktree",
+        "adapter",
         "contract"
       ]
     },

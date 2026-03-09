@@ -5,6 +5,17 @@
 
 ## Where are we now (as of 2026-03-08)
 
+### LOOP mainline completion (project-level update, 2026-03-08)
+- The remaining LOOP master-plan surfaces are now implemented on the current mainline.
+- Newly completed mainline surfaces:
+  - parent batch supervisor/autopilot
+  - capability publication + bounded human-ingress + context rematerialization
+  - default staged review execution backed by stored LOOP preferences
+  - LeanAtlas worktree orchestration as a host adapter
+  - reusable in-repo `looplib` packaging/docs/examples plus generic LOOP skills
+- Canonical entry remains: `docs/agents/LOOP_MAINLINE.md`
+- Standalone/non-LeanAtlas entry now also exists: `docs/setup/LOOP_LIBRARY_QUICKSTART.md`
+
 ### LOOP mainline (project-level update, 2026-03-07)
 - LOOP is now a committed mainline system in LeanAtlas rather than a `.cache`-only experiment.
 - Canonical entry: `docs/agents/LOOP_MAINLINE.md`

@@ -109,6 +109,18 @@ Runtime concurrency rule:
 - runtime MUST persist scheduler evidence showing whether each batch actually ran in serial or parallel mode
 - when `NESTED` edges are present, runtime MUST persist nested lineage evidence linking the child node to its nested parent predecessors
 
+## 5.1) Root supervisor kernel and layered supervisor model
+
+When a host already has reusable LOOP execution surfaces, the default non-trivial path is supervisor-first:
+- a root supervisor kernel freezes scope, materializes the active graph/session, delegates child work, and owns the integrated closeout decision
+- wave supervisors may coordinate multiple child waves
+- subgraph supervisors may coordinate a local maintainer/review/recovery graph
+- workers perform bounded execution only and do not own integrated closeout authority
+
+Hard rule:
+- hosts must not treat the conversation-facing task agent as the primary worker by default on non-trivial tasks when an existing LOOP path is available
+- if a host needs to fall back to direct/manual execution for a blocked subtree, that fallback must be rooted in an auditable session-issued root exception artifact, i.e. the root-issued exception artifact bound to the active session, rather than silent chat-only judgment
+
 ## 6) Required artifacts (runtime layer)
 
 Runtime artifacts SHOULD follow:

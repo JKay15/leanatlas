@@ -10,6 +10,20 @@ Current LOOP mainline entry:
 - `docs/agents/LOOP_MAINLINE.md`
 - `.agents/skills/leanatlas-loop-mainline/SKILL.md`
 
+Current reusable/non-LeanAtlas LOOP entry:
+- `docs/setup/LOOP_LIBRARY_QUICKSTART.md`
+- `.agents/skills/loop-mainline/SKILL.md`
+
+LeanAtlas wrapper mapping:
+- conversation Codex = root supervisor kernel
+- child waves / child subgraphs / workers remain delegated execution lanes, not the root itself
+- direct/manual fallback for a non-trivial blocked subtree requires the session-issued root exception artifact, i.e. the root-issued exception artifact for the active session, before execution can bypass the normal LOOP lane
+
+Current integrated maintainer helpers on top of the mainline core:
+- default staged review execution: `tools/loop/review_orchestration.py`
+- parent-wave supervision/publication/rematerialization: `tools/loop/batch_supervisor.py`, `tools/loop/publication.py`
+- LeanAtlas host worktree adapter: `tools/loop/worktree_adapter.py`
+
 ---
 
 ## When must I enter MAINTAINER?

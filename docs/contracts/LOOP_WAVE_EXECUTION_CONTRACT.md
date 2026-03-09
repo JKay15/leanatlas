@@ -22,6 +22,23 @@ Maintainer-loop requirement for non-trivial system changes:
 - `ExecPlan -> graph_spec -> test node -> implement node -> verify node -> AI review node -> LOOP closeout`
 - For maintainer work on system surfaces, this sequence must be materialized as a LOOP graph before routine implementation begins.
 - manual closeout is exceptional only.
+- the conversation-facing task agent should act as the root supervisor kernel, not as the default primary worker, whenever an existing LOOP path is available.
+- the layered supervisor model is:
+  - root supervisor kernel
+  - wave supervisors
+  - subgraph supervisors
+  - workers / node executors
+- direct/manual fallback is exceptional and must remain bounded to the blocked subtree rather than waiving the whole non-trivial task.
+- any direct/manual fallback for a non-trivial blocked subtree requires a stable session-issued root exception artifact, i.e. the root-issued exception artifact for the active session, containing at least:
+  - `reason_code`
+  - `blocked_capability`
+  - `evidence_refs`
+  - `approved_by = root_supervisor`
+  - `bounded_scope_paths`
+  - `fallback_allowed_actions`
+  - `reentry_condition`
+  - `affected_node_ids`
+- the stable session-issued root exception artifact may append multiple bounded exception entries within one run, but each entry must preserve the required fields above and remain scoped to a proper subset of delegated nodes.
 - If AI review cannot complete after bounded tooling attempts, closeout may use `TRIAGED_TOOLING` with persisted attempt evidence instead of silently skipping review.
 - A maintainer `LOOP closeout` node must still execute after `AI review` reaches `FAILED` or `TRIAGED`; use graph-level closeout materialization rather than leaving the run in implicit `UPSTREAM_BLOCKED`.
 - That closeout node must not improve the terminal class decided by `AI review`; it records the same terminal state (`PASSED|FAILED|TRIAGED`) rather than overriding it.
@@ -132,6 +149,10 @@ Hard rule:
 - if `REVIEW_REPAIR_LOOP` occurs, terminal closure MUST come from a later AI review round.
 - reusing the same `prompt_ref` or `response_ref` across distinct AI review rounds is forbidden.
 - every maintainer AI review attempt MUST materialize a canonical review payload that validates against `CanonicalReviewResult.schema.json`.
+- provider stdout banner lines such as `model: gpt-5.4`, `provider: openai`, and `reasoning effort: low` MUST be parsed into `observed_runtime_metadata` when available.
+- if `allowed_runtime_reasoning_efforts` is supplied and the observed reviewer `reasoning effort` falls outside that allowed set, the round MUST fail closed with `REVIEWER_PROFILE_MISMATCH`.
+- if `require_observed_runtime_metadata=True` and the observed runtime metadata is absent or incomplete, the round MUST fail closed with `REVIEWER_RUNTIME_METADATA_MISSING`.
+- canonical review payloads and closeout summaries MUST preserve `observed_runtime_metadata` for the accepted or rejected reviewer attempt.
 - response artifact MUST exist and be non-empty before `REVIEW_RUN`.
 - provider JSON event stream may be used as a fallback semantic source only when the runner deterministically extracts a terminal assistant message and materializes the canonical `response_ref` from it.
 - acceptable fallback extraction shapes include terminal assistant message carriers such as `event.message.assistant`, `event.item.assistant_message`, and `event.item.agent_message`; non-assistant `final_message` / `last_message` fallbacks are forbidden.
@@ -147,10 +168,13 @@ Hard rule:
 
 Review acceleration strategies (allowed, but constrained):
 - authoritative staged review bundles MUST keep reviewer-launching stages on `review.prompt.exhaustive.v1`.
+- authoritative staged review bundles MUST pass `allowed_runtime_reasoning_efforts=[stage.agent_profile]` and `require_observed_runtime_metadata=True` into each reviewer-launching stage.
 - `LOW_PLUS_MEDIUM` is the committed default reviewer tier policy.
 - `FAST + low` remains the baseline reviewer path.
 - `medium` is the standard bounded escalation tier.
 - `LOW_ONLY` policies may still keep the integrated no-escalation closeout at `LOW`; when they do, `final_integrated_closeout.agent_profile` must match `fast_partition_scan.agent_profile`.
+- helper-authored default no-escalation bundles may also keep the integrated closeout at `LOW` under `LOW_PLUS_MEDIUM`, but only when `deep_partition_followup.partition_ids=[]`.
+- any LOW integrated closeout must keep deep follow-up empty and must preserve explicit `review_tier_policy` provenance (`LOW_ONLY` or `LOW_PLUS_MEDIUM`).
 - `STRICT / xhigh` remains exceptional.
 - staged narrowing is allowed: intermediate review rounds may partition a large scope into smaller auditable review partitions to reduce latency and context burden.
 - pyramid reviewer is allowed: faster/lower-cost reviewer tiers may run before slower/higher-thinking tiers.
@@ -200,6 +224,27 @@ Review acceleration strategies (allowed, but constrained):
 - in explicit no-followup runs, `finding_dedupe` still remains a hard gate; if reconciliation itself ends `FAILED` or `TRIAGED`, authoritative closeout must stay blocked until that reconciliation failure is repaired or rerun.
 - fast partition scans still gate `finding_dedupe`; if a fast-stage node ends `FAILED` or `TRIAGED`, reconciliation and authoritative closeout remain blocked until that fast-stage failure is repaired or rerun.
 - in explicit no-followup runs, the authoritative final integrated closeout scope must still match the frozen fast-stage lineage exactly; a replayed or hand-authored strategy must not silently narrow, widen, or replace the closeout scope when no follow-up partitions were selected.
+
+Parent supervision / publication / rematerialization (allowed, but explicit):
+- parent-wave automation must materialize a deterministic batch plan/state/journal before child-wave execution begins.
+- new capability availability and bounded human external input must be published as append-only evidence, not hidden chat context.
+- downstream adoption must use rematerialized context packs that cite publication and ingress refs explicitly before later waves claim to have consumed them.
+- parent-supervised `xhigh` execution retries MUST NOT treat early context rebuild as terminal drift by itself.
+- the default same-mode `CONTEXT_REBUILD` retry budget is reserved for child waves that declare `supervision_policy.executor_reasoning_effort = xhigh`; other lanes must opt in explicitly via `allow_context_rebuild_retries`.
+- explicit `allow_context_rebuild_retries = 0` MUST disable same-mode `CONTEXT_REBUILD` retries rather than silently falling back to the default retry budget.
+- repeated no-milestone drift may be triaged only after the supervisor publishes explicit `SUPERVISOR_GUIDANCE` evidence and rematerializes a follow-up context pack for the child.
+- supervisor guidance artifacts MUST preserve explicit known conclusions, non-goals, and reminder text rather than assuming the child inherits hidden maintainer context.
+- rematerialized context packs MUST canonicalize repo-root refs to repo-relative form before hashing or deduping them, so absolute-vs-relative path spellings do not fork deterministic lineage.
+- child waves MUST NOT be recorded as `PASSED` unless every returned `result_refs` entry and `closeout_ref` resolves to an existing repo-root artifact; missing or invalid artifact refs must triage the child instead of producing a false-positive integrated closeout.
+- re-running `execute_batch_supervisor(...)` on the same `run_key` MUST requeue persisted `RUNNING` child waves back to `PENDING`, append a `CHILD_WAVE_REQUEUED` journal row whose deterministic reason token is `INTERRUPTED_RUNNING_STATE`, and retry them on the same batch identity instead of deadlocking.
+- representative helper surfaces for this family include:
+  - `materialize_batch_supervisor(...)`
+  - `execute_batch_supervisor(...)`
+  - `publish_capability_event(...)`
+  - `publish_supervisor_guidance_event(...)`
+  - `record_human_external_input(...)`
+  - `rematerialize_context_pack(...)`
+  - reusable in-repo hosts may consume them through `looplib`; external repository extraction remains a separate split wave
 
 Reviewer-memory consistency evidence (required for every Wave run):
 - `review_history_consistency` summary with:

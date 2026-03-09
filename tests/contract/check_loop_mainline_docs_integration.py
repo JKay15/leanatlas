@@ -43,16 +43,32 @@ def main() -> int:
 
     required_doc_snippets = [
         "## Capability Matrix",
-        "Implemented",
-        "Partial",
-        "Planned",
         "LOOP core",
         "LeanAtlas adapters",
         ".cache/leanatlas/tmp",
+        "root supervisor kernel",
+        "layered supervisor",
+        "Batch supervisor / autopilot",
+        "Capability publish + context refresh",
+        "LeanAtlas worktree orchestration",
+        "Independent LOOP Python library extraction / packaging",
+        "OPERATOR / MAINTAINER workflow integration on the new core",
     ]
     for snippet in required_doc_snippets:
         if snippet not in mainline_doc:
             return _fail(f"{mainline_doc_rel} missing required snippet `{snippet}`")
+    implemented_rows = [
+        "| User preference presets | Implemented |",
+        "| Default automated review execution | Implemented |",
+        "| Batch supervisor / autopilot | Implemented |",
+        "| Independent LOOP Python library extraction / packaging | Implemented |",
+        "| Capability publish + context refresh | Implemented |",
+        "| LeanAtlas worktree orchestration | Implemented |",
+        "| OPERATOR / MAINTAINER workflow integration on the new core | Implemented |",
+    ]
+    for snippet in implemented_rows:
+        if snippet not in mainline_doc:
+            return _fail(f"{mainline_doc_rel} must classify `{snippet}` as implemented in the capability matrix")
     if "- stable maintainer session bookkeeping and closeout refs" in mainline_doc.split("### LeanAtlas adapters", 1)[0]:
         return _fail("docs/agents/LOOP_MAINLINE.md must not classify maintainer closeout refs as LOOP core semantics")
     if "stable maintainer session bookkeeping and closeout refs" not in mainline_doc.split("### LeanAtlas adapters", 1)[-1]:
@@ -68,6 +84,12 @@ def main() -> int:
         text = _read(rel)
         if mainline_doc_rel not in text:
             return _fail(f"{rel} must reference {mainline_doc_rel}")
+    for rel in ("docs/agents/MAINTAINER_WORKFLOW.md", "docs/agents/OPERATOR_WORKFLOW.md"):
+        text = _read(rel)
+        if "conversation Codex = root supervisor kernel" not in text:
+            return _fail(f"{rel} must preserve the LeanAtlas wrapper mapping to the root supervisor kernel")
+        if "root-issued exception artifact" not in text:
+            return _fail(f"{rel} must describe root-issued exception artifacts for direct/manual fallback")
 
     try:
         skill = _read(skill_rel)
@@ -75,6 +97,12 @@ def main() -> int:
         return _fail(f"missing LOOP mainline skill: {skill_rel}")
     if "LOOP mainline" not in skill:
         return _fail(f"{skill_rel} must describe LOOP mainline usage explicitly")
+    if "conversation Codex = root supervisor kernel" not in skill:
+        return _fail(f"{skill_rel} must preserve the LeanAtlas wrapper mapping to the root supervisor kernel")
+    if ".agents/skills/loop-mainline/SKILL.md" not in mainline_doc:
+        return _fail(f"{mainline_doc_rel} must route non-LeanAtlas users to .agents/skills/loop-mainline/SKILL.md")
+    if "docs/setup/LOOP_LIBRARY_QUICKSTART.md" not in mainline_doc:
+        return _fail(f"{mainline_doc_rel} must reference docs/setup/LOOP_LIBRARY_QUICKSTART.md for standalone usage")
 
     onboarding_doc = _read("docs/agents/ONBOARDING.md")
     onboard_skill = _read(".agents/skills/leanatlas-onboard/SKILL.md")

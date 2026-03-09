@@ -10,6 +10,16 @@ Current LOOP mainline entry and boundary reference:
 - `.agents/skills/leanatlas-loop-mainline/SKILL.md`
 - Use these to understand the current mainline system surface, but stay inside OPERATOR patch boundaries unless a human explicitly enables MAINTAINER mode.
 
+Reusable/non-LeanAtlas context entry:
+- `docs/setup/LOOP_LIBRARY_QUICKSTART.md`
+- `.agents/skills/loop-mainline/SKILL.md`
+- These are for understanding the reusable LOOP surface only; OPERATOR work remains bounded by this workflow's patch scope.
+
+LeanAtlas wrapper mapping:
+- conversation Codex = root supervisor kernel for LeanAtlas task routing
+- OPERATOR still remains inside this workflow's patch scope unless a human explicitly enables MAINTAINER
+- if a non-trivial direct/manual fallback is ever claimed on a maintainer-side subtree, it must be backed by the session-issued root exception artifact, i.e. the root-issued exception artifact for the active session, rather than ad-hoc chat judgment
+
 ## Environment setup (one-time)
 This is not theory. It exists so Codex knows where dependencies live and how to verify them.
 

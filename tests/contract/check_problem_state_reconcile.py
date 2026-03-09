@@ -12,12 +12,22 @@ EXAMPLE_RR = ROOT / "docs" / "examples" / "reports" / "sample_run_001" / "RunRep
 def canonical_dump(obj) -> str:
   return json.dumps(obj, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
 
+def rmtree_missing_ok(path: Path) -> None:
+  def _onerror(_func, _entry, exc_info):
+    if exc_info and issubclass(exc_info[0], FileNotFoundError):
+      return
+    raise exc_info[1]
+  try:
+    shutil.rmtree(path, onerror=_onerror)
+  except FileNotFoundError:
+    return
+
 def main() -> int:
   slug = "__test_problem_state__"
   pdir = ROOT / "Problems" / slug
   # Clean if left over from a crashed run
   if pdir.exists():
-    shutil.rmtree(pdir)
+    rmtree_missing_ok(pdir)
   try:
     (pdir / "Reports").mkdir(parents=True, exist_ok=True)
     # Write a copy of the example RunReport into this problem reports dir
@@ -62,7 +72,7 @@ def main() -> int:
     return 0
   finally:
     if pdir.exists():
-      shutil.rmtree(pdir)
+      rmtree_missing_ok(pdir)
 
 if __name__ == "__main__":
   raise SystemExit(main())

@@ -96,6 +96,14 @@ def main() -> int:
                 "attempt = int(os.environ.get('LEANATLAS_REVIEW_ATTEMPT_INDEX', '1'))\n"
                 "response = pathlib.Path(os.environ['LEANATLAS_REVIEW_RESPONSE_PATH'])\n"
                 "response.parent.mkdir(parents=True, exist_ok=True)\n"
+                "for label, env_key in (\n"
+                "    ('model', 'REVIEW_RUNTIME_MODEL'),\n"
+                "    ('provider', 'REVIEW_RUNTIME_PROVIDER'),\n"
+                "    ('reasoning effort', 'REVIEW_RUNTIME_REASONING_EFFORT'),\n"
+                "):\n"
+                "    value = os.environ.get(env_key)\n"
+                "    if value:\n"
+                "        print(f'{label}: {value}', flush=True)\n"
                 "if mode == 'success':\n"
                 "    response.write_text('No findings.\\n', encoding='utf-8')\n"
                 "    raise SystemExit(0)\n"
@@ -248,7 +256,14 @@ def main() -> int:
             response_path=success_response,
             scope_paths=["tools/loop/target.py"],
             command=[sys.executable, str(helper)],
-            env={"REVIEW_TEST_MODE": "success"},
+            env={
+                "REVIEW_TEST_MODE": "success",
+                "REVIEW_RUNTIME_MODEL": "gpt-5.4",
+                "REVIEW_RUNTIME_PROVIDER": "openai",
+                "REVIEW_RUNTIME_REASONING_EFFORT": "low",
+            },
+            allowed_runtime_reasoning_efforts=["low"],
+            require_observed_runtime_metadata=True,
             **base_kwargs,
         )
         if success["review_closeout"]["mode"] != "REVIEW_RUN":
@@ -268,6 +283,11 @@ def main() -> int:
             return _fail("context pack must preserve normalized instruction_scope_refs")
         if context_obj.get("required_context_refs") != sorted(base_kwargs["required_context_refs"]):
             return _fail("context pack must preserve normalized required_context_refs")
+        expected_runtime_policy = context_obj.get("expected_runtime_policy") or {}
+        if expected_runtime_policy.get("allowed_runtime_reasoning_efforts") != ["low"]:
+            return _fail("context pack must preserve allowed_runtime_reasoning_efforts")
+        if expected_runtime_policy.get("require_observed_runtime_metadata") is not True:
+            return _fail("context pack must preserve require_observed_runtime_metadata=true")
         observation_policy = context_obj.get("observation_policy") or {}
         if observation_policy.get("minimum_observation_window_s") != 600:
             return _fail("context pack must record codex_cli minimum_observation_window_s=600 by default")
@@ -279,6 +299,11 @@ def main() -> int:
             return _fail("context pack must record codex_cli default semantic_idle_timeout_s=1200")
         if success.get("semantic_response_source") != "response_file":
             return _fail("response-backed success must record semantic_response_source=response_file")
+        success_runtime = success.get("observed_runtime_metadata") or {}
+        if success_runtime.get("reasoning_effort") != "low":
+            return _fail("successful review summary must preserve observed runtime reasoning effort")
+        if success_attempts[0].get("observed_runtime_metadata") != success_runtime:
+            return _fail("successful review attempt records must preserve observed runtime metadata")
         success_canonical = load_canonical_review_result(Path(success["canonical_result_ref"]))
         if success_canonical.get("status") != "SUCCEEDED":
             return _fail("successful review must materialize canonical status=SUCCEEDED")
@@ -286,8 +311,61 @@ def main() -> int:
             return _fail("successful review canonical payload must preserve response_file source")
         if success_canonical.get("terminal") is not True:
             return _fail("successful review canonical payload must be terminal")
+        if success_canonical.get("observed_runtime_metadata") != success_runtime:
+            return _fail("successful review canonical payload must preserve observed runtime metadata")
 
-        # Case 5b: canonical exhaustive prompts may be required before provider launch.
+        # Case 5a: reviewer runtime profile mismatches must fail closed.
+        mismatch = run_review_closure(
+            repo_root=repo,
+            review_id="reviewer_profile_mismatch_case",
+            prompt_path=prompt,
+            response_path=repo / "artifacts" / "reviews" / "reviewer_profile_mismatch_response.md",
+            scope_paths=["tools/loop/target.py"],
+            command=[sys.executable, str(helper)],
+            env={
+                "REVIEW_TEST_MODE": "success",
+                "REVIEW_RUNTIME_MODEL": "gpt-5.4",
+                "REVIEW_RUNTIME_PROVIDER": "openai",
+                "REVIEW_RUNTIME_REASONING_EFFORT": "xhigh",
+            },
+            allowed_runtime_reasoning_efforts=["low"],
+            require_observed_runtime_metadata=True,
+            **base_kwargs,
+        )
+        if mismatch["review_closeout"]["mode"] != "REVIEW_SKIPPED":
+            return _fail("reviewer runtime profile mismatch must fail closed")
+        if mismatch.get("reason_code") != "REVIEWER_PROFILE_MISMATCH":
+            return _fail("reviewer runtime profile mismatch must report REVIEWER_PROFILE_MISMATCH")
+        mismatch_canonical = load_canonical_review_result(Path(mismatch["canonical_result_ref"]))
+        if mismatch_canonical.get("reason_code") != "REVIEWER_PROFILE_MISMATCH":
+            return _fail("canonical mismatch payload must preserve REVIEWER_PROFILE_MISMATCH")
+        if (mismatch_canonical.get("observed_runtime_metadata") or {}).get("reasoning_effort") != "xhigh":
+            return _fail("canonical mismatch payload must preserve observed xhigh runtime metadata")
+
+        # Case 5b: required reviewer runtime metadata must fail closed when missing.
+        missing_runtime = run_review_closure(
+            repo_root=repo,
+            review_id="reviewer_runtime_metadata_missing_case",
+            prompt_path=prompt,
+            response_path=repo / "artifacts" / "reviews" / "reviewer_runtime_metadata_missing_response.md",
+            scope_paths=["tools/loop/target.py"],
+            command=[sys.executable, str(helper)],
+            env={"REVIEW_TEST_MODE": "success"},
+            allowed_runtime_reasoning_efforts=["low"],
+            require_observed_runtime_metadata=True,
+            **base_kwargs,
+        )
+        if missing_runtime["review_closeout"]["mode"] != "REVIEW_SKIPPED":
+            return _fail("missing reviewer runtime metadata must fail closed")
+        if missing_runtime.get("reason_code") != "REVIEWER_RUNTIME_METADATA_MISSING":
+            return _fail("missing reviewer runtime metadata must report REVIEWER_RUNTIME_METADATA_MISSING")
+        missing_runtime_canonical = load_canonical_review_result(Path(missing_runtime["canonical_result_ref"]))
+        if missing_runtime_canonical.get("reason_code") != "REVIEWER_RUNTIME_METADATA_MISSING":
+            return _fail("canonical missing-metadata payload must preserve REVIEWER_RUNTIME_METADATA_MISSING")
+        if missing_runtime_canonical.get("observed_runtime_metadata") not in (None, {}):
+            return _fail("missing reviewer runtime metadata must not synthesize observed runtime metadata")
+
+        # Case 5c: canonical exhaustive prompts may be required before provider launch.
         required_protocol_success = run_review_closure(
             repo_root=repo,
             review_id="required_protocol_success_case",
@@ -302,7 +380,7 @@ def main() -> int:
         if required_protocol_success["review_closeout"]["mode"] != "REVIEW_RUN":
             return _fail("canonical exhaustive prompts must satisfy required_prompt_protocol_id enforcement")
 
-        # Case 5c: canonical prompts must match the frozen run inputs exactly.
+        # Case 5d: canonical prompts must match the frozen run inputs exactly.
         mismatched_prompt = repo / "artifacts" / "reviews" / "mismatched_canonical_prompt.md"
         _write(
             mismatched_prompt,
@@ -335,7 +413,7 @@ def main() -> int:
         else:
             return _fail("run_review_closure must reject canonical prompts whose frozen inputs differ from the run")
 
-        # Case 5d: generic prompts must be rejected when exhaustive protocol is required.
+        # Case 5e: generic prompts must be rejected when exhaustive protocol is required.
         try:
             run_review_closure(
                 repo_root=repo,
@@ -353,7 +431,7 @@ def main() -> int:
         else:
             return _fail("run_review_closure must reject non-canonical prompts when exhaustive protocol is required")
 
-        # Case 5e: canonical-looking but tampered prompts must also be rejected.
+        # Case 5f: canonical-looking but tampered prompts must also be rejected.
         spoofed_prompt = repo / "artifacts" / "reviews" / "spoofed_prompt.md"
         spoofed_text = canonical_prompt.read_text(encoding="utf-8").replace(
             "- If one category looks clean, keep scanning the other categories before finalizing.",
@@ -394,7 +472,7 @@ def main() -> int:
         else:
             return _fail("run_review_closure must reject tampered prompts when exhaustive protocol is required")
 
-        # Case 5f: non-canonical prompts must not claim canonical protocol ids in persisted context.
+        # Case 5g: non-canonical prompts must not claim canonical protocol ids in persisted context.
         spoofed_success = run_review_closure(
             repo_root=repo,
             review_id="spoofed_success_case",

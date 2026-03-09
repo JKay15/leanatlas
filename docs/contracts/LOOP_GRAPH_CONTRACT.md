@@ -60,6 +60,15 @@ Graph builder rule:
 - maintainer orchestration must also publish a derived progress sidecar (`MaintainerProgress.json`) showing completed, pending, and current node ids so observers do not need to parse the journal to understand in-flight status.
 - maintainer closeout must also publish a stable execplan-addressable alias (`MaintainerCloseoutRef.json`) so ExecPlans can cite settled-state LOOP closeout without embedding a run-key-specific `GraphSummary.jsonl` path in the plan body.
 - session/progress/closeout-return surfaces should expose that alias as `closeout_ref_ref`.
+- non-trivial maintainer sessions must also publish root-supervisor delegation artifacts before implementation begins:
+  - `root_supervisor_skeleton.json`
+  - `root_supervisor_delegation.json`
+- those artifacts document the root supervisor kernel, delegated node ids, and the layered supervisor model for the active graph; they are not optional prose-only notes.
+- `root_supervisor_skeleton.json` must identify the root-owned nodes, delegated node ids, the integrated closeout sink, and the stable path for any root-issued exception artifact.
+- `root_supervisor_skeleton.json.root_nodes` must list only the root-owned nodes for the active graph; delegated nodes must remain outside that set.
+- `root_supervisor_delegation.json` must preserve delegated node ids and mirror delegated execution evidence (`execution_path`, child execution refs, terminal state, reason code) as node results are recorded.
+- manual/direct fallback is allowed only for a blocked subtree of delegated work and only when backed by a session-bound root-issued exception artifact for the active session; local blockage must not waive the whole non-trivial task.
+- the stable session-bound root-issued exception artifact may append multiple bounded exception entries within one run, but overlapping `affected_node_ids` across entries are invalid.
 - maintainer closeout must reject stale frozen inputs before rewriting the stable closeout ref alias; at minimum, stale execplan bytes must not be allowed to overwrite `MaintainerCloseoutRef.json`.
 - legacy sessions missing `required_context_hash` or `instruction_chain_hash` must be rematerialized before closeout.
 - stable closeout refs should preserve `session_created_at_utc` and `session_created_at_epoch_ns`, and an older same-plan session must not overwrite a newer stable closeout ref alias.
@@ -74,6 +83,7 @@ Graph builder rule:
 - `allow_terminal_predecessors` is only valid on sink nodes with at least one incoming edge, and those incoming edges must be `SERIAL | PARALLEL | NESTED | BARRIER`; it must not be attached to non-sink, `RACE`, or `QUORUM` nodes.
 - `GraphSummary.final_status` must preserve the worst admitted terminal class for sink paths; a closeout node using `allow_terminal_predecessors=true` must not mask upstream `FAILED` or `TRIAGED` outcomes as `PASSED`.
 - When an `all-pass` fan-in (`SERIAL | PARALLEL | NESTED | BARRIER`) is blocked by multiple upstream non-pass terminal classes, runtime MUST preserve the worst upstream terminal class rather than the first lexicographic non-pass predecessor.
+- root-issued exception artifacts must keep `affected_node_ids` within a proper subset of delegated nodes; they must not cover the full delegated node set for the run.
 
 ## 5) Determinism requirements
 

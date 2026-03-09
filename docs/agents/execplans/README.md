@@ -41,6 +41,7 @@ This means a hand-maintained list here must not be treated as the source of trut
   - `20260308_review_default_profile_policy_v0.md`
   - `20260308_review_tiered_default_policy_v0.md`
   - `20260308_review_supersession_reconciliation_runtime_v0.md`
+  - `20260308_loop_master_plan_completion_wave_v0.md`
   - `20260308_parallel_ror_retained_findings_repair_v0.md`
   - `20260308_loop_python_library_decoupling_packaging_v0.md`
   - `20260308_loop_skills_decoupling_and_project_skills_governance_v0.md`

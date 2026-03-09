@@ -258,22 +258,23 @@ def main() -> int:
         if clean_fast_scan_with_empty_scope.get("effective_scope_paths") != sorted(scope):
             return _fail("empty effective_scope_paths with empty followup must keep integrated closeout on the full scope")
 
-        try:
-            build_pyramid_review_plan(
-                repo_root=repo,
-                scope_paths=scope,
-                fast_profile="gpt-5.4-low",
-                deep_profile="gpt-5.4-medium",
-                strict_profile="gpt-5.4-xhigh",
-                final_closeout_tier="LOW",
-                max_files_per_partition=2,
-                followup_partition_ids=[],
-            )
-        except ValueError as exc:
-            if "LOW final_closeout_tier requires review_tier_policy=LOW_ONLY" not in str(exc):
-                return _fail("LOW closeout plans under the default LOW_PLUS_MEDIUM policy must fail with the dedicated provenance contract")
-        else:
-            return _fail("LOW closeout plans must not compile under the default LOW_PLUS_MEDIUM policy")
+        default_low_closeout_plan = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=scope,
+            fast_profile="gpt-5.4-low",
+            deep_profile="gpt-5.4-medium",
+            strict_profile="gpt-5.4-xhigh",
+            final_closeout_tier="LOW",
+            max_files_per_partition=2,
+            followup_partition_ids=[],
+        )
+        default_low_stages = default_low_closeout_plan.get("stages") or []
+        if default_low_stages[2].get("review_tier") != "LOW":
+            return _fail("LOW closeout plans under the default LOW_PLUS_MEDIUM policy must preserve a LOW integrated closeout tier")
+        if default_low_stages[2].get("agent_profile") != "gpt-5.4-low":
+            return _fail("LOW closeout plans under the default LOW_PLUS_MEDIUM policy must reuse the baseline fast reviewer profile")
+        if default_low_closeout_plan.get("closeout_policy", {}).get("review_tier_policy") != "LOW_PLUS_MEDIUM":
+            return _fail("default LOW closeout plans must preserve LOW_PLUS_MEDIUM provenance in closeout_policy")
 
         explicit_low_closeout_plan = build_pyramid_review_plan(
             repo_root=repo,
@@ -295,8 +296,11 @@ def main() -> int:
             return _fail("explicit LOW closeout plans must stay on the canonical full scope after empty followup")
         if explicit_low_closeout_plan.get("closeout_policy", {}).get("review_tier_policy") != "LOW_ONLY":
             return _fail("explicit LOW closeout plans must persist LOW_ONLY provenance in closeout_policy")
-        if explicit_low_closeout_plan.get("strategy_fingerprint") == clean_fast_scan_plan.get("strategy_fingerprint"):
-            return _fail("LOW closeout plans must perturb the authoritative strategy fingerprint")
+        if explicit_low_closeout_plan.get("strategy_fingerprint") in {
+            clean_fast_scan_plan.get("strategy_fingerprint"),
+            default_low_closeout_plan.get("strategy_fingerprint"),
+        }:
+            return _fail("LOW closeout provenance variants must perturb the authoritative strategy fingerprint")
         try:
             build_pyramid_review_plan(
                 repo_root=repo,

@@ -17,6 +17,7 @@ from tools.loop import (
     MaintainerLoopSession,
     close_maintainer_session,
     execute_recorded_graph,
+    issue_root_supervisor_exception,
     materialize_maintainer_session,
     record_maintainer_node_result,
 )
@@ -55,6 +56,26 @@ def _nested_replay_graph() -> dict[str, object]:
             {"from": "parent_b", "to": "child", "kind": "NESTED"},
         ],
     }
+
+
+def _record_happy_path(*, repo: Path, run_key: str) -> None:
+    for node_id, evidence_refs in (
+        ("execplan", ["docs/agents/execplans/active_plan.md"]),
+        ("graph_spec", ["docs/agents/execplans/active_plan.md"]),
+        ("test_node", ["tools/loop/target.py"]),
+        ("implement_node", ["tools/loop/target.py"]),
+        ("verify_node", ["metadata/context.txt"]),
+        ("ai_review_node", ["metadata/context.txt"]),
+        ("loop_closeout", ["docs/agents/execplans/active_plan.md"]),
+    ):
+        record_maintainer_node_result(
+            repo_root=repo,
+            run_key=run_key,
+            node_id=node_id,
+            state="PASSED",
+            reason_code="REVIEW_PASS" if node_id == "ai_review_node" else "NODE_EXEC_RESULT",
+            evidence_refs=evidence_refs,
+        )
 
 
 def main() -> int:
@@ -152,6 +173,12 @@ def main() -> int:
             return _fail("maintainer session must persist NodeJournal.jsonl")
         if not progress_ref.exists():
             return _fail("maintainer session must persist MaintainerProgress.json")
+        root_skeleton_ref = Path(str(session.get("root_supervisor_skeleton_ref") or ""))
+        root_delegation_ref = Path(str(session.get("root_supervisor_delegation_ref") or ""))
+        if not root_skeleton_ref.exists():
+            return _fail("maintainer session must persist root_supervisor_skeleton.json before implementation begins")
+        if not root_delegation_ref.exists():
+            return _fail("maintainer session must persist root_supervisor_delegation.json before implementation begins")
 
         session_obj = _read_json(session_ref)
         if session_obj.get("execplan_ref") != "docs/agents/execplans/active_plan.md":
@@ -167,10 +194,32 @@ def main() -> int:
             return _fail("MaintainerSession.json must preserve normalized required_context_refs")
         if not session_obj.get("graph_spec_hash"):
             return _fail("MaintainerSession.json must persist graph_spec_hash for run-identity auditing")
+        if str(session_obj.get("root_supervisor_skeleton_ref") or "") != str(root_skeleton_ref):
+            return _fail("MaintainerSession.json must preserve root_supervisor_skeleton_ref")
+        if str(session_obj.get("root_supervisor_delegation_ref") or "") != str(root_delegation_ref):
+            return _fail("MaintainerSession.json must preserve root_supervisor_delegation_ref")
         if graph_spec_ref.name != "GraphSpec.json":
             return _fail("maintainer session graph_spec_ref must point at GraphSpec.json")
         if (graph_spec_ref.parent / "GraphSummary.jsonl").exists():
             return _fail("maintainer session must not create GraphSummary.jsonl before closeout")
+        root_skeleton = _read_json(root_skeleton_ref)
+        if root_skeleton.get("authoritative_owner_surface") != "generic_loop_library":
+            return _fail("root_supervisor_skeleton.json must declare generic_loop_library as the authoritative owner")
+        if root_skeleton.get("integrated_closeout_path", {}).get("authoritative_sink_node_id") != "loop_closeout":
+            return _fail("root_supervisor_skeleton.json must preserve the authoritative sink node mapping")
+        if [str(item.get("node_id") or "") for item in root_skeleton.get("root_nodes") or []] != [
+            "execplan",
+            "graph_spec",
+            "loop_closeout",
+        ]:
+            return _fail("root_supervisor_skeleton.json root_nodes must list only the root-owned maintainer nodes")
+        root_delegation = _read_json(root_delegation_ref)
+        if root_delegation.get("delegated_node_ids") != ["test_node", "implement_node", "verify_node", "ai_review_node"]:
+            return _fail("root_supervisor_delegation.json must preserve the delegated node set for the maintainer graph")
+        if set(root_delegation.get("delegated_node_ids") or []).intersection(
+            {str(item.get("node_id") or "") for item in root_skeleton.get("root_nodes") or []}
+        ):
+            return _fail("root_supervisor_skeleton.json must not classify delegated maintainer nodes as root_nodes")
         progress_obj = _read_json(progress_ref)
         if progress_obj.get("completed_node_ids") != []:
             return _fail("MaintainerProgress.json must start with no completed nodes")
@@ -178,6 +227,10 @@ def main() -> int:
             return _fail("MaintainerProgress.json must expose the pending maintainer sequence")
         if progress_obj.get("current_node_id") != "execplan":
             return _fail("MaintainerProgress.json must point at the next pending node")
+        if str(progress_obj.get("root_supervisor_skeleton_ref") or "") != str(root_skeleton_ref):
+            return _fail("MaintainerProgress.json must surface root_supervisor_skeleton_ref")
+        if str(progress_obj.get("root_supervisor_delegation_ref") or "") != str(root_delegation_ref):
+            return _fail("MaintainerProgress.json must surface root_supervisor_delegation_ref")
 
         handle = MaintainerLoopSession.materialize(
             repo_root=repo,
@@ -194,10 +247,18 @@ def main() -> int:
             return _fail("MaintainerLoopSession.materialize must reuse the deterministic run_key")
         if Path(handle.progress_ref) != progress_ref:
             return _fail("MaintainerLoopSession.materialize must expose the persisted progress sidecar")
+        if Path(handle.root_supervisor_skeleton_ref) != root_skeleton_ref:
+            return _fail("MaintainerLoopSession.materialize must expose root_supervisor_skeleton_ref")
+        if Path(handle.root_supervisor_delegation_ref) != root_delegation_ref:
+            return _fail("MaintainerLoopSession.materialize must expose root_supervisor_delegation_ref")
 
         loaded_handle = MaintainerLoopSession.load(repo_root=repo, run_key=str(session["run_key"]))
         if loaded_handle.session_ref != str(session_ref):
             return _fail("MaintainerLoopSession.load must resolve the persisted session artifact")
+        if loaded_handle.root_supervisor_skeleton_ref != str(root_skeleton_ref):
+            return _fail("MaintainerLoopSession.load must expose the persisted root_supervisor_skeleton_ref")
+        if loaded_handle.root_supervisor_delegation_ref != str(root_delegation_ref):
+            return _fail("MaintainerLoopSession.load must expose the persisted root_supervisor_delegation_ref")
 
         resumed = materialize_maintainer_session(
             repo_root=repo,
@@ -231,6 +292,10 @@ def main() -> int:
         resumed_extra_session = _read_json(Path(str(resumed_with_extra_instruction.get("session_ref"))))
         if resumed_extra_session.get("instruction_scope_refs") != active_instruction_scope:
             return _fail("maintainer session must canonicalize instruction_scope_refs to the active AGENTS.md chain")
+        if str(resumed_with_extra_instruction.get("root_supervisor_skeleton_ref") or "") != str(root_skeleton_ref):
+            return _fail("maintainer session reuse must preserve root_supervisor_skeleton_ref")
+        if str(resumed_with_extra_instruction.get("root_supervisor_delegation_ref") or "") != str(root_delegation_ref):
+            return _fail("maintainer session reuse must preserve root_supervisor_delegation_ref")
 
         try:
             materialize_maintainer_session(
@@ -278,6 +343,420 @@ def main() -> int:
                 return _fail("graph_spec revisions must produce a new maintainer session run_key instead of colliding with existing GraphSpec.json")
         finally:
             maintainer_module.build_maintainer_change_graph = original_builder
+
+        root_exception = issue_root_supervisor_exception(
+            repo_root=repo,
+            run_key=str(session["run_key"]),
+            reason_code="TOOLING_BLOCKED",
+            blocked_capability="loop.worker.execute",
+            evidence_refs=["metadata/context.txt"],
+            bounded_scope_paths=["tools/loop/target.py"],
+            fallback_allowed_actions=["DIRECT_MANUAL_EXECUTION"],
+            reentry_condition="resume delegated loop after bounded manual patch",
+            affected_node_ids=["implement_node"],
+        )
+        root_exception_ref = Path(str(root_exception.get("root_supervisor_exception_ref") or ""))
+        if not root_exception_ref.exists():
+            return _fail("issue_root_supervisor_exception must persist a stable root_supervisor_exception.json artifact")
+        root_exception_obj = _read_json(root_exception_ref)
+        if root_exception_obj.get("approved_by") != "root_supervisor":
+            return _fail("root_supervisor_exception.json must record approved_by = root_supervisor")
+        if root_exception_obj.get("affected_node_ids") != ["implement_node"]:
+            return _fail("root_supervisor_exception.json must preserve the bounded affected_node_ids")
+        if root_exception_obj.get("fallback_allowed_actions") != ["DIRECT_MANUAL_EXECUTION"]:
+            return _fail("root_supervisor_exception.json must preserve fallback_allowed_actions")
+        second_root_exception = issue_root_supervisor_exception(
+            repo_root=repo,
+            run_key=str(session["run_key"]),
+            reason_code="SECONDARY_TOOLING_BLOCKED",
+            blocked_capability="loop.worker.verify",
+            evidence_refs=["metadata/context.txt"],
+            bounded_scope_paths=["tools/loop/target.py"],
+            fallback_allowed_actions=["DIRECT_MANUAL_EXECUTION"],
+            reentry_condition="resume delegated verification after bounded manual repair",
+            affected_node_ids=["verify_node"],
+        )
+        if str(second_root_exception.get("root_supervisor_exception_ref") or "") != str(root_exception_ref):
+            return _fail("issue_root_supervisor_exception must append to the stable root_supervisor_exception.json artifact")
+        root_exception_obj = _read_json(root_exception_ref)
+        if int(root_exception_obj.get("issued_exception_count") or 0) != 2:
+            return _fail("root_supervisor_exception.json must preserve the number of bounded exception entries")
+        if [entry.get("affected_node_ids") for entry in root_exception_obj.get("exceptions") or []] != [
+            ["implement_node"],
+            ["verify_node"],
+        ]:
+            return _fail("root_supervisor_exception.json must preserve multiple bounded exception entries in order")
+
+        try:
+            issue_root_supervisor_exception(
+                repo_root=repo,
+                run_key=str(session["run_key"]),
+                reason_code="TOOLING_BLOCKED",
+                blocked_capability="loop.worker.execute",
+                evidence_refs=["metadata/context.txt"],
+                bounded_scope_paths=["tools/loop/target.py"],
+                fallback_allowed_actions=["DIRECT_MANUAL_EXECUTION"],
+                reentry_condition="resume delegated loop after bounded manual patch",
+                affected_node_ids=["test_node", "implement_node", "verify_node", "ai_review_node"],
+            )
+        except ValueError as exc:
+            if "proper subset" not in str(exc):
+                return _fail("root supervisor exception rejection should mention proper subset when the whole delegated subtree is waived")
+        else:
+            return _fail("issue_root_supervisor_exception must reject exceptions that waive the whole delegated subtree")
+
+        session_manual = materialize_maintainer_session(
+            repo_root=repo,
+            change_id="review_wait_policy_manual",
+            execplan_ref="docs/agents/execplans/active_plan.md",
+            scope_paths=["tools/loop/target.py"],
+            instruction_scope_refs=active_instruction_scope,
+            required_context_refs=[
+                "docs/agents/execplans/active_plan.md",
+                "docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md",
+            ],
+        )
+        try:
+            record_maintainer_node_result(
+                repo_root=repo,
+                run_key=str(session_manual["run_key"]),
+                node_id="execplan",
+                state="PASSED",
+                reason_code="NODE_EXEC_RESULT",
+            )
+            record_maintainer_node_result(
+                repo_root=repo,
+                run_key=str(session_manual["run_key"]),
+                node_id="graph_spec",
+                state="PASSED",
+                reason_code="NODE_EXEC_RESULT",
+            )
+            record_maintainer_node_result(
+                repo_root=repo,
+                run_key=str(session_manual["run_key"]),
+                node_id="test_node",
+                state="PASSED",
+                reason_code="NODE_EXEC_RESULT",
+            )
+            record_maintainer_node_result(
+                repo_root=repo,
+                run_key=str(session_manual["run_key"]),
+                node_id="implement_node",
+                state="PASSED",
+                reason_code="NODE_EXEC_RESULT",
+                execution_path="DIRECT_MANUAL_EXCEPTION",
+            )
+        except ValueError as exc:
+            if "root-issued exception artifact" not in str(exc):
+                return _fail("manual/direct maintainer node rejection should mention the missing root-issued exception artifact")
+        else:
+            return _fail("direct/manual maintainer node results must require a root-issued exception artifact")
+
+        session_manual_multi = materialize_maintainer_session(
+            repo_root=repo,
+            change_id="review_wait_policy_manual_multi",
+            execplan_ref="docs/agents/execplans/active_plan.md",
+            scope_paths=["tools/loop/target.py"],
+            instruction_scope_refs=active_instruction_scope,
+            required_context_refs=[
+                "docs/agents/execplans/active_plan.md",
+                "docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md",
+            ],
+        )
+        for node_id in ("execplan", "graph_spec", "test_node"):
+            record_maintainer_node_result(
+                repo_root=repo,
+                run_key=str(session_manual_multi["run_key"]),
+                node_id=node_id,
+                state="PASSED",
+                reason_code="NODE_EXEC_RESULT",
+            )
+        first_multi_exception = issue_root_supervisor_exception(
+            repo_root=repo,
+            run_key=str(session_manual_multi["run_key"]),
+            reason_code="TOOLING_BLOCKED",
+            blocked_capability="loop.worker.execute",
+            evidence_refs=["metadata/context.txt"],
+            bounded_scope_paths=["tools/loop/target.py"],
+            fallback_allowed_actions=["DIRECT_MANUAL_EXECUTION"],
+            reentry_condition="resume delegated loop after bounded manual patch",
+            affected_node_ids=["implement_node"],
+        )
+        record_maintainer_node_result(
+            repo_root=repo,
+            run_key=str(session_manual_multi["run_key"]),
+            node_id="implement_node",
+            state="PASSED",
+            reason_code="NODE_EXEC_RESULT",
+            execution_path="DIRECT_MANUAL_EXCEPTION",
+            root_exception_ref=str(first_multi_exception["root_supervisor_exception_ref"]),
+        )
+        second_multi_exception = issue_root_supervisor_exception(
+            repo_root=repo,
+            run_key=str(session_manual_multi["run_key"]),
+            reason_code="VERIFY_TOOLING_BLOCKED",
+            blocked_capability="loop.worker.verify",
+            evidence_refs=["metadata/context.txt"],
+            bounded_scope_paths=["tools/loop/target.py"],
+            fallback_allowed_actions=["DIRECT_MANUAL_EXECUTION"],
+            reentry_condition="resume delegated verification after bounded manual patch",
+            affected_node_ids=["verify_node"],
+        )
+        if str(second_multi_exception.get("root_supervisor_exception_ref") or "") != str(
+            first_multi_exception.get("root_supervisor_exception_ref") or ""
+        ):
+            return _fail("multiple bounded manual exceptions in one run must reuse the stable root exception artifact path")
+        record_maintainer_node_result(
+            repo_root=repo,
+            run_key=str(session_manual_multi["run_key"]),
+            node_id="verify_node",
+            state="PASSED",
+            reason_code="NODE_EXEC_RESULT",
+            execution_path="DIRECT_MANUAL_EXCEPTION",
+            root_exception_ref=str(second_multi_exception["root_supervisor_exception_ref"]),
+        )
+
+        session_manual_overlap_guard = materialize_maintainer_session(
+            repo_root=repo,
+            change_id="review_wait_policy_manual_multi_overlap_guard",
+            execplan_ref="docs/agents/execplans/active_plan.md",
+            scope_paths=["tools/loop/target.py"],
+            instruction_scope_refs=active_instruction_scope,
+            required_context_refs=[
+                "docs/agents/execplans/active_plan.md",
+                "docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md",
+            ],
+        )
+        for node_id in ("execplan", "graph_spec", "test_node"):
+            record_maintainer_node_result(
+                repo_root=repo,
+                run_key=str(session_manual_overlap_guard["run_key"]),
+                node_id=node_id,
+                state="PASSED",
+                reason_code="NODE_EXEC_RESULT",
+            )
+        overlap_first_exception = issue_root_supervisor_exception(
+            repo_root=repo,
+            run_key=str(session_manual_overlap_guard["run_key"]),
+            reason_code="TOOLING_BLOCKED",
+            blocked_capability="loop.worker.execute",
+            evidence_refs=["metadata/context.txt"],
+            bounded_scope_paths=["tools/loop/target.py"],
+            fallback_allowed_actions=["DIRECT_MANUAL_EXECUTION"],
+            reentry_condition="resume delegated loop after bounded manual patch",
+            affected_node_ids=["implement_node"],
+        )
+        record_maintainer_node_result(
+            repo_root=repo,
+            run_key=str(session_manual_overlap_guard["run_key"]),
+            node_id="implement_node",
+            state="PASSED",
+            reason_code="NODE_EXEC_RESULT",
+            execution_path="DIRECT_MANUAL_EXCEPTION",
+            root_exception_ref=str(overlap_first_exception["root_supervisor_exception_ref"]),
+        )
+        overlap_second_exception = issue_root_supervisor_exception(
+            repo_root=repo,
+            run_key=str(session_manual_overlap_guard["run_key"]),
+            reason_code="VERIFY_TOOLING_BLOCKED",
+            blocked_capability="loop.worker.verify",
+            evidence_refs=["metadata/context.txt"],
+            bounded_scope_paths=["tools/loop/target.py"],
+            fallback_allowed_actions=["DIRECT_MANUAL_EXECUTION"],
+            reentry_condition="resume delegated verification after bounded manual patch",
+            affected_node_ids=["verify_node"],
+        )
+        overlap_exception_ref = Path(str(overlap_second_exception["root_supervisor_exception_ref"]))
+        record_maintainer_node_result(
+            repo_root=repo,
+            run_key=str(session_manual_overlap_guard["run_key"]),
+            node_id="verify_node",
+            state="PASSED",
+            reason_code="NODE_EXEC_RESULT",
+            execution_path="DIRECT_MANUAL_EXCEPTION",
+            root_exception_ref=str(overlap_exception_ref),
+        )
+        record_maintainer_node_result(
+            repo_root=repo,
+            run_key=str(session_manual_overlap_guard["run_key"]),
+            node_id="ai_review_node",
+            state="PASSED",
+            reason_code="REVIEW_PASS",
+            evidence_refs=["metadata/context.txt"],
+        )
+        record_maintainer_node_result(
+            repo_root=repo,
+            run_key=str(session_manual_overlap_guard["run_key"]),
+            node_id="loop_closeout",
+            state="PASSED",
+            reason_code="NODE_EXEC_RESULT",
+            evidence_refs=["docs/agents/execplans/active_plan.md"],
+        )
+        overlap_exception_obj = _read_json(overlap_exception_ref)
+        overlap_exception_obj["exceptions"].extend(
+            [
+                {
+                    "version": "1",
+                    "issued_at_utc": "2026-03-09T00:00:00Z",
+                    "run_key": str(session_manual_overlap_guard["run_key"]),
+                    "execplan_ref": "docs/agents/execplans/active_plan.md",
+                    "reason_code": "AUXILIARY_TOOLING_BLOCKED",
+                    "blocked_capability": "loop.worker.test",
+                    "evidence_refs": ["metadata/context.txt"],
+                    "approved_by": "root_supervisor",
+                    "bounded_scope_paths": ["tools/loop/target.py"],
+                    "fallback_allowed_actions": ["DIRECT_MANUAL_EXECUTION"],
+                    "reentry_condition": "resume delegated execution after bounded manual patch",
+                    "affected_node_ids": ["test_node"],
+                },
+                {
+                    "version": "1",
+                    "issued_at_utc": "2026-03-09T00:00:01Z",
+                    "run_key": str(session_manual_overlap_guard["run_key"]),
+                    "execplan_ref": "docs/agents/execplans/active_plan.md",
+                    "reason_code": "AUXILIARY_REVIEW_BLOCKED",
+                    "blocked_capability": "loop.worker.review",
+                    "evidence_refs": ["metadata/context.txt"],
+                    "approved_by": "root_supervisor",
+                    "bounded_scope_paths": ["tools/loop/target.py"],
+                    "fallback_allowed_actions": ["DIRECT_MANUAL_EXECUTION"],
+                    "reentry_condition": "resume delegated review after bounded manual patch",
+                    "affected_node_ids": ["test_node", "ai_review_node"],
+                },
+            ]
+        )
+        overlap_exception_ref.write_text(
+            json.dumps(overlap_exception_obj, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        try:
+            close_maintainer_session(repo_root=repo, run_key=str(session_manual_overlap_guard["run_key"]))
+        except ValueError as exc:
+            if "overlapping affected_node_ids" not in str(exc):
+                return _fail(
+                    "closeout rejection should mention overlapping affected_node_ids when the root exception artifact overlaps away from the active direct/manual nodes"
+                )
+        else:
+            return _fail(
+                "maintainer closeout must reject globally overlapping root-issued exception entries even when the overlap is outside the active direct/manual node"
+            )
+
+        foreign_session = materialize_maintainer_session(
+            repo_root=repo,
+            change_id="review_wait_policy_manual_foreign_exception",
+            execplan_ref="docs/agents/execplans/active_plan.md",
+            scope_paths=["tools/loop/target.py"],
+            instruction_scope_refs=active_instruction_scope,
+            required_context_refs=[
+                "docs/agents/execplans/active_plan.md",
+                "docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md",
+            ],
+        )
+        foreign_exception = issue_root_supervisor_exception(
+            repo_root=repo,
+            run_key=str(foreign_session["run_key"]),
+            reason_code="TOOLING_BLOCKED",
+            blocked_capability="loop.worker.execute",
+            evidence_refs=["metadata/context.txt"],
+            bounded_scope_paths=["tools/loop/target.py"],
+            fallback_allowed_actions=["DIRECT_MANUAL_EXECUTION"],
+            reentry_condition="resume delegated loop after bounded manual patch",
+            affected_node_ids=["implement_node"],
+        )
+        try:
+            record_maintainer_node_result(
+                repo_root=repo,
+                run_key=str(session_manual["run_key"]),
+                node_id="implement_node",
+                state="PASSED",
+                reason_code="NODE_EXEC_RESULT",
+                execution_path="DIRECT_MANUAL_EXCEPTION",
+                root_exception_ref=str(foreign_exception["root_supervisor_exception_ref"]),
+            )
+        except ValueError as exc:
+            if "session's root-issued exception artifact" not in str(exc):
+                return _fail(
+                    "manual/direct maintainer node rejection should require the session's root-issued exception artifact"
+                )
+        else:
+            return _fail(
+                "direct/manual maintainer node results must reject a foreign root-issued exception artifact when the session has not recorded its own exception ref"
+            )
+
+        session_closeout_guard = materialize_maintainer_session(
+            repo_root=repo,
+            change_id="review_wait_policy_closeout_guard",
+            execplan_ref="docs/agents/execplans/active_plan.md",
+            scope_paths=["tools/loop/target.py"],
+            instruction_scope_refs=active_instruction_scope,
+            required_context_refs=[
+                "docs/agents/execplans/active_plan.md",
+                "docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md",
+            ],
+        )
+        _record_happy_path(repo=repo, run_key=str(session_closeout_guard["run_key"]))
+        skeleton_guard_path = Path(str(session_closeout_guard["root_supervisor_skeleton_ref"]))
+        skeleton_guard_path.unlink()
+        try:
+            close_maintainer_session(repo_root=repo, run_key=str(session_closeout_guard["run_key"]))
+        except ValueError as exc:
+            if "root_supervisor_skeleton_ref" not in str(exc):
+                return _fail("closeout rejection should mention root_supervisor_skeleton_ref when the root skeleton artifact is missing")
+        else:
+            return _fail("maintainer closeout must fail closed when root_supervisor_skeleton_ref is missing")
+
+        session_closeout_guard_stale = materialize_maintainer_session(
+            repo_root=repo,
+            change_id="review_wait_policy_closeout_guard_stale",
+            execplan_ref="docs/agents/execplans/active_plan.md",
+            scope_paths=["tools/loop/target.py"],
+            instruction_scope_refs=active_instruction_scope,
+            required_context_refs=[
+                "docs/agents/execplans/active_plan.md",
+                "docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md",
+            ],
+        )
+        _record_happy_path(repo=repo, run_key=str(session_closeout_guard_stale["run_key"]))
+        stale_skeleton_path = Path(str(session_closeout_guard_stale["root_supervisor_skeleton_ref"]))
+        stale_skeleton_obj = _read_json(stale_skeleton_path)
+        stale_skeleton_obj["integrated_closeout_path"]["authoritative_sink_node_id"] = "verify_node"
+        stale_skeleton_path.write_text(
+            json.dumps(stale_skeleton_obj, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        try:
+            close_maintainer_session(repo_root=repo, run_key=str(session_closeout_guard_stale["run_key"]))
+        except ValueError as exc:
+            if "root_supervisor_skeleton_ref" not in str(exc):
+                return _fail(
+                    "closeout rejection should mention root_supervisor_skeleton_ref when the root skeleton artifact is stale"
+                )
+        else:
+            return _fail(
+                "maintainer closeout must fail closed when root_supervisor_skeleton_ref content drifts from the canonical root skeleton"
+            )
+
+        session_closeout_guard2 = materialize_maintainer_session(
+            repo_root=repo,
+            change_id="review_wait_policy_closeout_guard2",
+            execplan_ref="docs/agents/execplans/active_plan.md",
+            scope_paths=["tools/loop/target.py"],
+            instruction_scope_refs=active_instruction_scope,
+            required_context_refs=[
+                "docs/agents/execplans/active_plan.md",
+                "docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md",
+            ],
+        )
+        _record_happy_path(repo=repo, run_key=str(session_closeout_guard2["run_key"]))
+        delegation_guard_path = Path(str(session_closeout_guard2["root_supervisor_delegation_ref"]))
+        delegation_guard_path.unlink()
+        try:
+            close_maintainer_session(repo_root=repo, run_key=str(session_closeout_guard2["run_key"]))
+        except ValueError as exc:
+            if "root_supervisor_delegation_ref" not in str(exc):
+                return _fail("closeout rejection should mention root_supervisor_delegation_ref when the delegation artifact is missing")
+        else:
+            return _fail("maintainer closeout must fail closed when root_supervisor_delegation_ref is missing")
         if revised_graph.get("run_key") == session.get("run_key"):
             return _fail("frozen graph_spec revisions must participate in maintainer session run identity")
 

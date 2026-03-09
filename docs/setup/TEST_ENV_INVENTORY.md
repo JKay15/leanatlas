@@ -9,8 +9,8 @@
 |---|---|---|
 | `bash` | Runner shell for scripted scenario and agent commands. | `scripts/bootstrap.sh`, `scripts/doctor.sh`, `tests/agent_eval/check_scenario_tool_reuse_scoring.py`, `tools/agent_eval/dummy_agent.py`, `tools/agent_eval/run_pack.py`, `tools/agent_eval/run_scenario.py`, `tools/coordination/run_automation.py` |
 | `claude` | Supported real-agent CLI backend (claude exec). | `tools/agent_eval/agent_provider.py`, `tools/loop/sdk.py` |
-| `codex` | Supported real-agent CLI backend (codex exec). | `tests/automation/dry_run_single.py`, `tests/contract/check_loop_contract_docs.py`, `tests/contract/check_loop_python_sdk_contract_surface.py`, `tests/contract/check_loop_wave_execution_policy.py`, `tools/agent_eval/agent_provider.py`, `tools/loop/review_runner.py`, `tools/loop/sdk.py` |
-| `git` | Repository metadata checks in tests/contracts. | `scripts/bootstrap.sh`, `scripts/clean.sh`, `tests/contract/check_loop_wave_blocking_gate.py`, `tests/contract/check_problem_template_state.py`, `tools/docs/generate_file_index.py`, `tools/loop/dirty_tree_gate.py`, `tools/promote/promote.py` |
+| `codex` | Supported real-agent CLI backend (codex exec). | `tests/automation/dry_run_single.py`, `tests/contract/check_loop_contract_docs.py`, `tests/contract/check_loop_python_sdk_contract_surface.py`, `tests/contract/check_loop_wave_execution_policy.py`, `tools/agent_eval/agent_provider.py`, `tools/loop/review_orchestration.py`, `tools/loop/review_runner.py`, `tools/loop/sdk.py` |
+| `git` | Repository metadata checks in tests/contracts. | `scripts/bootstrap.sh`, `scripts/clean.sh`, `tests/contract/check_loop_batch_supervisor.py`, `tests/contract/check_loop_wave_blocking_gate.py`, `tests/contract/check_loop_worktree_adapter.py`, `tests/contract/check_problem_template_state.py`, `tools/docs/generate_file_index.py`, `tools/loop/dirty_tree_gate.py`, ... |
 | `lake` | Lean build/lint/test execution and cache warmup. | `scripts/bootstrap.sh`, `tests/contract/check_test_registry.py`, `tests/e2e/run_cases.py`, `tests/e2e/run_scenarios.py`, `tests/stress/soak.py`, `tools/agent_eval/run_pack.py`, `tools/gc/gc.py` |
 | `pre-commit` | Repo-local git hooks and commit/branch policy enforcement. | `scripts/install_repo_git_hooks.sh` |
 | `python` | Primary runtime for all registered tests and tooling. | `scripts/doctor.sh`, `tests/contract/check_test_registry.py` |
@@ -61,7 +61,7 @@
 | `LEANATLAS_REVIEW_INSTRUCTION_SCOPE_REFS_JSON` | Runtime policy | `tools/loop/review_runner.py` |
 | `LEANATLAS_REVIEW_PROMPT_PATH` | Runtime policy | `tools/loop/review_runner.py` |
 | `LEANATLAS_REVIEW_REQUIRED_CONTEXT_REFS_JSON` | Runtime policy | `tools/loop/review_runner.py` |
-| `LEANATLAS_REVIEW_RESPONSE_PATH` | Runtime policy | `tests/contract/check_loop_review_runner.py`, `tools/loop/review_runner.py` |
+| `LEANATLAS_REVIEW_RESPONSE_PATH` | Runtime policy | `tests/contract/check_loop_review_automation_runtime.py`, `tests/contract/check_loop_review_runner.py`, `tools/loop/review_runner.py` |
 | `LEANATLAS_REVIEW_SCOPE_FINGERPRINT` | Runtime policy | `tools/loop/review_runner.py` |
 | `LEANATLAS_REVIEW_SCOPE_PATHS_JSON` | Runtime policy | `tools/loop/review_runner.py` |
 | `LEANATLAS_RUN_DIR` | Traceability/telemetry | `tools/agent_eval/run_pack.py`, `tools/agent_eval/run_scenario.py` |

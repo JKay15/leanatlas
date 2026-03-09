@@ -1,7 +1,7 @@
 ---
 title: Stage LOOP skills decoupling and LeanAtlas project-level skills governance/completeness
 owner: Codex (local workspace)
-status: planned
+status: done
 created: 2026-03-08
 parent_execplan: docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md
 ---
@@ -134,6 +134,14 @@ Expected verification commands for the implementation wave:
 
 ## Outcomes & retrospective (fill when done)
 - Completed:
+  - added generic LOOP skills for `loop-mainline`, `loop-review-orchestration`, and `loop-batch-supervisor`
+  - kept LeanAtlas-specific `leanatlas-loop-*` skills as explicit adapter wrappers
+  - synchronized `.agents/skills/README.md`, `docs/agents/README.md`, and `docs/agents/LOOP_MAINLINE.md` with the generic-vs-adapter split
 - Verification:
+  - `uv run --locked python tests/contract/check_skills_standard_headers.py`
+  - `uv run --locked python tests/contract/check_loop_library_packaging.py`
+  - `uv run --locked python tests/contract/check_agents_navigation_coverage.py`
 - Residual risks:
+  - the generic skill layer now exists, but future LOOP capabilities still need explicit governance on whether they deserve a generic skill, a LeanAtlas wrapper, or docs-only routing
 - Follow-on recommendation:
+  - keep new reusable LOOP surfaces indexed in both `docs/setup/LOOP_LIBRARY_QUICKSTART.md` and `.agents/skills/README.md` as part of every future library-facing change

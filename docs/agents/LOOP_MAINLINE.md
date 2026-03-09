@@ -6,6 +6,7 @@ Use this page when you need to answer any of these questions:
 - what parts of LOOP are already implemented in mainline
 - which parts are only partial or still planned
 - where `LOOP core` stops and `LeanAtlas adapters` start
+- how the root supervisor kernel relates to layered supervisor execution
 - which docs, tools, tests, and skills are the default entrypoints
 - how experimental `.cache/leanatlas/tmp/**` assets relate to the committed mainline
 
@@ -15,6 +16,12 @@ Use this page when you need to answer any of these questions:
   - `docs/agents/MAINTAINER_WORKFLOW.md`
   - `tools/loop/maintainer.py`
   - `.agents/skills/leanatlas-loop-mainline/SKILL.md`
+- Standalone/non-LeanAtlas usage:
+  - `docs/setup/LOOP_LIBRARY_QUICKSTART.md`
+  - `looplib/__init__.py`
+  - `.agents/skills/loop-mainline/SKILL.md`
+  - `.agents/skills/loop-review-orchestration/SKILL.md`
+  - `.agents/skills/loop-batch-supervisor/SKILL.md`
 - Review/routing specifics:
   - `tools/loop/review_runner.py`
   - `tools/loop/review_strategy.py`
@@ -22,6 +29,10 @@ Use this page when you need to answer any of these questions:
   - `tools/loop/review_reconciliation.py`
   - `.agents/skills/loop-review-reconciliation/SKILL.md`
   - `.agents/skills/leanatlas-loop-review-acceleration/SKILL.md`
+- Parent supervision / publication / context refresh:
+  - `tools/loop/batch_supervisor.py`
+  - `tools/loop/publication.py`
+  - `tools/loop/worktree_adapter.py`
 - Formalization front-end helpers:
   - `tools/formalization/external_source_pack.py`
   - `tools/formalization/source_enrichment.py`
@@ -44,18 +55,23 @@ Use this page when you need to answer any of these questions:
 | Maintainer LOOP session + stable closeout ref | Implemented | `tools/loop/maintainer.py`, `artifacts/loop_runtime/by_execplan/**/MaintainerCloseoutRef.json` | ExecPlans can cite settled-state maintainer closeout without run-key recursion. |
 | Review strategy helpers (partitioning / narrowing / pyramid planning) | Implemented | `tools/loop/review_strategy.py`, `.agents/skills/leanatlas-loop-review-acceleration/SKILL.md` | Deterministic planning aids are committed and tested. |
 | Review orchestration graph/bundle compilation | Implemented | `tools/loop/review_orchestration.py`, `docs/agents/execplans/20260307_review_orchestration_automation_v0.md` | The compiler/bundle layer exists in mainline. |
-| User preference presets | Partial | `tools/loop/user_preferences.py`, `docs/agents/ONBOARDING.md`, `docs/setup/QUICKSTART.md` | The preset surface and local artifact format are committed, but onboarding/runtime do not yet auto-stage or consume the defaults by themselves. |
-| Default automated review execution | Partial | `tools/loop/review_runner.py`, `tools/loop/review_orchestration.py` | Single-review execution is implemented; default staged execution is not yet the automatic path. Helper-authored integrated closeout defaults to `MEDIUM`, while explicit audit-heavy exception plans may still use `STRICT / xhigh`. |
+| User preference presets | Implemented | `tools/loop/user_preferences.py`, `docs/agents/ONBOARDING.md`, `docs/setup/QUICKSTART.md` | Presets are committed, stored at `.cache/leanatlas/onboarding/loop_preferences.json`, auto-staged on demand, and consumed by the default review-orchestration helper path. |
+| Default automated review execution | Implemented | `tools/loop/review_orchestration.py`, `tests/contract/check_loop_review_automation_runtime.py` | `build_default_review_orchestration_bundle(...)` and `execute_review_orchestration_bundle(...)` materialize the committed default staged-review path and triage non-reconcilable reviewer output instead of corrupting reconciliation state. |
 | LOOP core vs LeanAtlas adapter layering | Implemented | `docs/contracts/LOOP_RUNTIME_CONTRACT.md`, `docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md` | Core is role-neutral; host/workflow semantics stay in adapters. |
-| Batch supervisor / autopilot | Planned | `docs/agents/execplans/20260307_batch_supervisor_autopilot_and_human_ingress_v0.md` | Parent-loop automation across child waves is not landed yet. |
-| Independent LOOP Python library extraction / packaging | Planned | `docs/agents/execplans/20260308_loop_python_library_decoupling_packaging_v0.md` | Current mainline documents core-vs-adapter boundaries, but cross-project packaging and standalone usage docs are still follow-on work. |
+| Batch supervisor / autopilot | Implemented | `tools/loop/batch_supervisor.py`, `tests/contract/check_loop_batch_supervisor.py`, `docs/agents/execplans/20260307_batch_supervisor_autopilot_and_human_ingress_v0.md` | Parent supervisors now materialize child waves, reroute retryable failures, and publish integrated closeout evidence. |
+| Independent LOOP Python library extraction / packaging | Implemented | `looplib/__init__.py`, `docs/setup/LOOP_LIBRARY_QUICKSTART.md`, `examples/looplib_quickstart.py`, `docs/agents/execplans/20260308_loop_python_library_decoupling_packaging_v0.md` | Reusable in-repo `looplib` imports, standalone docs, and generic skills now exist for non-LeanAtlas hosts; host-specific worktree adapters remain lazy optional dependencies. |
 | Review supersession / reconciliation runtime | Implemented | `tools/loop/review_reconciliation.py`, `docs/schemas/ReviewSupersessionReconciliation.schema.json`, `.agents/skills/loop-review-reconciliation/SKILL.md`, `tests/contract/check_loop_review_reconciliation_runtime.py`, `docs/agents/execplans/20260308_review_supersession_reconciliation_runtime_v0.md` | Deterministic authoritative reconciliation artifacts and persistence are landed, including run-key-independent immutable ledgers, authoritative finding settlement, and medium-reviewed closeout evidence. |
-| Capability publish + context refresh | Planned | `docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md` | Future loops must adopt new capabilities through explicit publish/rematerialize steps. |
-| LeanAtlas worktree orchestration | Planned | `docs/coordination/WORKSTREAMS.md`, `docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md` | Worktree coordination is documented, but not yet a LOOP-native execution layer. |
-| OPERATOR / MAINTAINER workflow integration on the new core | Partial | `docs/agents/OPERATOR_WORKFLOW.md`, `docs/agents/MAINTAINER_WORKFLOW.md` | Workflows reference LOOP surfaces, but full adapter integration is still staged. |
+| Capability publish + context refresh | Implemented | `tools/loop/publication.py`, `tests/contract/check_loop_publication_runtime.py` | Capability publication, human ingress, and rematerialized context packs are explicit append-only runtime artifacts. |
+| LeanAtlas worktree orchestration | Implemented | `tools/loop/worktree_adapter.py`, `tests/contract/check_loop_worktree_adapter.py` | LeanAtlas worktree orchestration now exists as a host adapter layered on top of LOOP core and batch supervision. |
+| OPERATOR / MAINTAINER workflow integration on the new core | Implemented | `docs/agents/OPERATOR_WORKFLOW.md`, `docs/agents/MAINTAINER_WORKFLOW.md`, `docs/agents/execplans/20260308_loop_master_plan_completion_wave_v0.md` | Workflow docs now route through the committed mainline core, default review execution, batch supervision, and adapter boundaries. |
 | Formalization front-end helpers | Implemented | `tools/formalization/external_source_pack.py`, `tools/formalization/source_enrichment.py`, `tools/formalization/review_todo.py`, `tools/formalization/resync_reverse_links.py` | Committed ingress/enrichment helpers absorb high-value paper-workflow capabilities from `.cache` experiments. |
 
 ## LOOP core vs LeanAtlas adapters
+
+Supervisor-first default:
+- generic non-trivial LOOP execution starts from a root supervisor kernel
+- layered supervisor execution then fans out into wave supervisors, subgraph supervisors, and workers
+- integrated closeout authority returns to the root rather than staying with any delegated worker lane
 
 ### LOOP core
 
@@ -75,9 +91,10 @@ They include:
 - MAINTAINER workflow integration
 - OPERATOR workflow integration
 - stable maintainer session bookkeeping and closeout refs
+- LeanAtlas wrapper mapping: conversation Codex = root supervisor kernel
 - review acceleration/pyramid-review usage policies
-- future worktree orchestration
-- future batch supervisor/autopilot over LeanAtlas-specific waves
+- worktree orchestration
+- batch supervisor/autopilot over LeanAtlas-specific waves
 
 The rule is:
 - `LOOP core` must stay role-neutral
@@ -98,7 +115,7 @@ Supported presets:
 - `Balanced`
 - `Auditable`
 
-These presets are post-onboarding defaults, not bootstrap blockers. Today the committed mainline surface provides the preset names, artifact shape, and override semantics through `tools/loop/user_preferences.py`; automatic onboarding-time persistence and default application are still follow-on wiring. Later runs may still override any chosen defaults without mutating the stored preference artifact.
+These presets are post-onboarding defaults, not bootstrap blockers. The committed mainline surface now provides the preset names, artifact shape, auto-staging helper, and override semantics through `tools/loop/user_preferences.py`. The default staged review path consumes that artifact automatically through `build_default_review_orchestration_bundle(...)`, while later runs may still override any chosen defaults without mutating the stored preference artifact.
 
 Current default policy:
 - `Budget Saver` is the committed default preset.
@@ -107,6 +124,25 @@ Current default policy:
 - `medium` is the standard bounded escalation tier.
 - `medium` is a bounded escalation only for small-scope high-risk core logic.
 - `STRICT / xhigh` remains available for exceptional audit-heavy closeout, but it is not the default path.
+
+## Standalone LOOP path
+
+For reusable/non-LeanAtlas usage:
+- start with `docs/setup/LOOP_LIBRARY_QUICKSTART.md`
+- import from `looplib`
+- route generic questions through `.agents/skills/loop-mainline/SKILL.md`
+- route staged review work through `.agents/skills/loop-review-orchestration/SKILL.md`
+- route parent-wave supervision or publication/rematerialization through `.agents/skills/loop-batch-supervisor/SKILL.md`
+
+This surface is intentionally separate from LeanAtlas-specific workflow adapters.
+
+## Parent supervisor path
+
+Use this path when the task needs more than one child wave:
+- materialize the parent batch via `tools/loop/batch_supervisor.py`
+- publish new capabilities or bounded human input via `tools/loop/publication.py`
+- rematerialize downstream context before later child-wave adoption
+- use `tools/loop/worktree_adapter.py` only when the host needs isolated git workspaces
 
 ### Maintainer path
 
@@ -145,6 +181,7 @@ If LOOP gains or changes a mainline capability, keep these aligned:
 - `docs/agents/README.md`
 - `docs/agents/MAINTAINER_WORKFLOW.md`
 - `docs/agents/OPERATOR_WORKFLOW.md`
+- `docs/setup/LOOP_LIBRARY_QUICKSTART.md`
 - `.agents/skills/README.md`
 - `docs/testing/TEST_MATRIX.md`
 - `docs/navigation/FILE_INDEX.md`

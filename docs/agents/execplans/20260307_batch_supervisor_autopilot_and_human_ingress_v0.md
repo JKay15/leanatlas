@@ -1,7 +1,7 @@
 ---
 title: Stage batch supervisor/autopilot and human external-input ingress as explicit LOOP completion themes
 owner: Codex (local workspace)
-status: planned
+status: done
 created: 2026-03-07
 parent_execplan: docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md
 ---
@@ -65,6 +65,14 @@ Out of scope:
 
 ## Outcomes & retrospective (fill when done)
 - Completed:
+  - implemented deterministic parent-wave supervision in `tools/loop/batch_supervisor.py`
+  - implemented explicit capability publication, bounded human ingress, and context rematerialization in `tools/loop/publication.py`
+  - wired LeanAtlas worktree preparation as a host adapter child-wave mode through `tools/loop/worktree_adapter.py`
 - Verification:
+  - `uv run --locked python tests/contract/check_loop_batch_supervisor.py`
+  - `uv run --locked python tests/contract/check_loop_publication_runtime.py`
+  - `uv run --locked python tests/contract/check_loop_worktree_adapter.py`
 - Residual risks:
+  - the committed supervisor is deterministic and bounded, but it is not an unbounded autonomous coding agent; child-wave plans still need explicit materialization and execution policy
 - Follow-on recommendation:
+  - keep future host-specific child-wave kinds as adapter-layer additions rather than redefining the generic parent-supervisor contract

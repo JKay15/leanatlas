@@ -32,6 +32,9 @@ Post-onboarding default preference requirement:
 - committed helper surface for those defaults:
   - `build_default_review_policy(...)`
   - `build_default_tiered_review_policy(...)`
+  - `ensure_preference_record(...)`
+  - `build_default_review_orchestration_bundle(...)`
+  - `execute_review_orchestration_bundle(...)`
   - `build_review_prompt(...)`
   - `build_controlled_review_prompt_experiment(...)`
   - `build_preference_record(...)`
@@ -67,6 +70,7 @@ Layering rule:
 Maintainer orchestration requirement:
 - Non-trivial maintainer work MUST materialize a maintainer LOOP graph before implementation and close through the same execution system.
 - Required maintainer sequence: `ExecPlan -> graph_spec -> test node -> implement node -> verify node -> AI review node -> LOOP closeout`
+- The conversation-facing task agent is the root supervisor kernel for that non-trivial run. It freezes the plan/session, delegates child work, and owns the integrated closeout decision rather than acting as the default primary worker.
 - Maintainer Python helpers MUST expose an upfront session materialization path (for example `materialize_maintainer_session(...)`) that freezes `graph_spec`, `run_key`, scope/context refs, and append-only node journal evidence before `implement node` work begins.
 - Preferred maintainer path: use a higher-level session facade (for example `MaintainerLoopSession`) that materializes once, advances node results, and closes through the same object rather than stitching together post-hoc summaries.
 - Maintainer session run identity MUST include active ExecPlan contents, not merely the `execplan_ref` pathname.
@@ -78,6 +82,10 @@ Maintainer orchestration requirement:
 - `MaintainerProgress.json` SHOULD distinguish ordinary runnable work from bookkeeping-only closeout by exposing:
   - `bookkeeping_pending_node_ids`
   - `current_node_mode` (`RUNNABLE | BOOKKEEPING_CLOSEOUT`)
+- Maintainer session materialization MUST also publish and expose:
+  - `root_supervisor_skeleton_ref`
+  - `root_supervisor_delegation_ref`
+- those refs must point to stable in-run artifacts that preserve the root supervisor kernel, delegated node ids, and child execution/delegation evidence before closeout.
 - Maintainer closeout MUST also publish a stable execplan-addressable closeout alias:
   - `artifacts/loop_runtime/by_execplan/<stable_execplan_id>/MaintainerCloseoutRef.json`
 - That stable closeout alias MUST preserve at least:
@@ -89,10 +97,26 @@ Maintainer orchestration requirement:
   - `session_created_at_utc`
   - `session_created_at_epoch_ns`
 - `MaintainerSession.json`, `MaintainerProgress.json`, and `close_maintainer_session(...)` return summaries MUST expose `closeout_ref_ref` so ExecPlans can cite settled-state LOOP closeout without embedding a run-key-specific `GraphSummary.jsonl` path in the plan body and perturbing `execplan_hash`.
+- `MaintainerSession.json`, `MaintainerProgress.json`, and `close_maintainer_session(...)` return summaries SHOULD also expose `root_supervisor_skeleton_ref` and `root_supervisor_delegation_ref`; if an exception is active they SHOULD expose `root_supervisor_exception_ref`.
 - Maintainer closeout must reject stale frozen inputs before settled-state closeout. At minimum, it must reject stale execplan bytes before settled-state closeout, refuse to rewrite the stable closeout alias from an out-of-date session, and refuse to let an older same-plan session overwrite a newer stable closeout ref.
 - legacy sessions missing `required_context_hash` or `instruction_chain_hash` must be rematerialized before closeout.
 - Maintainer `ai_review_node` evidence MUST also freeze the reviewed scope using `scope_fingerprint` plus `scope_observed_stamp`.
 - Maintainer closeout must reject mutate-and-restore scope drift after `ai_review_node`; the current reviewed scope must still match the `scope_observed_stamp` captured when `ai_review_node` was recorded.
+- Maintainer node-result evidence SHOULD preserve `execution_path` so delegated execution can be distinguished from root-owned or direct/manual exceptional execution.
+- direct/manual fallback is exceptional.
+- Maintainer helpers MUST expose a root-issued exception helper (for example `issue_root_supervisor_exception(...)`) that persists:
+  - `root_supervisor_exception_ref`
+  - `reason_code`
+  - `blocked_capability`
+  - `evidence_refs`
+  - `approved_by = root_supervisor`
+  - `bounded_scope_paths`
+  - `fallback_allowed_actions`
+  - `reentry_condition`
+  - `affected_node_ids`
+- `affected_node_ids` must remain a proper subset of delegated nodes so a local blockage cannot waive the whole non-trivial run.
+- the stable session-issued root exception artifact may append multiple bounded exception entries within one run, but each entry must preserve the required fields and remain scoped to a proper subset of delegated nodes.
+- `execution_path=DIRECT_MANUAL_EXCEPTION` is valid only when backed by the matching session-issued root exception artifact, i.e. the root-issued exception artifact already persisted on the active maintainer session.
 - SDK-facing helpers may return host-local bundle sidecars, but the embedded `graph_spec` must remain a canonical `LoopGraphSpec`.
 - Maintainer closeout helpers MUST use a deterministic reviewer runner for provider-invoked AI review.
 - That reviewer runner MUST require a non-empty review scope file list and emit append-only attempt evidence.
@@ -101,16 +125,42 @@ Maintainer orchestration requirement:
 - That reviewer runner MUST separate raw provider capture from LOOP closeout by materializing a canonical review payload before any `REVIEW_RUN` or `REVIEW_SKIPPED` decision.
 - The canonical review payload MUST validate against `CanonicalReviewResult.schema.json`.
 - raw provider stdout/stderr are audit evidence only; maintainer LOOP closeout MUST consume the canonical review payload rather than matching provider event shapes directly.
+- reviewer-runner policy knobs MUST include `allowed_runtime_reasoning_efforts` and `require_observed_runtime_metadata`.
+- provider stdout banner lines such as `model: gpt-5.4`, `provider: openai`, and `reasoning effort: low` MUST populate `observed_runtime_metadata` when available.
+- the reviewer context pack MUST persist an `expected_runtime_policy` section describing the allowed reasoning-effort set and whether observed runtime metadata is required.
+- if observed reviewer runtime metadata violates the allowed profile, closeout MUST fail closed with `REVIEWER_PROFILE_MISMATCH`; if required metadata is absent or incomplete, closeout MUST fail closed with `REVIEWER_RUNTIME_METADATA_MISSING`.
+- canonical review payloads and reviewer summaries MUST preserve `observed_runtime_metadata`.
 - That reviewer runner MUST enforce a semantic-idle gate in addition to transport idle; non-semantic stderr chatter must not keep the closeout attempt alive.
 - Maintainer helper surfaces MUST expose deterministic review-acceleration planners such as:
   - `partition_review_scope_paths(...)`
   - `merge_partition_scope_paths(...)`
   - `build_pyramid_review_plan(...)`
+  - `build_default_review_orchestration_bundle(...)`
+  - `execute_review_orchestration_bundle(...)`
   - `build_review_orchestration_graph(...)`
   - `build_review_orchestration_bundle(...)`
+- Maintainer/session helper surfaces MUST also expose parent-supervisor and publication/rematerialization helpers such as:
+  - `materialize_batch_supervisor(...)`
+  - `execute_batch_supervisor(...)`
+  - `publish_capability_event(...)`
+  - `publish_supervisor_guidance_event(...)`
+  - `record_human_external_input(...)`
+- `rematerialize_context_pack(...)`
+- parent-supervised `xhigh` execution retries MUST NOT treat early context rebuild as terminal drift by itself.
+- the default same-mode `CONTEXT_REBUILD` retry budget is reserved for child waves that declare `supervision_policy.executor_reasoning_effort = xhigh`; other lanes must opt in explicitly via `allow_context_rebuild_retries`.
+- explicit `allow_context_rebuild_retries = 0` MUST disable same-mode `CONTEXT_REBUILD` retries rather than silently restoring the default retry budget.
+- repeated no-milestone drift may be triaged only after the supervisor publishes explicit `SUPERVISOR_GUIDANCE` evidence and rematerializes a follow-up context pack for the child.
+- supervisor guidance artifacts MUST preserve explicit known conclusions, non-goals, and reminder text rather than assuming the child inherits hidden maintainer context.
+- rematerialized context packs MUST canonicalize repo-root refs to repo-relative form before hashing or deduping them, so absolute-vs-relative path spellings do not fork deterministic lineage.
+- parent-supervisor helpers MUST validate returned `result_refs` / `closeout_ref` artifacts before marking a child `PASSED`; missing repo-root artifacts must yield deterministic `TRIAGED` closeout rather than a broken authoritative reference.
+- `materialize_batch_supervisor(...)` / `execute_batch_supervisor(...)` MUST resume interrupted runs by requeueing persisted `RUNNING` child waves on the same `run_key`, journaling `CHILD_WAVE_REQUEUED` whose deterministic reason token is `INTERRUPTED_RUNNING_STATE`, and retrying the child instead of deadlocking the batch.
+- Reusable in-repo hosts may consume those role-neutral surfaces through `looplib`; external repository extraction remains a separate split wave.
+- `looplib` import surfaces MUST NOT eagerly require LeanAtlas-only worktree helpers; host-specific worktree preparation remains a lazy adapter dependency loaded only when that adapter path is actually invoked.
 - `partition_review_scope_paths(...)`, `merge_partition_scope_paths(...)`, and `build_pyramid_review_plan(...)` are planning aids only. They do not by themselves produce terminal closeout evidence.
 - `build_review_orchestration_graph(...)` compiles the schema-valid executable LOOP review graph payload only.
 - `build_review_orchestration_bundle(...)` compiles the executable LOOP review graph plus deterministic sidecar routing metadata and is the authoritative artifact for per-node reviewer-routing/audit metadata.
+- `execute_review_orchestration_bundle(...)` MUST only feed reconciliable reviewer findings into authoritative settlement. Exact `No findings.`, structured machine-readable finding payloads, and canonical top-level reviewer markdown bullets are accepted inputs; other reviewer prose MUST triage the stage with `UNPARSEABLE_REVIEW_OUTPUT` rather than collapsing into a synthetic blob finding.
+- `execute_review_orchestration_bundle(...)` MUST pass `allowed_runtime_reasoning_efforts=[stage.agent_profile]` and `require_observed_runtime_metadata=True` for every reviewer-launching stage so closeout lanes fail closed on provider/profile drift.
 - When callers need to replay a supported legacy tierless strategy plan, they MUST opt in explicitly via `allow_historical_strategy_replay=True`; missing `strategy_plan.closeout_policy.review_tier_policy` is rejected on the default authoritative replay path.
 - `graph_spec` may still persist coarse orchestration metadata needed for graph identity or merge policy (for example strategy/reconciliation summaries under `merge_policy.review_orchestration`), but it MUST NOT replace the bundle sidecar as the authoritative source for per-node reviewer routing.
 - `build_review_orchestration_bundle(...)` MUST return a machine-readable `stage_manifest` containing one entry per executable orchestration node, including non-review orchestration nodes such as `review_intake` and `finding_dedupe`; if callers later materialize bundle artifacts, that returned `stage_manifest` becomes the authoritative persisted routing sidecar. Consumers MUST be able to join each entry back to `graph_spec.nodes` via its stable `node_id`. Each entry MUST include at least:
@@ -206,7 +256,10 @@ Maintainer orchestration requirement:
 - canonical prompt frozen inputs must match the run; prompt protocol, canonical prompt bytes, and checksum evidence cannot silently drift between planning, execution, and replay.
 - In helper-authored default staged-review strategies, `final_integrated_closeout.review_tier` defaults to `MEDIUM` and `final_integrated_closeout.agent_profile` MUST reuse the bounded medium escalation profile.
 - `LOW_ONLY` staged-review policies MAY set `final_integrated_closeout.review_tier = LOW` only on the explicit no-escalation path where `deep_partition_followup.partition_ids=[]`; when they do, `final_integrated_closeout.agent_profile` MUST reuse `fast_partition_scan.agent_profile` exactly.
-- LOW closeout provenance MUST remain explicit in helper-authored/current strategies via `strategy_plan.closeout_policy.review_tier_policy = LOW_ONLY`; authoritative replay/bundle compilation MUST reject helper-authored/current LOW-closeout plans that omit that field or relabel it as `LOW_PLUS_MEDIUM`.
+- Helper-authored default no-escalation bundles MAY also keep `final_integrated_closeout.review_tier = LOW` under `LOW_PLUS_MEDIUM`, but only when `deep_partition_followup.partition_ids=[]`.
+- LOW closeout strategies MUST preserve explicit provenance via `strategy_plan.closeout_policy.review_tier_policy`, and the allowed values are `LOW_ONLY` and `LOW_PLUS_MEDIUM`.
+- When `final_integrated_closeout.review_tier = LOW` under `LOW_PLUS_MEDIUM`, authoritative replay/bundle compilation MUST preserve the `LOW_PLUS_MEDIUM` provenance rather than relabeling the plan as `LOW_ONLY`.
+- Any LOW integrated closeout, regardless of provenance, MUST keep `deep_partition_followup.partition_ids=[]` and MUST reuse `fast_partition_scan.agent_profile` exactly.
 - `strategy_plan.bounded_medium_profile` MUST be non-empty and MUST be included in the authoritative `strategy_fingerprint` top-level provenance surface.
 - In authoritative replay, `final_integrated_closeout.agent_profile` MUST match `strategy_plan.bounded_medium_profile` exactly when `final_integrated_closeout.review_tier = MEDIUM`.
 - `strategy_plan.strict_exception_profile` MUST be non-empty in helper-authored/current strategies and MUST be included in the authoritative `strategy_fingerprint` top-level provenance surface.
@@ -255,6 +308,7 @@ Maintainer orchestration requirement:
 - `run(...)` and `resume(...)` must support idempotency.
 - Same semantic input should resolve to the same `run_key`.
 - Repair loops must preserve attempt ordering and evidence chain.
+- batch-supervisor resume on the same `run_key` MUST preserve prior attempt counts; requeueing a persisted `RUNNING` child adds a later retry attempt rather than erasing the interrupted attempt.
 
 ## 3) Deterministic error model
 

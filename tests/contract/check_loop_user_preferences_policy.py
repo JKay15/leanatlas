@@ -42,6 +42,7 @@ def main() -> int:
             build_default_review_policy,
             build_preference_record,
             default_preference_artifact_path,
+            ensure_preference_record,
             load_preference_record,
             resolve_effective_preferences,
             write_preference_record,
@@ -175,6 +176,9 @@ def main() -> int:
         artifact_path = default_preference_artifact_path(repo_root)
         if artifact_path != repo_root / ".cache" / "leanatlas" / "onboarding" / "loop_preferences.json":
             return _fail("artifact path helper returned unexpected location")
+        ensured_path = ensure_preference_record(repo_root=repo_root)
+        if ensured_path != artifact_path or not ensured_path.exists():
+            return _fail("ensure_preference_record must materialize the default preference artifact when missing")
 
         record = build_preference_record()
         write_preference_record(repo_root=repo_root, record=record)

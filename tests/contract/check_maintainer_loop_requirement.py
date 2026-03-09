@@ -103,7 +103,6 @@ def main() -> int:
         "MaintainerProgress.json" in graph and "preferred maintainer path" in plans,
         "PLANS/GRAPH contracts must explain the visible maintainer progress path",
     )
-
     print("[maintainer-loop-requirement] OK")
     return 0
 

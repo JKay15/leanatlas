@@ -16,7 +16,6 @@ from tools.loop.review_canonical import (
     provider_adapter,
 )
 from tools.loop.review_prompting import inspect_review_prompt_protocol
-from tools.workflow.run_cmd import run_cmd
 
 
 def _utc_now() -> str:
@@ -118,6 +117,26 @@ def _normalize_required_context_refs(
     )
 
 
+def _normalize_runtime_reasoning_efforts(
+    values: Sequence[str] | None,
+) -> list[str]:
+    if values is None:
+        return []
+    normalized = sorted({str(value).strip().lower() for value in values if str(value).strip()})
+    if not normalized:
+        raise ValueError("allowed_runtime_reasoning_efforts must be a non-empty sequence when provided")
+    return normalized
+
+
+def _has_complete_runtime_metadata(observed_runtime_metadata: Mapping[str, Any] | None) -> bool:
+    if not isinstance(observed_runtime_metadata, Mapping):
+        return False
+    for key in ("model", "provider", "reasoning_effort"):
+        if not str(observed_runtime_metadata.get(key) or "").strip():
+            return False
+    return True
+
+
 def _expected_instruction_scope_chain(*, repo_root: Path, active_repo_files: Sequence[str]) -> list[str]:
     repo_root = repo_root.resolve()
     expected: set[str] = set()
@@ -200,6 +219,13 @@ def _write_attempts_md(path: Path, attempts: Sequence[Mapping[str, Any]]) -> Non
         canonical_result_ref = attempt.get("canonical_result_ref")
         if canonical_result_ref:
             lines.append(f"- canonical_result_ref: `{canonical_result_ref}`")
+        observed_runtime_metadata = attempt.get("observed_runtime_metadata")
+        if isinstance(observed_runtime_metadata, dict) and observed_runtime_metadata:
+            lines.append(
+                "- observed_runtime_metadata: `"
+                + json.dumps(observed_runtime_metadata, sort_keys=True, separators=(",", ":"))
+                + "`"
+            )
         lines.append(
             f"- scope_fingerprint_before: `{attempt.get('scope_fingerprint_before') or ''}`"
         )
@@ -215,6 +241,12 @@ def _write_attempts_md(path: Path, attempts: Sequence[Mapping[str, Any]]) -> Non
         lines.append("")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+
+
+def _run_cmd(*args: Any, **kwargs: Any) -> Any:
+    from tools.workflow.run_cmd import run_cmd
+
+    return run_cmd(*args, **kwargs)
 
 
 def run_review_closure(
@@ -237,6 +269,8 @@ def run_review_closure(
     instruction_scope_refs: Sequence[str] | None = None,
     required_context_refs: Sequence[str] | None = None,
     required_prompt_protocol_id: str | None = None,
+    allowed_runtime_reasoning_efforts: Sequence[str] | None = None,
+    require_observed_runtime_metadata: bool = False,
     allow_timebox_override: bool = False,
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
@@ -277,6 +311,9 @@ def run_review_closure(
         repo_root=repo_root,
         instruction_scope_refs=tuple(instruction_scope_refs or ()),
         active_repo_files=[*normalized_scope, *normalized_required_context],
+    )
+    normalized_allowed_runtime_reasoning_efforts = _normalize_runtime_reasoning_efforts(
+        allowed_runtime_reasoning_efforts
     )
     current_scope_fingerprint = compute_review_scope_fingerprint(repo_root=repo_root, scope_paths=normalized_scope)
     frozen_scope_fingerprint = expected_scope_fingerprint or current_scope_fingerprint
@@ -364,6 +401,10 @@ def run_review_closure(
         ),
         "declared_prompt_protocol_id": prompt_protocol.get("protocol_id"),
         "required_prompt_protocol_id": required_prompt_protocol_id,
+        "expected_runtime_policy": {
+            "allowed_runtime_reasoning_efforts": normalized_allowed_runtime_reasoning_efforts,
+            "require_observed_runtime_metadata": bool(require_observed_runtime_metadata),
+        },
         "expected_semantic_sources": list(adapter["semantic_sources"]),
         "observation_policy": {
             "minimum_observation_window_s": minimum_observation_window_s,
@@ -382,6 +423,7 @@ def run_review_closure(
     provider_event_ref: str | None = None
     canonical_result_ref: str | None = None
     extraction_kind: str | None = None
+    observed_runtime_metadata: dict[str, Any] | None = None
 
     for attempt_index in range(1, int(max_attempts) + 1):
         started_at = _utc_now()
@@ -404,6 +446,7 @@ def run_review_closure(
                 provider_event_ref=None,
                 stdout_ref=None,
                 stderr_ref=None,
+                observed_runtime_metadata=None,
             )
             _write_json(canonical_json, canonical_result)
             record = {
@@ -424,6 +467,7 @@ def run_review_closure(
                 "semantic_response_source": None,
                 "provider_event_ref": None,
                 "canonical_result_ref": str(canonical_json),
+                "observed_runtime_metadata": None,
             }
             attempts.append(record)
             _append_jsonl(attempts_jsonl, record)
@@ -459,7 +503,7 @@ def run_review_closure(
         if provider_event_stream in {"stdout", "stderr"}:
             semantic_activity_streams.append(provider_event_stream)
 
-        cmd_result = run_cmd(
+        cmd_result = _run_cmd(
             cmd=list(command),
             cwd=repo_root,
             log_dir=cmd_log_dir,
@@ -487,6 +531,18 @@ def run_review_closure(
         attempt_semantic_source: str | None = None
         attempt_provider_event_ref: str | None = None
         attempt_extraction_kind: str | None = None
+        attempt_observed_runtime_metadata: dict[str, Any] | None = None
+        extraction = extract_canonical_response(
+            agent_provider_id=agent_provider_id,
+            span=span,
+            evidence_root=evidence_root,
+        )
+        attempt_provider_event_ref = extraction.get("provider_event_ref")
+        attempt_semantic_source = extraction.get("semantic_response_source")
+        attempt_extraction_kind = extraction.get("extraction_kind")
+        raw_observed_runtime_metadata = extraction.get("observed_runtime_metadata")
+        if isinstance(raw_observed_runtime_metadata, Mapping):
+            attempt_observed_runtime_metadata = dict(raw_observed_runtime_metadata)
 
         status = "COMMAND_FAILED"
         reason_code = "COMMAND_FAILED"
@@ -509,28 +565,52 @@ def run_review_closure(
             status = "COMMAND_FAILED"
             reason_code = "COMMAND_FAILED"
         elif response_text:
-            status = "SUCCEEDED"
-            reason_code = "OK"
-            if attempt_semantic_source is None:
-                attempt_semantic_source = "response_file"
-            result_state = "SUCCEEDED"
+            if (
+                require_observed_runtime_metadata
+                and not _has_complete_runtime_metadata(attempt_observed_runtime_metadata)
+            ):
+                status = "REVIEWER_RUNTIME_METADATA_MISSING"
+                reason_code = "REVIEWER_RUNTIME_METADATA_MISSING"
+                result_state = "FAILED_CLOSED"
+            elif (
+                normalized_allowed_runtime_reasoning_efforts
+                and str((attempt_observed_runtime_metadata or {}).get("reasoning_effort") or "").strip().lower()
+                not in normalized_allowed_runtime_reasoning_efforts
+            ):
+                status = "REVIEWER_PROFILE_MISMATCH"
+                reason_code = "REVIEWER_PROFILE_MISMATCH"
+                result_state = "FAILED_CLOSED"
+            else:
+                status = "SUCCEEDED"
+                reason_code = "OK"
+                if attempt_semantic_source is None:
+                    attempt_semantic_source = "response_file"
+                result_state = "SUCCEEDED"
         else:
-            extraction = extract_canonical_response(
-                agent_provider_id=agent_provider_id,
-                span=span,
-                evidence_root=evidence_root,
-            )
             terminal_message = str(extraction.get("response_text") or "").strip() or None
-            attempt_provider_event_ref = extraction.get("provider_event_ref")
-            attempt_semantic_source = extraction.get("semantic_response_source")
-            attempt_extraction_kind = extraction.get("extraction_kind")
             if terminal_message:
                 response.write_text(terminal_message.rstrip() + "\n", encoding="utf-8")
                 response_exists = True
                 response_bytes = response.stat().st_size
-                status = "SUCCEEDED"
-                reason_code = "OK"
-                result_state = "SUCCEEDED"
+                if (
+                    require_observed_runtime_metadata
+                    and not _has_complete_runtime_metadata(attempt_observed_runtime_metadata)
+                ):
+                    status = "REVIEWER_RUNTIME_METADATA_MISSING"
+                    reason_code = "REVIEWER_RUNTIME_METADATA_MISSING"
+                    result_state = "FAILED_CLOSED"
+                elif (
+                    normalized_allowed_runtime_reasoning_efforts
+                    and str((attempt_observed_runtime_metadata or {}).get("reasoning_effort") or "").strip().lower()
+                    not in normalized_allowed_runtime_reasoning_efforts
+                ):
+                    status = "REVIEWER_PROFILE_MISMATCH"
+                    reason_code = "REVIEWER_PROFILE_MISMATCH"
+                    result_state = "FAILED_CLOSED"
+                else:
+                    status = "SUCCEEDED"
+                    reason_code = "OK"
+                    result_state = "SUCCEEDED"
             elif response_exists:
                 status = "RESPONSE_INVALID"
                 reason_code = "RESPONSE_EMPTY"
@@ -541,6 +621,8 @@ def run_review_closure(
         if status != "SUCCEEDED":
             attempt_semantic_source = None
             attempt_extraction_kind = None
+        if status == "SUCCEEDED" and attempt_semantic_source is None:
+            attempt_semantic_source = "response_file"
 
         canonical_result = build_canonical_review_result(
             review_id=review_id,
@@ -557,6 +639,7 @@ def run_review_closure(
             provider_event_ref=attempt_provider_event_ref,
             stdout_ref=str(span.get("stdout_path") or "") or None,
             stderr_ref=str(span.get("stderr_path") or "") or None,
+            observed_runtime_metadata=attempt_observed_runtime_metadata,
         )
         _write_json(canonical_json, canonical_result)
 
@@ -578,6 +661,7 @@ def run_review_closure(
             "semantic_response_source": attempt_semantic_source,
             "provider_event_ref": attempt_provider_event_ref,
             "canonical_result_ref": str(canonical_json),
+            "observed_runtime_metadata": attempt_observed_runtime_metadata,
         }
         attempts.append(record)
         _append_jsonl(attempts_jsonl, record)
@@ -585,6 +669,7 @@ def run_review_closure(
 
         last_reason_code = reason_code
         canonical_result_ref = str(canonical_json)
+        observed_runtime_metadata = attempt_observed_runtime_metadata
         if status == "SUCCEEDED":
             semantic_response_source = attempt_semantic_source
             provider_event_ref = attempt_provider_event_ref
@@ -605,7 +690,13 @@ def run_review_closure(
             "evidence_refs": evidence_refs,
         }
     else:
-        skip_reason = "OTHER" if result_state == "STALE_INPUT" else "TRIAGED_TOOLING"
+        skip_reason = (
+            "TRIAGED_TOOLING"
+            if result_state in {"TOOLING_FAILURE", "COMMAND_FAILED"}
+            and last_reason_code
+            not in {"REVIEWER_PROFILE_MISMATCH", "REVIEWER_RUNTIME_METADATA_MISSING"}
+            else "OTHER"
+        )
         review_closeout = {
             "mode": "REVIEW_SKIPPED",
             "skip_reason_code": skip_reason,
@@ -621,6 +712,10 @@ def run_review_closure(
         "provider_adapter_id": adapter["adapter_id"],
         "agent_profile": agent_profile,
         "resolved_invocation_signature": resolved_invocation_signature,
+        "expected_runtime_policy": {
+            "allowed_runtime_reasoning_efforts": normalized_allowed_runtime_reasoning_efforts,
+            "require_observed_runtime_metadata": bool(require_observed_runtime_metadata),
+        },
         "instruction_scope_refs": normalized_instruction_scope,
         "required_context_refs": normalized_required_context,
         "scope_ref": str(scope_json),
@@ -634,6 +729,7 @@ def run_review_closure(
         "provider_event_ref": provider_event_ref,
         "canonical_result_ref": canonical_result_ref,
         "extraction_kind": extraction_kind,
+        "observed_runtime_metadata": observed_runtime_metadata,
         "result_state": result_state,
         "reason_code": last_reason_code,
         "review_closeout": review_closeout,

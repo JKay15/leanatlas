@@ -367,8 +367,6 @@ def build_pyramid_review_plan(
                     effective_scope_source = "MANUAL_EFFECTIVE_SCOPE_OVERRIDE"
                     deep_scope_source = effective_scope_source
 
-    if final_closeout_tier == "LOW" and review_tier_policy != "LOW_ONLY":
-        raise ValueError("LOW final_closeout_tier requires review_tier_policy=LOW_ONLY")
     if final_closeout_tier == "LOW" and selected_partition_ids:
         raise ValueError(
             "LOW final_closeout_tier requires the explicit no-escalation path "

@@ -12,6 +12,35 @@ from typing import Any, Mapping
 _TERMINAL_EVENT_TOKENS = {"completed", "complete", "final", "done"}
 _ASSISTANTISH_TYPES = {"assistant_message", "agent_message"}
 _FIELD_TOKEN_SPLIT = re.compile(r"[^a-z0-9]+")
+_RUNTIME_BANNER_RE = re.compile(
+    r"^\s*(model|provider|reasoning(?:\s+|[-_])effort)\s*:\s*(?P<value>.+?)\s*$",
+    re.IGNORECASE,
+)
+
+
+def _resolve_observation_path(raw_path: str, *, evidence_root: Path) -> Path | None:
+    if not raw_path.strip():
+        return None
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = evidence_root / path
+    return path
+
+
+def _extract_observed_runtime_metadata(*, stdout_path: Path | None) -> dict[str, str] | None:
+    if stdout_path is None or not stdout_path.exists():
+        return None
+    observed: dict[str, str] = {}
+    for raw_line in stdout_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        match = _RUNTIME_BANNER_RE.match(raw_line)
+        if match is None:
+            continue
+        raw_key = match.group(1).strip().lower().replace("-", " ").replace("_", " ")
+        key = "reasoning_effort" if raw_key == "reasoning effort" else raw_key
+        value = match.group("value").strip()
+        if value:
+            observed[key] = value
+    return observed or None
 
 
 def _utc_now() -> str:
@@ -165,35 +194,36 @@ def extract_canonical_response(
     evidence_root: Path,
 ) -> dict[str, Any]:
     adapter = provider_adapter(agent_provider_id)
+    stdout_path = _resolve_observation_path(str(span.get("stdout_path") or ""), evidence_root=evidence_root)
+    observed_runtime_metadata = _extract_observed_runtime_metadata(stdout_path=stdout_path)
     if adapter.get("provider_event_jsonl_stream") != "stdout":
         return {
             "response_text": None,
             "provider_event_ref": None,
             "semantic_response_source": None,
             "extraction_kind": None,
+            "observed_runtime_metadata": observed_runtime_metadata,
         }
-    stdout_path = str(span.get("stdout_path") or "").strip()
-    if not stdout_path:
+    if stdout_path is None:
         return {
             "response_text": None,
             "provider_event_ref": None,
             "semantic_response_source": None,
             "extraction_kind": None,
+            "observed_runtime_metadata": observed_runtime_metadata,
         }
-    path = Path(stdout_path)
-    if not path.is_absolute():
-        path = evidence_root / path
-    if not path.exists():
+    if not stdout_path.exists():
         return {
             "response_text": None,
             "provider_event_ref": None,
             "semantic_response_source": None,
             "extraction_kind": None,
+            "observed_runtime_metadata": observed_runtime_metadata,
         }
 
     terminal_message: str | None = None
     extraction_kind: str | None = None
-    for raw_line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+    for raw_line in stdout_path.read_text(encoding="utf-8", errors="replace").splitlines():
         line = raw_line.strip()
         if not line:
             continue
@@ -208,15 +238,17 @@ def extract_canonical_response(
     if terminal_message:
         return {
             "response_text": terminal_message,
-            "provider_event_ref": str(path),
+            "provider_event_ref": str(stdout_path),
             "semantic_response_source": "provider_event_jsonl",
             "extraction_kind": extraction_kind,
+            "observed_runtime_metadata": observed_runtime_metadata,
         }
     return {
         "response_text": None,
-        "provider_event_ref": str(path),
+        "provider_event_ref": str(stdout_path),
         "semantic_response_source": None,
         "extraction_kind": None,
+        "observed_runtime_metadata": observed_runtime_metadata,
     }
 
 
@@ -236,6 +268,7 @@ def build_canonical_review_result(
     provider_event_ref: str | None,
     stdout_ref: str | None,
     stderr_ref: str | None,
+    observed_runtime_metadata: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     return {
         "version": "1",
@@ -255,6 +288,7 @@ def build_canonical_review_result(
         "provider_event_ref": provider_event_ref,
         "stdout_ref": stdout_ref,
         "stderr_ref": stderr_ref,
+        "observed_runtime_metadata": dict(observed_runtime_metadata or {}) or None,
     }
 
 

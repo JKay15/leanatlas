@@ -101,6 +101,18 @@ def iter_sources(repo_root: Path, source_roots: Iterable[str]) -> List[Path]:
     return out
 
 
+def _rmtree_missing_ok(path: Path) -> None:
+    def _onerror(_func, _entry, exc_info):  # type: ignore[no-untyped-def]
+        if exc_info and issubclass(exc_info[0], FileNotFoundError):
+            return
+        raise exc_info[1]
+
+    try:
+        shutil.rmtree(path, onerror=_onerror)
+    except FileNotFoundError:
+        return
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo-root", default=".", help="Repository root")
@@ -120,7 +132,7 @@ def main() -> int:
     sources = args.sources or list(DEFAULT_SOURCES)
 
     if args.clean and out_root.exists():
-        shutil.rmtree(out_root)
+        _rmtree_missing_ok(out_root)
     out_root.mkdir(parents=True, exist_ok=True)
 
     warnings: List[str] = []

@@ -21,6 +21,25 @@ _HEX64 = re.compile(r"^[a-f0-9]{64}$")
 _TERMINAL_STATES = {"PASSED", "FAILED", "TRIAGED"}
 _SUCCESS_IMPLYING_REVIEW_REASON_CODES = {"REVIEW_PASS"}
 _SOURCE_ROOT = Path(__file__).resolve().parents[2]
+_ROOT_OWNED_NODE_IDS = ("execplan", "graph_spec", "loop_closeout")
+_EXECUTION_PATH_ROOT = "ROOT_SUPERVISOR_KERNEL"
+_EXECUTION_PATH_DELEGATED = "LOOP_DELEGATED"
+_EXECUTION_PATH_DIRECT_EXCEPTION = "DIRECT_MANUAL_EXCEPTION"
+_ALLOWED_EXECUTION_PATHS = {
+    _EXECUTION_PATH_ROOT,
+    _EXECUTION_PATH_DELEGATED,
+    _EXECUTION_PATH_DIRECT_EXCEPTION,
+}
+_ROOT_EXCEPTION_REQUIRED_FIELDS = (
+    "reason_code",
+    "blocked_capability",
+    "evidence_refs",
+    "approved_by",
+    "bounded_scope_paths",
+    "fallback_allowed_actions",
+    "reentry_condition",
+    "affected_node_ids",
+)
 
 
 def _require_jsonschema() -> Any:
@@ -796,6 +815,15 @@ def _progress_snapshot(
     closeout_ref_ref = str(session.get("closeout_ref_ref") or "").strip()
     if closeout_ref_ref:
         snapshot["closeout_ref_ref"] = closeout_ref_ref
+    root_supervisor_skeleton_ref = str(session.get("root_supervisor_skeleton_ref") or "").strip()
+    if root_supervisor_skeleton_ref:
+        snapshot["root_supervisor_skeleton_ref"] = root_supervisor_skeleton_ref
+    root_supervisor_delegation_ref = str(session.get("root_supervisor_delegation_ref") or "").strip()
+    if root_supervisor_delegation_ref:
+        snapshot["root_supervisor_delegation_ref"] = root_supervisor_delegation_ref
+    root_supervisor_exception_ref = str(session.get("root_supervisor_exception_ref") or "").strip()
+    if root_supervisor_exception_ref:
+        snapshot["root_supervisor_exception_ref"] = root_supervisor_exception_ref
     return snapshot
 
 
@@ -1001,6 +1029,397 @@ def _assert_reviewed_scope_current(
         )
 
 
+def _maintainer_root_owned_node_ids(*, graph_spec: dict[str, Any]) -> list[str]:
+    node_ids = [str(node.get("node_id") or "") for node in graph_spec.get("nodes") or []]
+    return [node_id for node_id in node_ids if node_id in _ROOT_OWNED_NODE_IDS]
+
+
+def _maintainer_delegated_nodes(*, graph_spec: dict[str, Any]) -> list[dict[str, Any]]:
+    root_owned = set(_maintainer_root_owned_node_ids(graph_spec=graph_spec))
+    return [dict(node) for node in graph_spec.get("nodes") or [] if str(node.get("node_id") or "") not in root_owned]
+
+
+def _default_execution_path_for_node(*, node_id: str) -> str:
+    return _EXECUTION_PATH_ROOT if node_id in set(_ROOT_OWNED_NODE_IDS) else _EXECUTION_PATH_DELEGATED
+
+
+def _delegation_kind_for_node(*, node_id: str) -> str:
+    if node_id == "ai_review_node":
+        return "CHILD_REVIEW_LOOP"
+    if node_id == "verify_node":
+        return "CHILD_VERIFY_LOOP"
+    return "CHILD_WORKER"
+
+
+def _root_supervisor_skeleton_artifact(
+    *,
+    store: LoopStore,
+    session: dict[str, Any],
+    graph_spec: dict[str, Any],
+) -> dict[str, Any]:
+    root_owned = _maintainer_root_owned_node_ids(graph_spec=graph_spec)
+    delegated = [str(node["node_id"]) for node in _maintainer_delegated_nodes(graph_spec=graph_spec)]
+    responsibility_by_node = {
+        "execplan": "freeze scope and acceptance before execution begins",
+        "graph_spec": "materialize the declared LOOP path before work",
+        "test_node": "TDD guardrails before implementation",
+        "implement_node": "bounded implementation under delegated execution",
+        "verify_node": "deterministic verification",
+        "ai_review_node": "fresh reviewer closeout under the committed reviewer policy",
+        "loop_closeout": "root-only integrated closeout and merge approval",
+    }
+    return {
+        "version": "1",
+        "run_key": str(session["run_key"]),
+        "execplan_ref": str(session["execplan_ref"]),
+        "authoritative_owner_surface": "generic_loop_library",
+        "root_supervisor_kernel": {
+            "identity": "conversation-facing task agent",
+            "authority": [
+                "freeze_execplan",
+                "materialize_root_session",
+                "emit_root_supervisor_skeleton",
+                "delegate_child_subgraphs_or_workers",
+                "issue_root_supervisor_exception_when_needed",
+                "approve_integrated_closeout",
+            ],
+            "must_not": [
+                "act as the primary worker for non-trivial tasks when an existing LOOP path is available",
+                "skip root or child LOOP materialization without a root-issued exception artifact",
+                "let a blocked subtree waive LOOP execution for the whole task",
+            ],
+        },
+        "root_owned_node_ids": root_owned,
+        "delegated_node_ids": delegated,
+        "root_nodes": [
+            {
+                "node_id": str(node.get("node_id") or ""),
+                "loop_id": str(node.get("loop_id") or ""),
+                "role": str(node.get("role") or ""),
+                "execution_path": _default_execution_path_for_node(node_id=str(node.get("node_id") or "")),
+                "responsibility": responsibility_by_node.get(str(node.get("node_id") or ""), ""),
+            }
+            for node in graph_spec.get("nodes") or []
+            if str(node.get("node_id") or "") in set(root_owned)
+        ],
+        "layered_supervisor_model": {
+            "root supervisor kernel": "owns scope freeze, delegation, exceptions, and final approval",
+            "wave supervisor": "coordinates multiple child waves through batch supervision",
+            "subgraph supervisor": "coordinates a local maintainer, review, or recovery subgraph",
+            "worker": "performs bounded execution only and never owns integrated closeout",
+        },
+        "child_wave_types": [
+            {"type": "maintainer_change_graph", "surface": "tools/loop/presets.py::build_maintainer_change_graph"},
+            {"type": "review_orchestration_bundle", "surface": "tools/loop/review_orchestration.py"},
+            {"type": "batch_supervisor_batch", "surface": "tools/loop/batch_supervisor.py"},
+        ],
+        "child_subgraph_types": [
+            {"subgraph_type": "maintainer_change_v1", "surface": "tools/loop/presets.py::build_maintainer_change_bundle"},
+            {"subgraph_type": "review_orchestration", "surface": "tools/loop/review_orchestration.py"},
+            {"subgraph_type": "dynamic_recovery_v1", "surface": "tools/loop/presets.py::build_dynamic_recovery_bundle"},
+        ],
+        "exception_path": {
+            "artifact_path": str(store.artifact_path("graph/root_supervisor_exception.json")),
+            "required_fields": [
+                "reason_code",
+                "blocked_capability",
+                "evidence_refs",
+                "approved_by",
+                "bounded_scope_paths",
+                "fallback_allowed_actions",
+                "reentry_condition",
+                "affected_node_ids",
+            ],
+            "policy": [
+                "direct/manual fallback is exceptional and root-issued",
+                "fallback may cover only the blocked subtree, not the whole delegated task",
+                "unblocked portions of the task remain on the root or delegated LOOP path",
+                "stable session-issued root exception artifact may append multiple bounded exception entries within one run",
+            ],
+        },
+        "delegation_evidence_mapping": {
+            "delegation_manifest_ref": str(store.artifact_path("graph/root_supervisor_delegation.json")),
+            "session_evidence_refs": [
+                str(store.artifact_path("graph/GraphSpec.json")),
+                str(store.artifact_path("graph/MaintainerSession.json")),
+                str(store.artifact_path("graph/MaintainerProgress.json")),
+                str(store.artifact_path("graph/NodeJournal.jsonl")),
+            ],
+        },
+        "integrated_closeout_path": {
+            "authority": "root_supervisor_kernel",
+            "authoritative_sink_node_id": "loop_closeout",
+            "required_evidence": [
+                "root_supervisor_skeleton.json",
+                "root_supervisor_delegation.json",
+                "MaintainerSession.json",
+                "MaintainerProgress.json",
+                "NodeJournal.jsonl",
+                "MaintainerCloseoutRef.json",
+            ],
+        },
+    }
+
+
+def _root_supervisor_delegation_artifact(
+    *,
+    store: LoopStore,
+    session: dict[str, Any],
+    graph_spec: dict[str, Any],
+    journal: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    terminal_entries = {
+        str(entry.get("node_id")): dict(entry)
+        for entry in journal
+        if entry.get("entry_kind") == "NODE_TERMINAL_RESULT"
+    }
+    delegated_nodes = _maintainer_delegated_nodes(graph_spec=graph_spec)
+    return {
+        "version": "1",
+        "run_key": str(session["run_key"]),
+        "execplan_ref": str(session["execplan_ref"]),
+        "root_supervisor_skeleton_ref": str(store.artifact_path("graph/root_supervisor_skeleton.json")),
+        "root_owned_node_ids": _maintainer_root_owned_node_ids(graph_spec=graph_spec),
+        "delegated_node_ids": [str(node["node_id"]) for node in delegated_nodes],
+        "delegated_nodes": [
+            {
+                "node_id": str(node["node_id"]),
+                "loop_id": str(node.get("loop_id") or ""),
+                "role": str(node.get("role") or ""),
+                "delegation_kind": _delegation_kind_for_node(node_id=str(node["node_id"])),
+                "execution_path": str(
+                    terminal_entries.get(str(node["node_id"]), {}).get(
+                        "execution_path",
+                        _EXECUTION_PATH_DELEGATED,
+                    )
+                ),
+                "terminal_state": terminal_entries.get(str(node["node_id"]), {}).get("state"),
+                "reason_code": terminal_entries.get(str(node["node_id"]), {}).get("reason_code"),
+                "child_execution_refs": list(terminal_entries.get(str(node["node_id"]), {}).get("evidence_refs") or []),
+                "node_run_key": terminal_entries.get(str(node["node_id"]), {}).get("node_run_key"),
+                "root_exception_ref": terminal_entries.get(str(node["node_id"]), {}).get("root_exception_ref"),
+            }
+            for node in delegated_nodes
+        ],
+    }
+
+
+def _canonicalize_root_supervisor_refs(
+    *,
+    store: LoopStore,
+    session: dict[str, Any],
+    graph_spec: dict[str, Any],
+    root_exception_ref: str | None = None,
+    ensure_artifacts: bool,
+) -> tuple[dict[str, Any], bool]:
+    skeleton_path = store.artifact_path("graph/root_supervisor_skeleton.json")
+    delegation_path = store.artifact_path("graph/root_supervisor_delegation.json")
+    if ensure_artifacts:
+        journal = _read_jsonl(store.artifact_path("graph/NodeJournal.jsonl"))
+        _write_json_overwrite(
+            skeleton_path,
+            _root_supervisor_skeleton_artifact(store=store, session=session, graph_spec=graph_spec),
+        )
+        _write_json_overwrite(
+            delegation_path,
+            _root_supervisor_delegation_artifact(
+                store=store,
+                session=session,
+                graph_spec=graph_spec,
+                journal=journal,
+            ),
+        )
+    session_path = store.artifact_path("graph/MaintainerSession.json")
+    changed = False
+    canonical_fields = {
+        "root_supervisor_skeleton_ref": str(skeleton_path),
+        "root_supervisor_delegation_ref": str(delegation_path),
+    }
+    if root_exception_ref is not None:
+        canonical_fields["root_supervisor_exception_ref"] = str(root_exception_ref)
+    elif str(session.get("root_supervisor_exception_ref") or "").strip():
+        canonical_fields["root_supervisor_exception_ref"] = str(session["root_supervisor_exception_ref"])
+    for key, value in canonical_fields.items():
+        if str(session.get(key) or "") != value:
+            session[key] = value
+            changed = True
+    if changed:
+        _write_json_overwrite(session_path, session)
+    return session, changed
+
+
+def _normalize_root_supervisor_exception_entry(
+    *,
+    repo_root: Path,
+    entry: dict[str, Any],
+    delegated_node_ids: Sequence[str],
+    affected_node_id: str | None = None,
+) -> dict[str, Any]:
+    missing = [field for field in _ROOT_EXCEPTION_REQUIRED_FIELDS if field not in entry]
+    if missing:
+        raise ValueError(
+            "root-issued exception artifact is missing required fields: " + ", ".join(missing)
+        )
+    if str(entry.get("approved_by") or "") != "root_supervisor":
+        raise ValueError("root-issued exception artifact must record approved_by = root_supervisor")
+    normalized_evidence = _normalize_repo_file_refs(
+        repo_root=repo_root,
+        refs=entry.get("evidence_refs") or [],
+        field_name="evidence_refs",
+        require_non_empty=True,
+    )
+    normalized_scope = _normalize_repo_file_refs(
+        repo_root=repo_root,
+        refs=entry.get("bounded_scope_paths") or [],
+        field_name="bounded_scope_paths",
+        require_non_empty=True,
+    )
+    affected_node_ids = sorted(
+        {str(node_id) for node_id in entry.get("affected_node_ids") or [] if str(node_id).strip()}
+    )
+    delegated = sorted({str(node_id) for node_id in delegated_node_ids})
+    if not affected_node_ids:
+        raise ValueError("root-issued exception artifact must preserve a non-empty affected_node_ids list")
+    if not set(affected_node_ids).issubset(set(delegated)):
+        raise ValueError("root-issued exception artifact affected_node_ids must stay within delegated nodes")
+    if len(affected_node_ids) >= len(delegated):
+        raise ValueError("root-issued exception artifact must cover a proper subset of delegated nodes")
+    if affected_node_id is not None and affected_node_id not in set(affected_node_ids):
+        raise ValueError(
+            "root-issued exception artifact does not cover the requested delegated node: "
+            + affected_node_id
+        )
+    normalized = dict(entry)
+    normalized["evidence_refs"] = normalized_evidence
+    normalized["bounded_scope_paths"] = normalized_scope
+    normalized["affected_node_ids"] = affected_node_ids
+    return normalized
+
+
+def _validate_root_supervisor_exception_artifact(
+    *,
+    repo_root: Path,
+    root_exception_ref: str | Path,
+    delegated_node_ids: Sequence[str],
+    affected_node_id: str | None = None,
+) -> tuple[Path, dict[str, Any]]:
+    path = _resolve_repo_file(repo_root, root_exception_ref)
+    obj = json.loads(path.read_text(encoding="utf-8"))
+    raw_entries = obj.get("exceptions")
+    if raw_entries is None:
+        candidate_entries = [obj]
+    elif not isinstance(raw_entries, list) or not raw_entries:
+        raise ValueError("root-issued exception artifact exceptions must be a non-empty list when present")
+    else:
+        candidate_entries = [dict(item) for item in raw_entries if isinstance(item, dict)]
+        if len(candidate_entries) != len(raw_entries):
+            raise ValueError("root-issued exception artifact exceptions must contain only object entries")
+    normalized_entries = [
+        _normalize_root_supervisor_exception_entry(
+            repo_root=repo_root,
+            entry=dict(entry),
+            delegated_node_ids=delegated_node_ids,
+            affected_node_id=None,
+        )
+        for entry in candidate_entries
+    ]
+    seen_affected_node_ids: set[str] = set()
+    for entry in normalized_entries:
+        affected_ids = set(entry.get("affected_node_ids") or [])
+        if seen_affected_node_ids & affected_ids:
+            raise ValueError(
+                "root-issued exception artifact must not record overlapping affected_node_ids across bounded entries"
+            )
+        seen_affected_node_ids.update(affected_ids)
+    if affected_node_id is None:
+        return path, dict(normalized_entries[-1])
+    matching_entries = [
+        entry for entry in normalized_entries if affected_node_id in set(entry.get("affected_node_ids") or [])
+    ]
+    if not matching_entries:
+        raise ValueError(
+            "root-issued exception artifact does not cover the requested delegated node: "
+            + affected_node_id
+        )
+    if len(matching_entries) > 1:
+        raise ValueError(
+            "root-issued exception artifact must not record overlapping affected_node_ids across bounded entries"
+        )
+    return path, dict(matching_entries[0])
+
+
+def _assert_root_supervisor_artifacts_current(
+    *,
+    repo_root: Path,
+    store: LoopStore,
+    session: dict[str, Any],
+    graph_spec: dict[str, Any],
+    journal: Sequence[dict[str, Any]],
+) -> None:
+    skeleton_ref = str(session.get("root_supervisor_skeleton_ref") or "").strip()
+    if not skeleton_ref:
+        raise ValueError("cannot close maintainer session without root_supervisor_skeleton_ref")
+    skeleton_path = Path(skeleton_ref)
+    if not skeleton_path.exists():
+        raise ValueError("cannot close maintainer session when root_supervisor_skeleton_ref is missing on disk")
+    skeleton = json.loads(skeleton_path.read_text(encoding="utf-8"))
+    expected_skeleton = _root_supervisor_skeleton_artifact(
+        store=store,
+        session=session,
+        graph_spec=graph_spec,
+    )
+    if skeleton != expected_skeleton:
+        raise ValueError(
+            "root_supervisor_skeleton_ref must preserve the canonical root supervisor skeleton contents"
+        )
+    delegation_ref = str(session.get("root_supervisor_delegation_ref") or "").strip()
+    if not delegation_ref:
+        raise ValueError("cannot close maintainer session without root_supervisor_delegation_ref")
+    delegation_path = Path(delegation_ref)
+    if not delegation_path.exists():
+        raise ValueError("cannot close maintainer session when root_supervisor_delegation_ref is missing on disk")
+    delegation = json.loads(delegation_path.read_text(encoding="utf-8"))
+    delegated_node_ids = [str(node["node_id"]) for node in _maintainer_delegated_nodes(graph_spec=graph_spec)]
+    if delegation.get("delegated_node_ids") != delegated_node_ids:
+        raise ValueError("root_supervisor_delegation_ref must preserve the canonical delegated node ids")
+    delegated_entries = {
+        str(item.get("node_id") or ""): dict(item)
+        for item in delegation.get("delegated_nodes") or []
+    }
+    terminal_entries = {
+        str(entry.get("node_id")): dict(entry)
+        for entry in journal
+        if entry.get("entry_kind") == "NODE_TERMINAL_RESULT"
+    }
+    for node_id in delegated_node_ids:
+        entry = delegated_entries.get(node_id)
+        if entry is None:
+            raise ValueError("root_supervisor_delegation_ref is missing delegated node coverage for " + node_id)
+        journal_entry = terminal_entries.get(node_id)
+        if journal_entry is None:
+            continue
+        if entry.get("terminal_state") != journal_entry.get("state"):
+            raise ValueError("root_supervisor_delegation_ref must mirror delegated terminal state for " + node_id)
+        if entry.get("reason_code") != journal_entry.get("reason_code"):
+            raise ValueError("root_supervisor_delegation_ref must mirror delegated reason_code for " + node_id)
+        if entry.get("execution_path") != journal_entry.get("execution_path"):
+            raise ValueError("root_supervisor_delegation_ref must mirror delegated execution_path for " + node_id)
+        if list(entry.get("child_execution_refs") or []) != list(journal_entry.get("evidence_refs") or []):
+            raise ValueError("root_supervisor_delegation_ref must mirror delegated child_execution_refs for " + node_id)
+        if str(journal_entry.get("execution_path") or "") == _EXECUTION_PATH_DIRECT_EXCEPTION:
+            root_exception_ref = str(journal_entry.get("root_exception_ref") or "").strip()
+            if not root_exception_ref:
+                raise ValueError(
+                    "direct/manual fallback requires a root-issued exception artifact on the node evidence"
+                )
+            _validate_root_supervisor_exception_artifact(
+                repo_root=repo_root,
+                root_exception_ref=root_exception_ref,
+                delegated_node_ids=delegated_node_ids,
+                affected_node_id=node_id,
+            )
+
+
 def materialize_maintainer_session(
     *,
     repo_root: Path,
@@ -1122,6 +1541,12 @@ def materialize_maintainer_session(
         store=store,
         session=session,
     )
+    session, _session_root_supervisor_updated = _canonicalize_root_supervisor_refs(
+        store=store,
+        session=session,
+        graph_spec=graph_spec,
+        ensure_artifacts=True,
+    )
     _append_jsonl_if_absent_or_equal_first(
         store=store,
         rel="graph/NodeJournal.jsonl",
@@ -1141,6 +1566,8 @@ def materialize_maintainer_session(
         "graph_spec": graph_spec,
         "session_ref": str(session_path),
         "progress_ref": str(progress_path),
+        "root_supervisor_skeleton_ref": str(session["root_supervisor_skeleton_ref"]),
+        "root_supervisor_delegation_ref": str(session["root_supervisor_delegation_ref"]),
     }
 
 
@@ -1166,6 +1593,12 @@ def _load_maintainer_session(
         session=session,
     )
     graph_spec = dict(store.read_json("graph/GraphSpec.json", stream="artifact"))
+    session, _session_root_supervisor_updated = _canonicalize_root_supervisor_refs(
+        store=store,
+        session=session,
+        graph_spec=graph_spec,
+        ensure_artifacts=False,
+    )
     return store, session, graph_spec
 
 
@@ -1224,6 +1657,119 @@ def _resolved_terminal_states(
     return resolved_states, effective_states, resolved_executed
 
 
+def issue_root_supervisor_exception(
+    *,
+    repo_root: Path,
+    run_key: str,
+    reason_code: str,
+    blocked_capability: str,
+    evidence_refs: Sequence[str | Path],
+    bounded_scope_paths: Sequence[str | Path],
+    fallback_allowed_actions: Sequence[str],
+    reentry_condition: str,
+    affected_node_ids: Sequence[str],
+) -> dict[str, Any]:
+    store, session, graph_spec = _load_maintainer_session(repo_root=repo_root, run_key=run_key)
+    delegated_node_ids = [str(node["node_id"]) for node in _maintainer_delegated_nodes(graph_spec=graph_spec)]
+    normalized_evidence = _normalize_repo_file_refs(
+        repo_root=repo_root.resolve(),
+        refs=evidence_refs,
+        field_name="evidence_refs",
+        require_non_empty=True,
+    )
+    normalized_scope = _normalize_repo_file_refs(
+        repo_root=repo_root.resolve(),
+        refs=bounded_scope_paths,
+        field_name="bounded_scope_paths",
+        require_non_empty=True,
+    )
+    normalized_actions = sorted({str(action).strip() for action in fallback_allowed_actions if str(action).strip()})
+    if not normalized_actions:
+        raise ValueError("fallback_allowed_actions must be a non-empty sequence")
+    normalized_affected = sorted({str(node_id).strip() for node_id in affected_node_ids if str(node_id).strip()})
+    if not normalized_affected:
+        raise ValueError("affected_node_ids must be a non-empty sequence")
+    if not set(normalized_affected).issubset(set(delegated_node_ids)):
+        raise ValueError("root-issued exception artifact affected_node_ids must stay within delegated nodes")
+    if len(normalized_affected) >= len(delegated_node_ids):
+        raise ValueError("root-issued exception artifact must cover a proper subset of delegated nodes")
+    if not str(reason_code).strip():
+        raise ValueError("reason_code must be non-empty")
+    if not str(blocked_capability).strip():
+        raise ValueError("blocked_capability must be non-empty")
+    if not str(reentry_condition).strip():
+        raise ValueError("reentry_condition must be non-empty")
+
+    exception_entry = {
+        "version": "1",
+        "issued_at_utc": _utc_now(),
+        "run_key": str(run_key),
+        "execplan_ref": str(session["execplan_ref"]),
+        "reason_code": str(reason_code),
+        "blocked_capability": str(blocked_capability),
+        "evidence_refs": normalized_evidence,
+        "approved_by": "root_supervisor",
+        "bounded_scope_paths": normalized_scope,
+        "fallback_allowed_actions": normalized_actions,
+        "reentry_condition": str(reentry_condition),
+        "affected_node_ids": normalized_affected,
+    }
+    exception_path = store.artifact_path("graph/root_supervisor_exception.json")
+    exception_entries: list[dict[str, Any]] = []
+    if exception_path.exists():
+        existing = json.loads(exception_path.read_text(encoding="utf-8"))
+        existing_raw_entries = existing.get("exceptions")
+        if existing_raw_entries is None:
+            existing_entries = [dict(existing)]
+        elif not isinstance(existing_raw_entries, list) or not existing_raw_entries:
+            raise ValueError("root_supervisor_exception.json exceptions must be a non-empty list when present")
+        else:
+            existing_entries = [dict(item) for item in existing_raw_entries if isinstance(item, dict)]
+            if len(existing_entries) != len(existing_raw_entries):
+                raise ValueError("root_supervisor_exception.json exceptions must contain only object entries")
+        for existing_entry in existing_entries:
+            normalized_existing_entry = _normalize_root_supervisor_exception_entry(
+                repo_root=repo_root.resolve(),
+                entry=existing_entry,
+                delegated_node_ids=delegated_node_ids,
+            )
+            if normalized_existing_entry == exception_entry:
+                exception_entries.append(normalized_existing_entry)
+                continue
+            if set(normalized_existing_entry.get("affected_node_ids") or []) & set(normalized_affected):
+                raise ValueError(
+                    "root-issued exception artifact must not record overlapping affected_node_ids across bounded entries"
+                )
+            exception_entries.append(normalized_existing_entry)
+        if exception_entry not in exception_entries:
+            exception_entries.append(exception_entry)
+    else:
+        exception_entries.append(exception_entry)
+    latest_entry = dict(exception_entries[-1])
+    exception_obj = {
+        "version": "1",
+        "run_key": str(run_key),
+        "execplan_ref": str(session["execplan_ref"]),
+        "issued_exception_count": len(exception_entries),
+        "exceptions": exception_entries,
+        **latest_entry,
+    }
+    _write_json_overwrite(exception_path, exception_obj)
+    session, _ = _canonicalize_root_supervisor_refs(
+        store=store,
+        session=session,
+        graph_spec=graph_spec,
+        root_exception_ref=str(exception_path),
+        ensure_artifacts=True,
+    )
+    _write_progress_snapshot(store=store, session=session)
+    return {
+        **latest_entry,
+        "issued_exception_count": len(exception_entries),
+        "root_supervisor_exception_ref": str(exception_path),
+    }
+
+
 def record_maintainer_node_result(
     *,
     repo_root: Path,
@@ -1233,6 +1779,8 @@ def record_maintainer_node_result(
     reason_code: str,
     evidence_refs: Sequence[str | Path] | None = None,
     node_run_key: str | None = None,
+    execution_path: str | None = None,
+    root_exception_ref: str | Path | None = None,
 ) -> dict[str, Any]:
     if state not in _TERMINAL_STATES:
         raise ValueError(f"state must be one of {_TERMINAL_STATES}")
@@ -1265,6 +1813,16 @@ def record_maintainer_node_result(
         for entry in journal
     ):
         raise ValueError(f"node_id {node_id!r} already has a terminal journal entry")
+    is_root_owned = node_id in set(_maintainer_root_owned_node_ids(graph_spec=graph_spec))
+    resolved_execution_path = str(execution_path or _default_execution_path_for_node(node_id=node_id))
+    if resolved_execution_path not in _ALLOWED_EXECUTION_PATHS:
+        raise ValueError(
+            "execution_path must be one of " + ", ".join(sorted(_ALLOWED_EXECUTION_PATHS))
+        )
+    if is_root_owned and resolved_execution_path != _EXECUTION_PATH_ROOT:
+        raise ValueError("root-owned maintainer nodes must record execution_path=ROOT_SUPERVISOR_KERNEL")
+    if not is_root_owned and resolved_execution_path == _EXECUTION_PATH_ROOT:
+        raise ValueError("delegated maintainer nodes must not record execution_path=ROOT_SUPERVISOR_KERNEL")
     predecessors = sorted(
         str(edge["from"])
         for edge in graph_spec.get("edges") or []
@@ -1312,6 +1870,35 @@ def record_maintainer_node_result(
         field_name="evidence_refs",
         require_non_empty=False,
     )
+    resolved_root_exception_ref: str | None = None
+    if resolved_execution_path == _EXECUTION_PATH_DIRECT_EXCEPTION:
+        if is_root_owned:
+            raise ValueError("root-owned maintainer nodes must not use the direct/manual exception path")
+        if root_exception_ref is None:
+            raise ValueError(
+                "direct/manual maintainer node results require a root-issued exception artifact"
+            )
+        resolved_exception_path, _exception_obj = _validate_root_supervisor_exception_artifact(
+            repo_root=repo_root.resolve(),
+            root_exception_ref=root_exception_ref,
+            delegated_node_ids=[str(node["node_id"]) for node in _maintainer_delegated_nodes(graph_spec=graph_spec)],
+            affected_node_id=node_id,
+        )
+        session_root_exception_ref = str(session.get("root_supervisor_exception_ref") or "").strip()
+        if not session_root_exception_ref:
+            raise ValueError(
+                "direct/manual maintainer node results must use the session's root-issued exception artifact; "
+                "issue_root_supervisor_exception(...) must persist root_supervisor_exception_ref first"
+            )
+        if session_root_exception_ref != str(resolved_exception_path):
+            raise ValueError(
+                "direct/manual maintainer node results must use the session's root-issued exception artifact"
+            )
+        resolved_root_exception_ref = str(resolved_exception_path)
+    elif root_exception_ref is not None:
+        raise ValueError(
+            "root_exception_ref is only valid when execution_path=DIRECT_MANUAL_EXCEPTION"
+        )
     entry: dict[str, Any] = {
         "entry_kind": "NODE_TERMINAL_RESULT",
         "at_utc": _utc_now(),
@@ -1320,11 +1907,14 @@ def record_maintainer_node_result(
         "node_id": node_id,
         "state": state,
         "reason_code": reason_code,
+        "execution_path": resolved_execution_path,
     }
     if normalized_evidence:
         entry["evidence_refs"] = normalized_evidence
     if node_run_key is not None:
         entry["node_run_key"] = str(node_run_key)
+    if resolved_root_exception_ref is not None:
+        entry["root_exception_ref"] = resolved_root_exception_ref
     if node_id == "ai_review_node":
         entry["scope_fingerprint"] = _hash_repo_file_set(
             repo_root=repo_root.resolve(),
@@ -1336,6 +1926,12 @@ def record_maintainer_node_result(
         )
     store.append_jsonl("graph/NodeJournal.jsonl", entry, stream="artifact")
     session["session_ref"] = str(store.artifact_path("graph/MaintainerSession.json"))
+    session, _ = _canonicalize_root_supervisor_refs(
+        store=store,
+        session=session,
+        graph_spec=graph_spec,
+        ensure_artifacts=True,
+    )
     _write_progress_snapshot(store=store, session=session)
     return entry
 
@@ -1345,6 +1941,13 @@ def close_maintainer_session(*, repo_root: Path, run_key: str) -> dict[str, Any]
     journal = _read_jsonl(store.artifact_path("graph/NodeJournal.jsonl"))
     _assert_frozen_session_inputs_current(repo_root=repo_root.resolve(), session=session)
     _assert_reviewed_scope_current(repo_root=repo_root.resolve(), session=session, journal=journal)
+    _assert_root_supervisor_artifacts_current(
+        repo_root=repo_root.resolve(),
+        store=store,
+        session=session,
+        graph_spec=graph_spec,
+        journal=journal,
+    )
     node_results: dict[str, dict[str, object]] = {}
     for entry in journal:
         if entry.get("entry_kind") != "NODE_TERMINAL_RESULT":
@@ -1394,7 +1997,11 @@ def close_maintainer_session(*, repo_root: Path, run_key: str) -> dict[str, Any]
         "final_status": str(summary["final_status"]),
         "session_ref": str(store.artifact_path("graph/MaintainerSession.json")),
         "progress_ref": str(store.artifact_path("graph/MaintainerProgress.json")),
+        "root_supervisor_skeleton_ref": str(session.get("root_supervisor_skeleton_ref") or ""),
+        "root_supervisor_delegation_ref": str(session.get("root_supervisor_delegation_ref") or ""),
     }
+    if str(session.get("root_supervisor_exception_ref") or "").strip():
+        closeout_ref["root_supervisor_exception_ref"] = str(session["root_supervisor_exception_ref"])
     _write_json_overwrite(closeout_ref_path, closeout_ref)
     session["session_ref"] = str(store.artifact_path("graph/MaintainerSession.json"))
     _write_progress_snapshot(
@@ -1403,7 +2010,17 @@ def close_maintainer_session(*, repo_root: Path, run_key: str) -> dict[str, Any]
         final_status=str(summary["final_status"]),
         summary_ref=str(summary["summary_ref"]),
     )
-    return {**summary, "closeout_ref_ref": str(closeout_ref_path)}
+    return {
+        **summary,
+        "closeout_ref_ref": str(closeout_ref_path),
+        "root_supervisor_skeleton_ref": str(session.get("root_supervisor_skeleton_ref") or ""),
+        "root_supervisor_delegation_ref": str(session.get("root_supervisor_delegation_ref") or ""),
+        **(
+            {"root_supervisor_exception_ref": str(session["root_supervisor_exception_ref"])}
+            if str(session.get("root_supervisor_exception_ref") or "").strip()
+            else {}
+        ),
+    }
 
 
 def execute_recorded_graph(
@@ -1508,6 +2125,9 @@ class MaintainerLoopSession:
     graph_spec_ref: str
     node_journal_ref: str
     progress_ref: str
+    root_supervisor_skeleton_ref: str
+    root_supervisor_delegation_ref: str
+    root_supervisor_exception_ref: str | None = None
 
     @classmethod
     def materialize(
@@ -1537,6 +2157,13 @@ class MaintainerLoopSession:
             graph_spec_ref=str(session["graph_spec_ref"]),
             node_journal_ref=str(session["node_journal_ref"]),
             progress_ref=str(session["progress_ref"]),
+            root_supervisor_skeleton_ref=str(session["root_supervisor_skeleton_ref"]),
+            root_supervisor_delegation_ref=str(session["root_supervisor_delegation_ref"]),
+            root_supervisor_exception_ref=(
+                str(session["root_supervisor_exception_ref"])
+                if str(session.get("root_supervisor_exception_ref") or "").strip()
+                else None
+            ),
         )
 
     @classmethod
@@ -1551,6 +2178,13 @@ class MaintainerLoopSession:
             graph_spec_ref=str(session["graph_spec_ref"]),
             node_journal_ref=str(session["node_journal_ref"]),
             progress_ref=str(progress_path),
+            root_supervisor_skeleton_ref=str(session["root_supervisor_skeleton_ref"]),
+            root_supervisor_delegation_ref=str(session["root_supervisor_delegation_ref"]),
+            root_supervisor_exception_ref=(
+                str(session["root_supervisor_exception_ref"])
+                if str(session.get("root_supervisor_exception_ref") or "").strip()
+                else None
+            ),
         )
 
     def record_node_result(
@@ -1561,6 +2195,8 @@ class MaintainerLoopSession:
         reason_code: str,
         evidence_refs: Sequence[str | Path] | None = None,
         node_run_key: str | None = None,
+        execution_path: str | None = None,
+        root_exception_ref: str | Path | None = None,
     ) -> dict[str, Any]:
         return record_maintainer_node_result(
             repo_root=self.repo_root,
@@ -1570,6 +2206,8 @@ class MaintainerLoopSession:
             reason_code=reason_code,
             evidence_refs=evidence_refs,
             node_run_key=node_run_key,
+            execution_path=execution_path,
+            root_exception_ref=root_exception_ref,
         )
 
     def close(self) -> dict[str, Any]:
@@ -1580,6 +2218,7 @@ __all__ = [
     "MaintainerLoopSession",
     "close_maintainer_session",
     "execute_recorded_graph",
+    "issue_root_supervisor_exception",
     "materialize_maintainer_session",
     "record_maintainer_node_result",
 ]

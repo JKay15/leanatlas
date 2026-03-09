@@ -6,12 +6,20 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
-from .review_prompting import EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID
-from .review_runner import compute_review_scope_fingerprint
-from .review_strategy import _canonical_partitioning_policy_for_strategy_fingerprint, partition_review_scope_paths
+from .review_prompting import EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID, build_review_prompt
+from .review_reconciliation import persist_review_reconciliation, reconcile_review_rounds
+from .review_runner import compute_review_scope_fingerprint, run_review_closure
+from .review_strategy import (
+    _canonical_partitioning_policy_for_strategy_fingerprint,
+    build_pyramid_review_plan,
+    partition_review_scope_paths,
+)
+from .run_key import RunKeyInput, compute_run_key
+from .user_preferences import ensure_preference_record, resolve_effective_preferences
 
 _GRAPH_MODE_VALUES = {"STATIC_USER_MODE", "SYSTEM_EXCEPTION_MODE"}
 _RESOURCE_CLASS_VALUES = {"IMMUTABLE", "APPEND_ONLY", "MUTABLE_CONTROLLED"}
@@ -186,6 +194,18 @@ def _canonical_hash(obj: Any) -> str:
     return hashlib.sha256(
         json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     ).hexdigest()
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _hash_repo_file_set(*, repo_root: Path, refs: Sequence[str]) -> str:
+    payload = {}
+    for rel in refs:
+        path = repo_root / rel
+        payload[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return _canonical_hash(payload)
 
 
 def _normalize_repo_root(repo_root: str | Path) -> Path:
@@ -1177,9 +1197,9 @@ def _validate_strategy_plan(
             "escalation profile exactly when review_tier is `MEDIUM`"
         )
     if final_review_tier == "LOW":
-        if review_tier_policy != "LOW_ONLY":
+        if review_tier_policy not in {"LOW_ONLY", "LOW_PLUS_MEDIUM"}:
             raise ValueError(
-                "LOW closeout strategies require closeout_policy.review_tier_policy=`LOW_ONLY`"
+                "LOW closeout strategies require closeout_policy.review_tier_policy=`LOW_ONLY` or `LOW_PLUS_MEDIUM`"
             )
         if deep_partition_ids:
             raise ValueError(
@@ -1733,7 +1753,472 @@ def build_review_orchestration_bundle(
     )
 
 
+def build_default_review_orchestration_bundle(
+    *,
+    repo_root: str | Path,
+    review_id: str,
+    scope_paths: Sequence[str | Path],
+    instruction_scope_refs: Sequence[str | Path],
+    required_context_refs: Sequence[str | Path],
+    preference_overrides: Mapping[str, Any] | None = None,
+    risk_category: str = "STANDARD",
+    max_files_per_partition: int = 4,
+    followup_partition_ids: Sequence[str] | None = None,
+    effective_scope_paths: Sequence[str | Path] | None = None,
+) -> dict[str, Any]:
+    requested_repo_root = Path(repo_root)
+    repo_root = _normalize_repo_root(repo_root)
+    preference_repo_root = requested_repo_root if requested_repo_root.is_absolute() else repo_root
+    preferences_ref = ensure_preference_record(repo_root=preference_repo_root)
+    effective_preferences = resolve_effective_preferences(
+        repo_root=preference_repo_root,
+        overrides=dict(preference_overrides or {}),
+    )
+    normalized_instruction_scope_refs = _canonicalize_scope_paths(
+        repo_root=repo_root,
+        scope_paths=instruction_scope_refs,
+        field_name="instruction_scope_refs",
+        require_non_empty=True,
+    )
+    normalized_required_context_refs = _canonicalize_scope_paths(
+        repo_root=repo_root,
+        scope_paths=required_context_refs,
+        field_name="required_context_refs",
+        require_non_empty=True,
+    )
+    runtime_defaults = dict(effective_preferences["effective_runtime"])
+    normalized_risk_category = str(risk_category or "STANDARD").strip().upper()
+    default_followup_partition_ids = (
+        [str(item) for item in followup_partition_ids]
+        if followup_partition_ids is not None
+        else None
+    )
+    final_closeout_tier = "LOW"
+    if normalized_risk_category == "SMALL_SCOPE_HIGH_RISK_CORE_LOGIC":
+        final_closeout_tier = "MEDIUM"
+    elif default_followup_partition_ids is None:
+        default_followup_partition_ids = []
+    elif default_followup_partition_ids:
+        final_closeout_tier = "MEDIUM"
+    strategy_plan = build_pyramid_review_plan(
+        repo_root=repo_root,
+        scope_paths=scope_paths,
+        fast_profile=str(runtime_defaults["fast_reviewer_profile"]),
+        deep_profile="medium",
+        strict_profile="xhigh",
+        final_closeout_tier=final_closeout_tier,
+        review_tier_policy=str(runtime_defaults["review_tier_policy"]),
+        agent_provider_id=str(runtime_defaults["agent_provider_id"]),
+        max_files_per_partition=max_files_per_partition,
+        followup_partition_ids=default_followup_partition_ids,
+        effective_scope_paths=effective_scope_paths,
+    )
+    orchestration_bundle = build_review_orchestration_bundle(
+        repo_root=repo_root,
+        review_id=review_id,
+        strategy_plan=strategy_plan,
+    )
+    return {
+        "preferences_ref": str(preferences_ref),
+        "effective_preferences": effective_preferences,
+        "instruction_scope_refs": normalized_instruction_scope_refs,
+        "required_context_refs": normalized_required_context_refs,
+        "strategy_plan": strategy_plan,
+        "orchestration_bundle": orchestration_bundle,
+    }
+
+
+def _parse_review_response_findings(*, response_path: Path) -> dict[str, Any]:
+    text = response_path.read_text(encoding="utf-8").strip()
+    if not text or text == "No findings.":
+        return {
+            "parse_kind": "NO_FINDINGS",
+            "reconciliation_ready": True,
+            "findings": [],
+        }
+
+    def _coerce_severity(*, value: Any, fallback: str | None = None) -> str | None:
+        severity_map = {
+            "P0": "S1_CRITICAL",
+            "P1": "S1_CRITICAL",
+            "P2": "S2_MAJOR",
+            "P3": "S3_MINOR",
+            "S1_CRITICAL": "S1_CRITICAL",
+            "S2_MAJOR": "S2_MAJOR",
+            "S3_MINOR": "S3_MINOR",
+            "INFO": "INFO",
+            "0": "S1_CRITICAL",
+            "1": "S1_CRITICAL",
+            "2": "S2_MAJOR",
+            "3": "S3_MINOR",
+        }
+        if value is None:
+            return fallback
+        if isinstance(value, bool):
+            return fallback
+        text_value = str(value).strip().upper()
+        if not text_value:
+            return fallback
+        bracket_match = re.search(r"\[(P[0-3])\]", text_value)
+        if bracket_match:
+            return severity_map.get(bracket_match.group(1), fallback)
+        return severity_map.get(text_value, fallback)
+
+    def _normalize_finding_entry(
+        finding: Mapping[str, Any],
+        *,
+        index: int,
+        default_severity: str = "S2_MAJOR",
+    ) -> dict[str, Any] | None:
+        summary = str(finding.get("summary") or "").strip()
+        title = str(finding.get("title") or "").strip()
+        body = str(finding.get("body") or "").strip()
+        if not summary:
+            summary = "\n\n".join(part for part in (title, body) if part).strip()
+        if not summary:
+            return None
+        severity = _coerce_severity(value=finding.get("severity"), fallback=None)
+        if severity is None:
+            severity = _coerce_severity(value=finding.get("priority"), fallback=None)
+        if severity is None and title:
+            severity = _coerce_severity(value=title, fallback=None)
+        severity = str(severity or default_severity).strip().upper() or default_severity
+        if severity not in {"S1_CRITICAL", "S2_MAJOR", "S3_MINOR", "INFO"}:
+            severity = default_severity
+        repairable_raw = finding.get("repairable")
+        if isinstance(repairable_raw, bool):
+            repairable = repairable_raw
+        elif repairable_raw is None:
+            repairable = True
+        else:
+            repairable = str(repairable_raw).strip().lower() not in {"0", "false", "no"}
+        evidence = [
+            str(item).strip()
+            for item in (finding.get("evidence") or finding.get("evidence_refs") or [])
+            if str(item).strip()
+        ]
+        if not evidence:
+            evidence = [str(response_path)]
+        normalized: dict[str, Any] = {
+            "summary": summary,
+            "severity": severity,
+            "repairable": repairable,
+            "evidence": evidence,
+            "evidence_refs": evidence,
+        }
+        finding_id = str(finding.get("finding_id") or "").strip()
+        finding_fingerprint = str(finding.get("finding_fingerprint") or "").strip()
+        if finding_id:
+            normalized["finding_id"] = finding_id
+        elif finding_fingerprint:
+            normalized["finding_fingerprint"] = finding_fingerprint
+        else:
+            normalized["_fallback_fingerprint_basis"] = _canonical_hash(
+                {
+                    "summary": summary,
+                    "severity": severity,
+                    "repairable": repairable,
+                }
+            )
+        return normalized
+
+    def _stabilize_fallback_fingerprints(findings: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+        occurrence_by_basis: dict[str, int] = {}
+        stabilized: list[dict[str, Any]] = []
+        for finding in findings:
+            normalized = dict(finding)
+            basis = str(normalized.pop("_fallback_fingerprint_basis", "")).strip()
+            if basis and "finding_id" not in normalized and "finding_fingerprint" not in normalized:
+                occurrence = occurrence_by_basis.get(basis, 0) + 1
+                occurrence_by_basis[basis] = occurrence
+                normalized["finding_fingerprint"] = _canonical_hash(
+                    {
+                        "fallback_fingerprint_basis": basis,
+                        "occurrence_index": occurrence,
+                    }
+                )
+            stabilized.append(normalized)
+        return stabilized
+
+    try:
+        structured_payload = json.loads(text)
+    except json.JSONDecodeError:
+        structured_payload = None
+    if isinstance(structured_payload, Mapping):
+        raw_findings = structured_payload.get("findings")
+        if raw_findings is None and any(
+            key in structured_payload for key in ("summary", "severity", "title", "body", "priority")
+        ):
+            raw_findings = [structured_payload]
+    elif isinstance(structured_payload, list):
+        raw_findings = structured_payload
+    else:
+        raw_findings = None
+    if isinstance(raw_findings, list):
+        if not raw_findings:
+            return {
+                "parse_kind": "NO_FINDINGS",
+                "reconciliation_ready": True,
+                "findings": [],
+            }
+        normalized_structured = [
+            normalized
+            for index, raw in enumerate(raw_findings, start=1)
+            if isinstance(raw, Mapping)
+            for normalized in [_normalize_finding_entry(raw, index=index)]
+            if normalized is not None
+        ]
+        if normalized_structured:
+            return {
+                "parse_kind": "STRUCTURED_FINDINGS",
+                "reconciliation_ready": True,
+                "findings": _stabilize_fallback_fingerprints(normalized_structured),
+            }
+
+    severity_map = {
+        "P0": "S1_CRITICAL",
+        "P1": "S1_CRITICAL",
+        "P2": "S2_MAJOR",
+        "P3": "S3_MINOR",
+        "S1_CRITICAL": "S1_CRITICAL",
+        "S2_MAJOR": "S2_MAJOR",
+        "S3_MINOR": "S3_MINOR",
+        "INFO": "INFO",
+    }
+    markdown_bullets: list[dict[str, Any]] = []
+    current_label: str | None = None
+    current_lines: list[str] = []
+    for line in text.splitlines():
+        match = re.match(r"^- \[([A-Za-z0-9_]+)\]\s*(.*)$", line)
+        if match:
+            if current_label is not None:
+                markdown_bullets.append({"label": current_label, "summary": "\n".join(current_lines).strip()})
+            current_label = str(match.group(1)).strip().upper()
+            current_lines = [str(match.group(2)).strip()]
+            continue
+        if current_label is not None:
+            current_lines.append(line.strip())
+    if current_label is not None:
+        markdown_bullets.append({"label": current_label, "summary": "\n".join(current_lines).strip()})
+    normalized_markdown = [
+        normalized
+        for index, finding in enumerate(markdown_bullets, start=1)
+        for normalized in [
+            _normalize_finding_entry(
+                {
+                    "summary": str(finding.get("summary") or ""),
+                    "severity": severity_map.get(str(finding.get("label") or "").upper(), "S2_MAJOR"),
+                    "repairable": True,
+                    "evidence_refs": [str(response_path)],
+                },
+                index=index,
+            )
+        ]
+        if normalized is not None
+    ]
+    if normalized_markdown:
+        return {
+            "parse_kind": "MARKDOWN_FINDINGS",
+            "reconciliation_ready": True,
+            "findings": _stabilize_fallback_fingerprints(normalized_markdown),
+        }
+
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return {
+        "parse_kind": "RAW_RESPONSE_BLOB",
+        "reconciliation_ready": False,
+        "findings": [
+            {
+                "finding_fingerprint": digest,
+                "summary": text,
+                "severity": "S2_MAJOR",
+                "repairable": True,
+                "evidence": [str(response_path)],
+                "evidence_refs": [str(response_path)],
+            }
+        ],
+    }
+
+
+def _response_findings(*, response_path: Path) -> list[dict[str, Any]]:
+    return list(_parse_review_response_findings(response_path=response_path)["findings"])
+
+
+def execute_review_orchestration_bundle(
+    *,
+    repo_root: str | Path,
+    review_id: str,
+    orchestration_bundle: Mapping[str, Any],
+    instruction_scope_refs: Sequence[str | Path],
+    required_context_refs: Sequence[str | Path],
+    prompt_root: str | Path,
+    command_factory: Callable[[dict[str, Any], Path, Path], Sequence[str]],
+    timeout_s: int | None = None,
+    idle_timeout_s: int | None = None,
+    semantic_idle_timeout_s: int | None = None,
+    max_attempts: int = 1,
+    env_factory: Callable[[dict[str, Any]], Mapping[str, str]] | None = None,
+) -> dict[str, Any]:
+    repo_root = _normalize_repo_root(repo_root)
+    prompt_root_path = Path(prompt_root)
+    if not prompt_root_path.is_absolute():
+        prompt_root_path = repo_root / prompt_root_path
+    prompt_root_path = prompt_root_path.resolve()
+    try:
+        prompt_root_path.relative_to(repo_root)
+    except ValueError as exc:
+        raise ValueError("prompt_root must stay under repo_root") from exc
+    prompt_root_path.mkdir(parents=True, exist_ok=True)
+
+    normalized_instruction_scope_refs = _canonicalize_scope_paths(
+        repo_root=repo_root,
+        scope_paths=instruction_scope_refs,
+        field_name="instruction_scope_refs",
+        require_non_empty=True,
+    )
+    normalized_required_context_refs = _canonicalize_scope_paths(
+        repo_root=repo_root,
+        scope_paths=required_context_refs,
+        field_name="required_context_refs",
+        require_non_empty=True,
+    )
+    stage_manifest = [dict(item) for item in orchestration_bundle.get("stage_manifest") or []]
+    if not stage_manifest:
+        raise ValueError("orchestration_bundle.stage_manifest must be non-empty")
+
+    input_projection_hash = _canonical_hash(
+        {
+            "review_id": str(review_id),
+            "orchestration_bundle": dict(orchestration_bundle),
+            "required_context_refs": list(normalized_required_context_refs),
+            "required_context_hash": _hash_repo_file_set(
+                repo_root=repo_root,
+                refs=normalized_required_context_refs,
+            ),
+        }
+    )
+    instruction_chain_hash = _hash_repo_file_set(
+        repo_root=repo_root,
+        refs=normalized_instruction_scope_refs,
+    )
+    run_key = compute_run_key(
+        RunKeyInput(
+            loop_id=f"loop.review_automation.{_slug_token(str(review_id), fallback='review')}",
+            graph_mode="STATIC_USER_MODE",
+            input_projection_hash=input_projection_hash,
+            instruction_chain_hash=instruction_chain_hash,
+            dependency_pin_set_id="maintainer.repo_local.v1",
+        )
+    )
+
+    review_rounds: list[dict[str, Any]] = []
+    review_round_response_refs: list[str] = []
+    review_round_summary_refs: list[str] = []
+    for stage in stage_manifest:
+        stage_id = str(stage.get("stage_id") or "")
+        if stage_id in {"review_intake", "finding_dedupe"}:
+            continue
+        stage_review_id = f"{review_id}__{str(stage['node_id'])}"
+        safe_stage_review_id = _slug_token(stage_review_id, fallback="review")
+        prompt_path = prompt_root_path / f"{safe_stage_review_id}_prompt.md"
+        response_path = prompt_root_path / f"{safe_stage_review_id}_response.md"
+        prompt_text = build_review_prompt(
+            review_id=safe_stage_review_id,
+            prompt_protocol_id=str(stage.get("prompt_protocol_id") or EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID),
+            review_tier=str(stage.get("review_tier") or "LOW"),
+            agent_provider_id=str(stage.get("agent_provider_id") or "codex_cli"),
+            agent_profile=str(stage.get("agent_profile") or "low"),
+            scope_paths=[str(path) for path in stage.get("scope_paths") or []],
+            instruction_scope_refs=normalized_instruction_scope_refs,
+            required_context_refs=normalized_required_context_refs,
+        )
+        prompt_path.write_text(prompt_text, encoding="utf-8")
+        closeout = run_review_closure(
+            repo_root=repo_root,
+            review_id=safe_stage_review_id,
+            prompt_path=prompt_path,
+            response_path=response_path,
+            scope_paths=[str(path) for path in stage.get("scope_paths") or []],
+            command=[str(item) for item in command_factory(dict(stage), prompt_path, response_path)],
+            timeout_s=timeout_s,
+            idle_timeout_s=idle_timeout_s,
+            semantic_idle_timeout_s=semantic_idle_timeout_s,
+            max_attempts=max_attempts,
+            env=dict(env_factory(dict(stage)) if env_factory is not None else {}),
+            agent_provider_id=str(stage.get("agent_provider_id") or "codex_cli"),
+            agent_profile=str(stage.get("agent_profile") or "low"),
+            resolved_invocation_signature="codex exec review",
+            instruction_scope_refs=normalized_instruction_scope_refs,
+            required_context_refs=normalized_required_context_refs,
+            required_prompt_protocol_id=str(stage.get("prompt_protocol_id") or EXHAUSTIVE_REVIEW_PROMPT_PROTOCOL_ID),
+            allowed_runtime_reasoning_efforts=[str(stage.get("agent_profile") or "low")],
+            require_observed_runtime_metadata=True,
+        )
+        review_round_response_refs.append(str(closeout["response_ref"]))
+        review_round_summary_refs.append(str(closeout["summary_ref"]))
+        if (
+            str(closeout.get("result_state") or "") != "SUCCEEDED"
+            or dict(closeout.get("review_closeout") or {}).get("mode") != "REVIEW_RUN"
+        ):
+            return {
+                "run_key": run_key,
+                "generated_at_utc": _utc_now(),
+                "final_status": "TRIAGED",
+                "reason_code": str(closeout.get("reason_code") or "REVIEW_STAGE_FAILED"),
+                "failed_stage_id": stage_id,
+                "failed_review_round_id": safe_stage_review_id,
+                "review_round_response_refs": review_round_response_refs,
+                "review_round_summary_refs": review_round_summary_refs,
+                "reconciliation_ref": None,
+                "reconciliation_journal_ref": None,
+            }
+        parsed_findings = _parse_review_response_findings(response_path=response_path)
+        if parsed_findings.get("reconciliation_ready") is not True:
+            return {
+                "run_key": run_key,
+                "generated_at_utc": _utc_now(),
+                "final_status": "TRIAGED",
+                "reason_code": "UNPARSEABLE_REVIEW_OUTPUT",
+                "failed_stage_id": stage_id,
+                "failed_review_round_id": safe_stage_review_id,
+                "review_round_response_refs": review_round_response_refs,
+                "review_round_summary_refs": review_round_summary_refs,
+                "reconciliation_ref": None,
+                "reconciliation_journal_ref": None,
+            }
+        review_rounds.append(
+            {
+                "review_round_id": safe_stage_review_id,
+                "node_id": str(stage["node_id"]),
+                "at_utc": str(closeout["generated_at_utc"]),
+                "findings": list(parsed_findings["findings"]),
+            }
+        )
+    reconciliation = reconcile_review_rounds(
+        review_id=review_id,
+        orchestration_bundle=orchestration_bundle,
+        review_rounds=review_rounds,
+    )
+    persistence = persist_review_reconciliation(
+        repo_root=repo_root,
+        run_key=run_key,
+        reconciliation=reconciliation,
+    )
+    return {
+        "run_key": run_key,
+        "generated_at_utc": _utc_now(),
+        "final_status": "PASSED",
+        "reason_code": "OK",
+        "review_round_response_refs": review_round_response_refs,
+        "review_round_summary_refs": review_round_summary_refs,
+        "reconciliation_ref": persistence["ledger_ref"],
+        "reconciliation_journal_ref": persistence["journal_ref"],
+    }
+
+
 __all__ = [
+    "build_default_review_orchestration_bundle",
     "build_review_orchestration_bundle",
     "build_review_orchestration_graph",
+    "execute_review_orchestration_bundle",
 ]

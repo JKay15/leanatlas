@@ -593,8 +593,40 @@ def _assert_compiled_graph_shape() -> None:
             low_manifest["final_integrated_closeout"]["agent_profile"] == "gpt-5.4-low",
             "explicit LOW closeout bundles must preserve the baseline fast reviewer profile",
         )
+        default_low_strategy = build_pyramid_review_plan(
+            repo_root=repo,
+            scope_paths=[
+                "docs/contracts/alpha.md",
+                "docs/contracts/beta.md",
+                "tests/contract/test_alpha.py",
+                "tools/loop/review_a.py",
+                "tools/loop/review_b.py",
+                "tools/loop/review_c.py",
+            ],
+            fast_profile="gpt-5.4-low",
+            deep_profile="gpt-5.4-medium",
+            strict_profile="gpt-5.4-xhigh",
+            final_closeout_tier="LOW",
+            max_files_per_partition=2,
+            followup_partition_ids=[],
+        )
+        default_low_bundle = build_review_orchestration_bundle(
+            repo_root=repo,
+            review_id="review_orchestration_default_low_closeout",
+            strategy_plan=default_low_strategy,
+            max_parallel_branches=3,
+        )
+        default_low_manifest = _stage_manifest_map(default_low_bundle)
+        _assert(
+            default_low_manifest["final_integrated_closeout"]["review_tier"] == "LOW",
+            "default LOW_PLUS_MEDIUM bundles must preserve a LOW integrated closeout tier on the no-escalation path",
+        )
+        _assert(
+            default_low_strategy["closeout_policy"]["review_tier_policy"] == "LOW_PLUS_MEDIUM",
+            "default LOW baseline bundles must preserve LOW_PLUS_MEDIUM provenance",
+        )
         invalid_low_policy_strategy = json.loads(json.dumps(low_strategy))
-        invalid_low_policy_strategy["closeout_policy"]["review_tier_policy"] = "LOW_PLUS_MEDIUM"
+        invalid_low_policy_strategy["closeout_policy"]["review_tier_policy"] = "UNKNOWN_POLICY"
         invalid_low_policy_strategy["strategy_fingerprint"] = _canonical_hash(
             _strategy_fingerprint_payload(invalid_low_policy_strategy)
         )
@@ -607,11 +639,12 @@ def _assert_compiled_graph_shape() -> None:
             )
         except ValueError as exc:
             _assert(
-                "LOW closeout strategies require closeout_policy.review_tier_policy=`LOW_ONLY`" in str(exc),
-                "LOW closeout bundles must reject strategies that downgrade closeout tier without LOW_ONLY provenance",
+                "LOW closeout strategies require closeout_policy.review_tier_policy=`LOW_ONLY` or `LOW_PLUS_MEDIUM`"
+                in str(exc),
+                "LOW closeout bundles must reject unsupported closeout policy provenance labels",
             )
         else:
-            raise AssertionError("LOW closeout bundles must reject non-LOW_ONLY provenance")
+            raise AssertionError("LOW closeout bundles must reject unsupported provenance labels")
         invalid_low_only_medium_strategy = json.loads(json.dumps(strategy))
         invalid_low_only_medium_strategy["closeout_policy"]["review_tier_policy"] = "LOW_ONLY"
         invalid_low_only_medium_strategy["strategy_fingerprint"] = _canonical_hash(
@@ -3468,6 +3501,164 @@ def _assert_graph_only_rejects_stale_legacy_fingerprint_hint() -> None:
             raise AssertionError("graph-only orchestration compilation must not accept stale legacy fingerprints")
 
 
+def _assert_response_findings_preserve_individual_records() -> None:
+    with tempfile.TemporaryDirectory(prefix="loop_review_orchestration_findings_") as td:
+        response = Path(td) / "response.md"
+        response.write_text(
+            json.dumps({"findings": []}, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        parsed_empty_json = review_orchestration._parse_review_response_findings(response_path=response)
+        _assert(
+            parsed_empty_json == {
+                "parse_kind": "NO_FINDINGS",
+                "reconciliation_ready": True,
+                "findings": [],
+            },
+            "structured no-findings JSON must remain reconciliation-ready instead of triaging the review bundle",
+        )
+
+        response.write_text(
+            json.dumps(
+                {
+                    "findings": [
+                        {
+                            "finding_id": "finding.final.001",
+                            "severity": "S1_CRITICAL",
+                            "repairable": True,
+                            "evidence": ["artifacts/reviews/finding_001.md"],
+                            "summary": "Final closeout issue one",
+                        },
+                        {
+                            "finding_id": "finding.final.002",
+                            "severity": "S2_MAJOR",
+                            "repairable": True,
+                            "evidence": ["artifacts/reviews/finding_002.md"],
+                            "summary": "Final closeout issue two",
+                        },
+                    ]
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        parsed_json = review_orchestration._response_findings(response_path=response)
+        _assert(
+            [item.get("finding_id") for item in parsed_json] == ["finding.final.001", "finding.final.002"],
+            "structured review responses must preserve individual finding ids instead of collapsing the whole blob",
+        )
+        _assert(
+            [item.get("severity") for item in parsed_json] == ["S1_CRITICAL", "S2_MAJOR"],
+            "structured review responses must preserve per-finding severity",
+        )
+
+        response.write_text(
+            json.dumps(
+                [
+                    {
+                        "title": "[P1] Final closeout issue one",
+                        "body": "The helper still reports pass when a reviewer stage never closes.",
+                        "priority": 1,
+                    },
+                    {
+                        "title": "[P2] Final closeout issue two",
+                        "body": "The helper still collapses multiple findings into one blob.",
+                        "priority": 2,
+                    },
+                ],
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        parsed_standard_json = review_orchestration._response_findings(response_path=response)
+        _assert(
+            len(parsed_standard_json) == 2,
+            "standard review JSON with title/body/priority records must preserve two finding records",
+        )
+        _assert(
+            [item.get("severity") for item in parsed_standard_json] == ["S1_CRITICAL", "S2_MAJOR"],
+            "standard review JSON priorities must map onto deterministic severities",
+        )
+        _assert(
+            "Final closeout issue one" in str(parsed_standard_json[0].get("summary") or "")
+            and "reviewer stage never closes" in str(parsed_standard_json[0].get("summary") or ""),
+            "standard review JSON must preserve title/body detail in the normalized summary",
+        )
+        second_response = Path(td) / "response_second.md"
+        second_response.write_text(response.read_text(encoding="utf-8"), encoding="utf-8")
+        parsed_standard_json_again = review_orchestration._response_findings(response_path=second_response)
+        _assert(
+            [item.get("finding_fingerprint") for item in parsed_standard_json]
+            == [item.get("finding_fingerprint") for item in parsed_standard_json_again],
+            "fallback finding fingerprints must stay stable across rounds when the substantive finding content is unchanged",
+        )
+
+        response.write_text(
+            json.dumps(
+                [
+                    {
+                        "title": "[P0] Final closeout blocker",
+                        "body": "The closeout still demotes blocking findings during reconciliation.",
+                        "priority": 0,
+                    }
+                ],
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        parsed_p0_json = review_orchestration._response_findings(response_path=response)
+        _assert(
+            [item.get("severity") for item in parsed_p0_json] == ["S1_CRITICAL"],
+            "standard review JSON must not demote P0 findings below blocking severity",
+        )
+
+        response.write_text(
+            (
+                "The closeout is not clean.\n\n"
+                "Full review comments:\n\n"
+                "- [P1] Final closeout issue one — tools/loop/review_orchestration.py:1905-1968\n"
+                "  The helper still reports pass when a reviewer stage never closes.\n\n"
+                "- [P2] Final closeout issue two — tools/loop/review_orchestration.py:1825-1838\n"
+                "  The helper still collapses multiple findings into one blob.\n"
+            ),
+            encoding="utf-8",
+        )
+        parsed_markdown = review_orchestration._response_findings(response_path=response)
+        _assert(
+            len(parsed_markdown) == 2,
+            "markdown review responses with two top-level findings must preserve two finding records",
+        )
+        _assert(
+            [item.get("severity") for item in parsed_markdown] == ["S1_CRITICAL", "S2_MAJOR"],
+            "markdown review responses must map reviewer priorities onto deterministic severities",
+        )
+        _assert(
+            parsed_markdown[0].get("finding_fingerprint") != parsed_markdown[1].get("finding_fingerprint"),
+            "markdown findings must receive distinct finding fingerprints",
+        )
+
+        response.write_text(
+            (
+                "The closeout is not clean.\n\n"
+                "Full review comments:\n\n"
+                "- [P0] Final closeout blocker — tools/loop/review_orchestration.py:1841-1850\n"
+                "  The helper still demotes blocking findings during reconciliation.\n"
+            ),
+            encoding="utf-8",
+        )
+        parsed_p0_markdown = review_orchestration._response_findings(response_path=response)
+        _assert(
+            [item.get("severity") for item in parsed_p0_markdown] == ["S1_CRITICAL"],
+            "markdown review responses must not demote P0 findings below blocking severity",
+        )
+
+
 def main() -> int:
     _assert_compiled_graph_shape()
     _assert_runtime_evidence()
@@ -3485,6 +3676,7 @@ def main() -> int:
     _assert_low_closeout_strategies_reject_legacy_medium_backfill()
     _assert_legacy_fingerprint_omit_keys_cannot_hide_unrelated_drift()
     _assert_graph_only_rejects_stale_legacy_fingerprint_hint()
+    _assert_response_findings_preserve_individual_records()
     print("[loop-review-orchestration] OK")
     return 0
 

@@ -77,6 +77,11 @@ You MAY move fast, but you MUST keep the seatbelt on:
 - If you cannot run verification, explicitly state what would be run and why it wasn't.
 - Keep patches minimal and local; avoid opportunistic refactors.
 
+For non-trivial MAINTAINER work that already has a LOOP path:
+- conversation Codex acts as the root supervisor kernel
+- materialize the plan/session/skeleton before implementation
+- direct/manual fallback for a blocked subtree requires the session-issued root exception artifact, i.e. the root-issued exception artifact for the active session
+
 ## OPERATOR hard boundaries (PatchScope)
 When in OPERATOR mode you MAY edit only inside a single problem folder:
 

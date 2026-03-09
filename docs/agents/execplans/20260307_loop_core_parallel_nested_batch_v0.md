@@ -1,7 +1,7 @@
 ---
 title: Implement LOOP core native parallel+nested execution and stage the next adapter batch
 owner: Codex (local workspace)
-status: active
+status: done
 created: 2026-03-07
 ---
 
@@ -249,6 +249,13 @@ Contamination control:
   - first-wave core runtime parallel+nested execution landed earlier in this batch
   - follow-on child plans for LOOP mainline productization, user preferences, Python-library decoupling, and skills governance are now all materialized
   - LOOP mainline productization and user-preference staging are now completed child waves
+  - batch supervisor/autopilot, publication/rematerialization, worktree adapter, standalone `looplib`, generic LOOP skills, and workflow/default-execution wiring are now implemented child waves
 - Verification:
+  - `uv run --locked python tests/run.py --profile core`
+  - `uv run --locked python tests/run.py --profile nightly`
+  - `lake build`
+  - `git diff --check`
 - Residual risks:
+  - the committed mainline now covers the staged master-plan surfaces inside this repository, but future external package publication/release automation remains a separate bounded wave
 - Follow-on recommendation:
+  - keep future LOOP work on new bounded child execplans instead of reopening the completed core-parallel/nested master batch

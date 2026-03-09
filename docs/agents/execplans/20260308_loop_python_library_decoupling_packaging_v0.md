@@ -1,7 +1,7 @@
 ---
 title: Stage LOOP Python library extraction, packaging, and non-LeanAtlas usage docs
 owner: Codex (local workspace)
-status: planned
+status: done
 created: 2026-03-08
 parent_execplan: docs/agents/execplans/20260307_loop_core_parallel_nested_batch_v0.md
 ---
@@ -107,6 +107,14 @@ Expected verification commands for the implementation wave:
 
 ## Outcomes & retrospective (fill when done)
 - Completed:
+  - landed the in-repo reusable `looplib/**` package surface
+  - added standalone/non-LeanAtlas entry docs at `docs/setup/LOOP_LIBRARY_QUICKSTART.md`
+  - added `examples/looplib_quickstart.py` and routed mainline docs through the standalone entrypoint
 - Verification:
+  - `uv run --locked python tests/contract/check_loop_library_packaging.py`
+  - `uv run --locked python tests/contract/check_loop_mainline_docs_integration.py`
+  - `uv run --locked python tests/contract/check_loop_python_sdk_contract_surface.py`
 - Residual risks:
+  - `looplib` is reusable and documented inside this repository, but it is not yet published as a separate distribution artifact
 - Follow-on recommendation:
+  - if cross-repo consumption becomes frequent, stage packaging metadata and release mechanics as a separate bounded wave rather than expanding the runtime contract again
