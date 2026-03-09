@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+import json
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -34,8 +35,12 @@ def main() -> int:
         / "core_dummy_smoke_v0"
         / "scenario.yaml"
     )
+    profile_path = REPO_ROOT / "tests" / "agent_eval" / "profiles" / "dummy_agent.profile.json"
     if not scenario_path.exists():
         print(f"Missing scenario: {scenario_path}")
+        return 2
+    if not profile_path.exists():
+        print(f"Missing profile: {profile_path}")
         return 2
 
     with tempfile.TemporaryDirectory(prefix="leanatlas_scn_dummy_") as td:
@@ -52,8 +57,8 @@ def main() -> int:
                 "run",
                 "--out-root",
                 str(out_root),
-                "--agent-cmd",
-                "python tools/agent_eval/dummy_agent.py",
+                "--agent-profile",
+                str(profile_path),
             ],
             cwd=REPO_ROOT,
         )
@@ -64,6 +69,18 @@ def main() -> int:
             print("[FAIL] run_scenario produced no eval dirs")
             return 2
         eval_dir = stamps[-1]
+
+        invs = list(eval_dir.glob("runs/*/agent_invocation.json"))
+        if not invs:
+            print("[FAIL] missing agent_invocation.json in scenario run")
+            return 2
+        inv = json.loads(invs[0].read_text(encoding="utf-8"))
+        if inv.get("prompt_transport") != "env_path":
+            print(f"[FAIL] prompt_transport mismatch: {inv.get('prompt_transport')}")
+            return 2
+        if not isinstance(inv.get("env_map"), dict) or "LEANATLAS_PROMPT_PATH" not in inv.get("env_map", {}):
+            print("[FAIL] env_map missing LEANATLAS_PROMPT_PATH")
+            return 2
 
         _run(
             [sys.executable, "tools/agent_eval/grade_scenario.py", "--eval-dir", str(eval_dir)],

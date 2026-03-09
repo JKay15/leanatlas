@@ -1,0 +1,19 @@
+{
+  "version": "1",
+  "review_id": "review.min",
+  "attempt_index": 1,
+  "generated_at_utc": "2026-03-06T00:00:00Z",
+  "agent_provider_id": "codex_cli",
+  "provider_adapter_id": "codex_cli_v2",
+  "status": "SUCCEEDED",
+  "reason_code": "OK",
+  "terminal": true,
+  "response_ref": "artifacts/reviews/review.min_response.md",
+  "response_exists": true,
+  "response_bytes": 14,
+  "semantic_response_source": "provider_event_jsonl",
+  "extraction_kind": "event.item.agent_message",
+  "provider_event_ref": "artifacts/reviews/review.min.stdout.jsonl",
+  "stdout_ref": "artifacts/reviews/review.min.stdout.jsonl",
+  "stderr_ref": "artifacts/reviews/review.min.stderr.txt"
+}

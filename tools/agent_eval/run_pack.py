@@ -45,6 +45,7 @@ from jsonschema import Draft202012Validator
 from tools.workflow.run_cmd import run_cmd
 from tools.workflow.shared_cache import ensure_workspace_lake_packages
 from tools.agent_eval.pins_used import ensure_pins_used
+from tools.agent_eval.agent_provider import apply_env_map, resolve_agent_invocation
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -262,6 +263,48 @@ def _agent_timeout_s() -> Optional[int]:
     if v <= 0:
         return None
     return v
+
+
+def _agent_idle_timeout_s(agent_timeout_s: Optional[int]) -> Optional[int]:
+    """Agent inactivity timeout in seconds.
+
+    - Default: 600s (10m) with bounded silence.
+    - LEANATLAS_AGENT_IDLE_TIMEOUT_S <= 0 means disabled.
+    - Never exceed hard timeout when hard timeout is set.
+    """
+    raw = os.environ.get("LEANATLAS_AGENT_IDLE_TIMEOUT_S", "").strip()
+    if not raw:
+        v = 600
+    else:
+        try:
+            v = int(raw)
+        except Exception:
+            v = 600
+    if v <= 0:
+        return None
+    if agent_timeout_s is not None:
+        return max(1, min(v, int(agent_timeout_s)))
+    return v
+
+
+def _agent_reconnect_policy(provider_id: str) -> tuple[Optional[int], int]:
+    """Bounded reconnect grace policy for provider-driven agent calls."""
+    default_on = provider_id == "codex_cli"
+    raw_grace = os.environ.get("LEANATLAS_AGENT_RECONNECT_GRACE_S", "").strip()
+    raw_max = os.environ.get("LEANATLAS_AGENT_RECONNECT_MAX_EVENTS", "").strip()
+
+    try:
+        grace = int(raw_grace) if raw_grace else (240 if default_on else 0)
+    except Exception:
+        grace = 240 if default_on else 0
+    try:
+        max_events = int(raw_max) if raw_max else (5 if default_on else 0)
+    except Exception:
+        max_events = 5 if default_on else 0
+
+    if grace <= 0 or max_events <= 0:
+        return (None, 0)
+    return (grace, max_events)
 
 
 def _prune_workspace_heavy_dirs(workspace_root: Path, *, keep: bool) -> None:
@@ -575,12 +618,29 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="Shell command for running the agent non-interactively (only for --mode run).",
     )
     ap.add_argument(
+        "--agent-provider",
+        default=None,
+        help="Named provider id (for example: codex_cli, claude_code). Used when --agent-cmd is not set.",
+    )
+    ap.add_argument(
+        "--agent-profile",
+        default=None,
+        help="Path to AgentProfile JSON. Used when --agent-cmd is not set.",
+    )
+    ap.add_argument(
         "--keep-workspace-lake",
         action="store_true",
         help="Keep workspace .lake/build directories in artifacts (default prunes them in --mode run).",
     )
     args = ap.parse_args(argv)
     keep_workspace_lake = args.keep_workspace_lake or _bool_env("LEANATLAS_KEEP_WORKSPACE_LAKE", False)
+    resolved_agent = resolve_agent_invocation(
+        repo_root=REPO_ROOT,
+        mode=args.mode,
+        agent_cmd=args.agent_cmd,
+        agent_provider=args.agent_provider,
+        agent_profile=args.agent_profile,
+    )
 
     pack_path = (REPO_ROOT / args.pack).resolve() if not os.path.isabs(args.pack) else Path(args.pack)
     tasks_root = (REPO_ROOT / args.tasks_root).resolve()
@@ -612,6 +672,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         runs = runs[: args.limit]
 
     agent_timeout_s = _agent_timeout_s()
+    agent_idle_timeout_s = _agent_idle_timeout_s(agent_timeout_s)
 
     stamp = _utc_stamp()
     base_dir = out_root / eval_id / stamp
@@ -702,8 +763,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 _write_json(run_dir / "CONTEXT.json", ctx)
 
                 if args.mode == "run":
-                    if not args.agent_cmd:
-                        raise ValueError("--mode run requires --agent-cmd")
+                    if resolved_agent is None:
+                        raise ValueError("--mode run requires one of: --agent-cmd, --agent-profile, --agent-provider")
 
                     env = os.environ.copy()
                     env["LEANATLAS_EVAL_WORKSPACE"] = str(ws_dir)
@@ -720,6 +781,12 @@ def main(argv: Optional[List[str]] = None) -> int:
                     env["BASH"] = "/bin/bash"
                     env.setdefault("LEANATLAS_AGENT_SHELL", "bash")
                     env.setdefault("LEANATLAS_AGENT_TIMEOUT_S", str(agent_timeout_s or 0))
+                    env.setdefault("LEANATLAS_AGENT_IDLE_TIMEOUT_S", str(agent_idle_timeout_s or 0))
+                    env["LEANATLAS_AGENT_PROVIDER"] = resolved_agent.provider_id
+                    reconnect_grace_s, reconnect_max_events = _agent_reconnect_policy(resolved_agent.provider_id)
+                    env.setdefault("LEANATLAS_AGENT_RECONNECT_GRACE_S", str(reconnect_grace_s or 0))
+                    env.setdefault("LEANATLAS_AGENT_RECONNECT_MAX_EVENTS", str(reconnect_max_events))
+                    env = apply_env_map(resolved=resolved_agent, env=env)
 
                     log_dir = run_dir / "exec_logs"
                     cache_res_run = _ensure_workspace_lake_packages(
@@ -730,7 +797,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                     _write_json(run_dir / "CachePolicy.run.json", cache_res_run)
                     if not bool(cache_res_run.get("ok", False)):
                         raise RuntimeError(f"Lake package cache is not seeded: {cache_res_run.get('note')}")
-                    cmd = ["bash", "-lc", args.agent_cmd]
+                    _write_json(run_dir / "agent_invocation.json", resolved_agent.to_metadata())
+                    cmd = ["bash", "-lc", resolved_agent.agent_cmd]
                     res = run_cmd(
                         cmd=cmd,
                         cwd=ws_dir,
@@ -738,6 +806,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                         label="agent",
                         env=env,
                         timeout_s=agent_timeout_s,
+                        idle_timeout_s=agent_idle_timeout_s,
+                        reconnect_grace_s=reconnect_grace_s,
+                        reconnect_max_events=reconnect_max_events,
                         capture_text=False,
                     )
                     _write_json(run_dir / "agent_exec_span.json", res.span)

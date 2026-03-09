@@ -80,6 +80,10 @@ def main() -> int:
     return die("QUICKSTART.md must include uv fallback command for core tests")
   if "LEANATLAS_REAL_AGENT_CMD" not in quickstart:
     return die("QUICKSTART.md must explain LEANATLAS_REAL_AGENT_CMD setup for Phase6 real-agent checks")
+  if "LEANATLAS_REAL_AGENT_PROVIDER" not in quickstart:
+    return die("QUICKSTART.md must explain LEANATLAS_REAL_AGENT_PROVIDER setup for provider-based Phase6 real-agent checks")
+  if "LEANATLAS_REAL_AGENT_PROFILE" not in quickstart:
+    return die("QUICKSTART.md must explain LEANATLAS_REAL_AGENT_PROFILE setup for profile-based Phase6 real-agent checks")
   if "scripts/install_repo_git_hooks.sh" not in quickstart:
     return die("QUICKSTART.md must explain repo-local git hook installer usage")
   if "TLS" not in quickstart and "handshake" not in quickstart:
@@ -91,6 +95,22 @@ def main() -> int:
     return die("OPERATOR_WORKFLOW.md must point to docs/setup so Codex can find install steps")
   if "lean-lsp-mcp" not in op:
     return die("OPERATOR_WORKFLOW.md should mention lean-lsp-mcp (MCP acceleration)")
+  for snippet in (
+    "repository-external paper ingress",
+    ".cache/leanatlas/tmp/<paper_id>/source/**",
+    "Problems/<problem_slug>/",
+  ):
+    if snippet.lower() not in op.lower():
+      return die(f"OPERATOR_WORKFLOW.md must document external-paper ingress via `{snippet}`")
+
+  op_skill = (ROOT / ".agents" / "skills" / "leanatlas-operator-proof-loop" / "SKILL.md").read_text(encoding="utf-8")
+  for snippet in (
+    "Repository-external paper ingress",
+    ".cache/leanatlas/tmp/<paper_id>/source/**",
+    "Problems/<slug>/",
+  ):
+    if snippet.lower() not in op_skill.lower():
+      return die(f"leanatlas-operator-proof-loop skill must document external-paper ingress via `{snippet}`")
 
   print("[setup.docs] OK")
   return 0

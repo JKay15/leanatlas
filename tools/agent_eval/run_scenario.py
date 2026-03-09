@@ -40,6 +40,7 @@ import jsonschema
 from tools.workflow.run_cmd import run_cmd
 from tools.workflow.shared_cache import ensure_workspace_lake_packages
 from tools.agent_eval.pins_used import ensure_pins_used
+from tools.agent_eval.agent_provider import apply_env_map, resolve_agent_invocation
 
 REPO_ROOT = _REPO_ROOT
 SCHEMA = json.loads((REPO_ROOT / "docs" / "schemas" / "AgentEvalScenario.schema.json").read_text(encoding="utf-8"))
@@ -185,6 +186,48 @@ def _agent_timeout_s() -> Optional[int]:
     if v <= 0:
         return None
     return v
+
+
+def _agent_idle_timeout_s(agent_timeout_s: Optional[int]) -> Optional[int]:
+    """Agent inactivity timeout in seconds.
+
+    - Default: 600s (10m).
+    - LEANATLAS_AGENT_IDLE_TIMEOUT_S <= 0 means disabled.
+    - Never exceed hard timeout when hard timeout is set.
+    """
+    raw = os.environ.get("LEANATLAS_AGENT_IDLE_TIMEOUT_S", "").strip()
+    if not raw:
+        v = 600
+    else:
+        try:
+            v = int(raw)
+        except Exception:
+            v = 600
+    if v <= 0:
+        return None
+    if agent_timeout_s is not None:
+        return max(1, min(v, int(agent_timeout_s)))
+    return v
+
+
+def _agent_reconnect_policy(provider_id: str) -> tuple[Optional[int], int]:
+    """Bounded reconnect grace policy for provider-driven agent calls."""
+    default_on = provider_id == "codex_cli"
+    raw_grace = os.environ.get("LEANATLAS_AGENT_RECONNECT_GRACE_S", "").strip()
+    raw_max = os.environ.get("LEANATLAS_AGENT_RECONNECT_MAX_EVENTS", "").strip()
+
+    try:
+        grace = int(raw_grace) if raw_grace else (240 if default_on else 0)
+    except Exception:
+        grace = 240 if default_on else 0
+    try:
+        max_events = int(raw_max) if raw_max else (5 if default_on else 0)
+    except Exception:
+        max_events = 5 if default_on else 0
+
+    if grace <= 0 or max_events <= 0:
+        return (None, 0)
+    return (grace, max_events)
 
 
 def _prune_workspace_heavy_dirs(workspace_root: Path, *, keep: bool) -> None:
@@ -586,6 +629,9 @@ def _exec_span(
     label: str,
     env: Optional[Dict[str, str]] = None,
     timeout_s: Optional[int] = None,
+    idle_timeout_s: Optional[int] = None,
+    reconnect_grace_s: Optional[int] = None,
+    reconnect_max_events: int = 0,
 ) -> Dict[str, Any]:
     """Run a command via the unified runner and return the captured exec span.
 
@@ -593,7 +639,18 @@ def _exec_span(
     """
 
     log_dir = step_dir / "exec_logs"
-    res = run_cmd(cmd=cmd, cwd=cwd, log_dir=log_dir, label=label, env=env, timeout_s=timeout_s, capture_text=False)
+    res = run_cmd(
+        cmd=cmd,
+        cwd=cwd,
+        log_dir=log_dir,
+        label=label,
+        env=env,
+        timeout_s=timeout_s,
+        idle_timeout_s=idle_timeout_s,
+        reconnect_grace_s=reconnect_grace_s,
+        reconnect_max_events=reconnect_max_events,
+        capture_text=False,
+    )
     return res.span
 
 
@@ -619,6 +676,16 @@ def main() -> int:
         help='External agent command for each run_task step (executed via `bash -lc`). Required for --mode run if scenario contains run_task steps.',
     )
     ap.add_argument(
+        "--agent-provider",
+        default="",
+        help="Named provider id (for example: codex_cli, claude_code). Used when --agent-cmd is not set.",
+    )
+    ap.add_argument(
+        "--agent-profile",
+        default="",
+        help="Path to AgentProfile JSON. Used when --agent-cmd is not set.",
+    )
+    ap.add_argument(
         "--keep-workspace-lake",
         action="store_true",
         help="Keep workspace .lake/build directories in artifacts (default prunes them in --mode run).",
@@ -642,6 +709,13 @@ def main() -> int:
     )
     args = ap.parse_args()
     keep_workspace_lake = args.keep_workspace_lake or _bool_env("LEANATLAS_KEEP_WORKSPACE_LAKE", False)
+    resolved_agent = resolve_agent_invocation(
+        repo_root=REPO_ROOT,
+        mode=args.mode,
+        agent_cmd=args.agent_cmd,
+        agent_provider=args.agent_provider,
+        agent_profile=args.agent_profile,
+    )
     if args.from_step < 1:
         print("[scenario][FAIL] --from-step must be >= 1", file=sys.stderr)
         return 2
@@ -772,14 +846,15 @@ def main() -> int:
         return 2
 
     agent_timeout_s = _agent_timeout_s()
+    agent_idle_timeout_s = _agent_idle_timeout_s(agent_timeout_s)
 
     runs_root = eval_dir / "runs"
     runs_root.mkdir(parents=True, exist_ok=True)
 
     # Pre-scan: do we actually need agent-cmd?
     has_run_task = any(s.kind == "run_task" for s in expanded)
-    if args.mode == "run" and has_run_task and not args.agent_cmd:
-        print("[scenario][FAIL] --agent-cmd required for --mode run", file=sys.stderr)
+    if args.mode == "run" and has_run_task and resolved_agent is None:
+        print("[scenario][FAIL] run mode with run_task requires --agent-cmd, --agent-provider, or --agent-profile", file=sys.stderr)
         return 2
 
     if resume_eval_dir and args.reapply_overlays and args.from_step > 1:
@@ -913,8 +988,12 @@ def main() -> int:
             env["LEANATLAS_WORKSPACE"] = str(workspace_root)
             env["LEANATLAS_PROMPT_PATH"] = str(step_dir / "PROMPT.md")
             env["LEANATLAS_CONTEXT_PATH"] = str(step_dir / "CONTEXT.json")
+            env["LEANATLAS_EVAL_WORKSPACE"] = str(workspace_root)
+            env["LEANATLAS_EVAL_PROMPT"] = str(step_dir / "PROMPT.md")
+            env["LEANATLAS_EVAL_CONTEXT"] = str(step_dir / "CONTEXT.json")
             env["LEANATLAS_RUN_DIR"] = str(step_dir)
             env["LEANATLAS_RUN_ID"] = run_id
+            env["LEANATLAS_EVAL_RUN_ID"] = run_id
             env["LEANATLAS_SCENARIO_ID"] = scenario_id
             env["LEANATLAS_SCENARIO_CLASS"] = scenario_class
             env["LEANATLAS_SCENARIO_STEP"] = str(step.step_index)
@@ -922,14 +1001,33 @@ def main() -> int:
             env["BASH"] = "/bin/bash"
             env.setdefault("LEANATLAS_AGENT_SHELL", "bash")
             env.setdefault("LEANATLAS_AGENT_TIMEOUT_S", str(agent_timeout_s or 0))
+            env.setdefault("LEANATLAS_AGENT_IDLE_TIMEOUT_S", str(agent_idle_timeout_s or 0))
+            if resolved_agent is None:
+                print(
+                    "[scenario][FAIL] internal: agent invocation was not resolved in run mode",
+                    file=sys.stderr,
+                )
+                return 2
+            env["LEANATLAS_AGENT_PROVIDER"] = resolved_agent.provider_id
+            reconnect_grace_s, reconnect_max_events = _agent_reconnect_policy(resolved_agent.provider_id)
+            env.setdefault("LEANATLAS_AGENT_RECONNECT_GRACE_S", str(reconnect_grace_s or 0))
+            env.setdefault("LEANATLAS_AGENT_RECONNECT_MAX_EVENTS", str(reconnect_max_events))
+            env = apply_env_map(resolved=resolved_agent, env=env)
 
+            (step_dir / "agent_invocation.json").write_text(
+                json.dumps(resolved_agent.to_metadata(), indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
             span = _exec_span(
                 step_dir=step_dir,
-                cmd=["bash", "-lc", args.agent_cmd],
+                cmd=["bash", "-lc", resolved_agent.agent_cmd],
                 cwd=workspace_root,
                 label="agent",
                 env=env,
                 timeout_s=agent_timeout_s,
+                idle_timeout_s=agent_idle_timeout_s,
+                reconnect_grace_s=reconnect_grace_s,
+                reconnect_max_events=reconnect_max_events,
             )
             (step_dir / "agent_exec_span.json").write_text(json.dumps(span, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 

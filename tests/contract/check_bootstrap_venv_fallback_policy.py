@@ -84,6 +84,16 @@ def main() -> int:
         "bootstrap finalize step must use $PY_BIN",
         errors,
     )
+    _require(
+        "LEANATLAS_REAL_AGENT_PROVIDER" in text,
+        "bootstrap must support LEANATLAS_REAL_AGENT_PROVIDER for provider-based real-agent config",
+        errors,
+    )
+    _require(
+        "LEANATLAS_REAL_AGENT_PROFILE" in text,
+        "bootstrap must support LEANATLAS_REAL_AGENT_PROFILE for profile-based real-agent config",
+        errors,
+    )
 
     if errors:
         print("[bootstrap-fallback-policy][FAIL]")

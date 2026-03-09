@@ -4,6 +4,8 @@ This directory is for documentation "for Codex use" (not for human-readable essa
 
 ## Start here
 - First-run onboarding (welcome + consented setup): `docs/agents/ONBOARDING.md`
+- Current LOOP mainline system: `docs/agents/LOOP_MAINLINE.md`
+- Standalone/non-LeanAtlas LOOP quickstart: `docs/setup/LOOP_LIBRARY_QUICKSTART.md`
 - Banner/source style: `docs/agents/BRANDING.md`
 - Maintainer initialization checklist: `INIT_FOR_CODEX.md`
 - Full file-level index (low-frequency lookup): `docs/navigation/FILE_INDEX.md`
@@ -20,11 +22,15 @@ The goal of LeanAtlas is not to write a piece of Lean code, but to make Codex wo
 | Tasks | Which documents to read first (in order) |
 |---|---|
 | First-run onboarding (welcome + consented setup) | `docs/agents/ONBOARDING.md` → `.agents/skills/leanatlas-onboard/SKILL.md` → `INIT_FOR_CODEX.md` → `docs/setup/QUICKSTART.md` |
-| Prove a problem (natural language → SUCCESS/TRIAGED) | `docs/agents/OPERATOR_WORKFLOW.md` → `docs/contracts/WORKFLOW_CONTRACT.md` → `docs/contracts/RUNREPORT_CONTRACT.md` → `docs/contracts/RETRIEVAL_TRACE_CONTRACT.md` → `.agents/skills/leanatlas-operator-proof-loop/SKILL.md` |
+| Prove a problem (natural language → SUCCESS/TRIAGED) | `docs/agents/OPERATOR_WORKFLOW.md` → `docs/contracts/WORKFLOW_CONTRACT.md` → `docs/contracts/RUNREPORT_CONTRACT.md` → `docs/contracts/RETRIEVAL_TRACE_CONTRACT.md` → `.agents/skills/leanatlas-operator-proof-loop/SKILL.md` ; if the paper source is outside the repo, ingress it into LeanAtlas scope first |
+| Understand/use the current mainline LOOP system | `docs/agents/LOOP_MAINLINE.md` → `.agents/skills/leanatlas-loop-mainline/SKILL.md` → `.agents/skills/loop-review-reconciliation/SKILL.md` when the task is authoritative finding settlement → `docs/agents/MAINTAINER_WORKFLOW.md` or `docs/agents/OPERATOR_WORKFLOW.md` depending on mode |
+| Use LOOP outside LeanAtlas | `docs/setup/LOOP_LIBRARY_QUICKSTART.md` → `.agents/skills/loop-mainline/SKILL.md` → `.agents/skills/loop-review-orchestration/SKILL.md` or `.agents/skills/loop-batch-supervisor/SKILL.md` depending on whether the host needs staged review or parent-wave supervision |
 | Update/extend domain dictionary (MSC2020/LOCAL) | `docs/contracts/MCP_MSC2020_CONTRACT.md` → `docs/setup/external/msc2020.md` → `tools/lean_domain_mcp/**` → `.agents/skills/leanatlas-domain-mcp/SKILL.md` |
 | Run automations (backend Advisor) | `docs/agents/AUTOMATIONS.md` → `docs/contracts/AUTOMATION_CONTRACT.md` → `automations/registry.json` → `.agents/skills/leanatlas-automations/SKILL.md` |
 | Deposit and route chat feedback | `docs/agents/FEEDBACK_LOOP.md` → `tools/feedback/mine_chat_feedback.py` → `automations/registry.json` (`nightly_chat_feedback_deposition`) |
-| Maintain Dedup/Promotion/GC closed loop (Phase3) | `docs/agents/MAINTAINER_WORKFLOW.md` → `docs/agents/execplans/phase3_*` → `docs/contracts/PROMOTION_GATE_CONTRACT.md`/`GC_*` → `.agents/skills/leanatlas-dedup|promote|gc/SKILL.md` |
+| Maintain Dedup/Promotion/GC closed loop (Phase3) | `docs/agents/MAINTAINER_WORKFLOW.md` → `docs/agents/execplans/phase3_*` → `docs/contracts/PROMOTION_GATE_CONTRACT.md`/`GC_*` → `.agents/skills/leanatlas-dedup/SKILL.md` or `.agents/skills/leanatlas-promote/SKILL.md` or `.agents/skills/leanatlas-gc/SKILL.md` depending on the gate you are touching |
+| Maintain LOOP runtime contracts (provider routing / review-history / SDK-MCP alignment) | `docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md` → `docs/contracts/LOOP_PYTHON_SDK_CONTRACT.md` + `docs/contracts/LOOP_MCP_CONTRACT.md` → `docs/schemas/WaveExecutionLoopRun.schema.json` + `docs/schemas/LoopSDKCallContract.schema.json` → `.agents/skills/loop-review-reconciliation/SKILL.md` first for generic authoritative finding settlement semantics → `.agents/skills/leanatlas-loop-maintainer-ops/SKILL.md` for LeanAtlas-local wiring |
+| Accelerate maintainer AI review (scope partition / staged narrowing / pyramid reviewer) | `docs/contracts/LOOP_WAVE_EXECUTION_CONTRACT.md` → `docs/contracts/LOOP_PYTHON_SDK_CONTRACT.md` → `tools/loop/review_strategy.py` → `.agents/skills/leanatlas-loop-review-acceleration/SKILL.md` |
 | Phase6: Real Agent eval (without relying on vibe) | `docs/contracts/AGENT_EVAL_CONTRACT.md` → `docs/agents/EVAL_PROBLEM_PACK_GUIDE.md` → `tools/agent_eval/run_pack.py`/`grade_pack.py` + `tools/agent_eval/run_scenario.py`/`grade_scenario.py` → `.agents/skills/leanatlas-agent-eval/SKILL.md` |
 | Phase6: Design real question set (ProblemPack/Scenario) | `docs/agents/EVAL_PROBLEM_PACK_GUIDE.md` → `tests/agent_eval/packs/**` + `tests/agent_eval/scenarios/**` → `docs/contracts/AGENT_EVAL_CONTRACT.md` |
 | Install/lock external "wheels" | `docs/setup/DEPENDENCIES.md` → `docs/contracts/THIRD_PARTY_DEPENDENCY_CONTRACT.md` → `tools/deps/pins.json` |
@@ -43,6 +49,8 @@ therefore:
 
 ## Directory description
 - `STATUS.md`: current stage status and next step (single source of truth)
+- `LOOP_MAINLINE.md`: canonical entry for the committed mainline LOOP system
+- `../setup/LOOP_LIBRARY_QUICKSTART.md`: reusable/non-LeanAtlas `looplib` entrypoint
 - `OPERATOR_WORKFLOW.md`: lifetime workflow (from natural language questions to SUCCESS/TRIAGED)
 - `MAINTAINER_WORKFLOW.md`: Maintenance period workflow skeleton (system evolution, ExecPlan driver)
 - `PLANS.md`: ExecPlan specification (for complex changes/refactorings/new modules)
@@ -56,6 +64,18 @@ therefore:
 - Summary list of external dependencies: `docs/setup/DEPENDENCIES.md`
 - MCP (lean-lsp-mcp) installation: `docs/setup/external/lean-lsp-mcp.md`
 - Depends on smoke (nightly): `python tests/run.py --profile nightly`
+
+## Generic LOOP routing
+
+Reusable/non-LeanAtlas LOOP surfaces now live at:
+- `docs/setup/LOOP_LIBRARY_QUICKSTART.md`
+- `.agents/skills/loop-mainline/SKILL.md`
+- `.agents/skills/loop-review-orchestration/SKILL.md`
+- `.agents/skills/loop-batch-supervisor/SKILL.md`
+
+LeanAtlas-specific wrappers stay separate:
+- `.agents/skills/leanatlas-loop-mainline/SKILL.md`
+- `.agents/skills/leanatlas-loop-maintainer-ops/SKILL.md`
 
 ## Important agreement: Do not pollute the main library with "test temporary injection"
 Any test that needs to temporarily put something into the Toolbox/Incubator must be injected into the working directory of `.cache/leanatlas/**` through the "workspace overlay" of the test runner.

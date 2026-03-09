@@ -62,6 +62,7 @@ SHELL_SKIP = {
 
 KNOWN_COMMAND_ALLOW = {
     "bash",
+    "claude",
     "codex",
     "domain-mcp",
     "git",
@@ -123,6 +124,8 @@ def _scan_python(
 
     if "codex exec" in text:
         _add(cmd_hits, "codex", path)
+    if "claude exec" in text:
+        _add(cmd_hits, "claude", path)
 
     try:
         tree = ast.parse(text)
@@ -184,6 +187,8 @@ def _scan_shell(
 
     if "codex exec" in text:
         _add(cmd_hits, "codex", path)
+    if "claude exec" in text:
+        _add(cmd_hits, "claude", path)
 
     for raw in text.splitlines():
         line = raw.strip()
@@ -229,7 +234,7 @@ def _render(cmds: DefaultDict[str, Set[str]], envs: DefaultDict[str, Set[str]], 
     lines.append("# Test Environment Inventory\n\n")
     lines.append(
         "> Deterministic inventory generated from `tests/`, `tools/`, and `scripts/` by "
-        "`./.venv/bin/python tools/tests/generate_test_env_inventory.py --write`.\n"
+        "`uv run --locked python tools/tests/generate_test_env_inventory.py --write`.\n"
     )
     lines.append("> Scope: environment requirements that appear in test and test-runner codepaths.\n\n")
 
@@ -245,7 +250,8 @@ def _render(cmds: DefaultDict[str, Set[str]], envs: DefaultDict[str, Set[str]], 
         "lake": "Lean build/lint/test execution and cache warmup.",
         "rg": "Fast fallback search backend (recommended).",
         "bash": "Runner shell for scripted scenario and agent commands.",
-        "codex": "Real-agent command for Phase6 nightly eval execution.",
+        "claude": "Supported real-agent CLI backend (claude exec).",
+        "codex": "Supported real-agent CLI backend (codex exec).",
         "domain-mcp": "Domain MCP CLI endpoint (default command name).",
         "git": "Repository metadata checks in tests/contracts.",
     }
@@ -279,7 +285,13 @@ def _render(cmds: DefaultDict[str, Set[str]], envs: DefaultDict[str, Set[str]], 
     lines.append("|---|---|---|\n")
 
     def cat(name: str) -> str:
-        if name in {"LEANATLAS_REAL_AGENT_CMD", "LEANATLAS_AGENT_TIMEOUT_S", "LEANATLAS_AGENT_SHELL"}:
+        if name in {
+            "LEANATLAS_REAL_AGENT_CMD",
+            "LEANATLAS_REAL_AGENT_PROVIDER",
+            "LEANATLAS_REAL_AGENT_PROFILE",
+            "LEANATLAS_AGENT_TIMEOUT_S",
+            "LEANATLAS_AGENT_SHELL",
+        }:
             return "Real-agent execution"
         if name.startswith("LEANATLAS_DOMAIN_MCP"):
             return "Domain MCP installation/command"
@@ -305,7 +317,7 @@ def _render(cmds: DefaultDict[str, Set[str]], envs: DefaultDict[str, Set[str]], 
 
     lines.append("\n")
     lines.append("## Operational Notes\n\n")
-    lines.append("- Core profile can run without real-agent command, but nightly real-agent tests require `LEANATLAS_REAL_AGENT_CMD` to be non-dummy.\n")
+    lines.append("- Core profile can run without real-agent config, but nightly real-agent tests require either `LEANATLAS_REAL_AGENT_PROVIDER` (optional profile) or `LEANATLAS_REAL_AGENT_CMD`.\n")
     lines.append("- Shared Lake policy is enforced by `tests/contract/check_shared_cache_policy.py`; runners must hydrate workspace `.lake/packages` via shared cache.\n")
     lines.append("- MCP tools are external installs: `lean-lsp-mcp` (third-party) and `lean-domain-mcp` (Repo C command endpoint).\n")
     lines.append("- On network-restricted machines, use healthy `.venv` fallback when `uv run --locked` handshake fails, then repair proxy/network before forced resync.\n")

@@ -2,7 +2,23 @@
 
 This is the **use-phase** manual: after someone clones LeanAtlas, Codex should follow this workflow by default.
 
-Default mode is OPERATOR. Mode is controlled by the local file `.cache/leanatlas/mode.json` (gitignored).
+Default mode is OPERATOR.
+MAINTAINER is enabled only when a human has created a local root `AGENTS.override.md` (gitignored).
+
+Current LOOP mainline entry and boundary reference:
+- `docs/agents/LOOP_MAINLINE.md`
+- `.agents/skills/leanatlas-loop-mainline/SKILL.md`
+- Use these to understand the current mainline system surface, but stay inside OPERATOR patch boundaries unless a human explicitly enables MAINTAINER mode.
+
+Reusable/non-LeanAtlas context entry:
+- `docs/setup/LOOP_LIBRARY_QUICKSTART.md`
+- `.agents/skills/loop-mainline/SKILL.md`
+- These are for understanding the reusable LOOP surface only; OPERATOR work remains bounded by this workflow's patch scope.
+
+LeanAtlas wrapper mapping:
+- conversation Codex = root supervisor kernel for LeanAtlas task routing
+- OPERATOR still remains inside this workflow's patch scope unless a human explicitly enables MAINTAINER
+- if a non-trivial direct/manual fallback is ever claimed on a maintainer-side subtree, it must be backed by the session-issued root exception artifact, i.e. the root-issued exception artifact for the active session, rather than ad-hoc chat judgment
 
 ## Environment setup (one-time)
 This is not theory. It exists so Codex knows where dependencies live and how to verify them.
@@ -33,6 +49,15 @@ OPERATOR assumes a problem directory already exists:
 - `Problems/<problem_slug>/README.md` may contain the natural-language statement and definitions.
 
 Codex in OPERATOR mode must **not** edit Spec/README. If the Spec is wrong or missing assumptions, the correct outcome is TRIAGED.
+
+### Repository-external paper ingress (hard rule)
+LeanAtlas OPERATOR workflow does not automatically attach to paper sources outside this repository. If the human points Codex at a LaTeX/PDF file elsewhere on disk, treat that as an external source, not as an in-repo LeanAtlas problem yet.
+
+Before running the OPERATOR loop:
+- either ingress the paper into LeanAtlas-controlled scope such as `.cache/leanatlas/tmp/<paper_id>/source/**`
+- or translate it into a prepared `Problems/<problem_slug>/` problem contract inside the repository
+
+If neither has happened, do not silently act as if LeanAtlas `AGENTS.md` / skills already govern that external file; say that ingress is required first.
 
 ### Goal
 Given `Problems/<problem_slug>/`:

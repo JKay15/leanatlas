@@ -55,6 +55,10 @@ Minimal expected fields:
 }
 ```
 
+Separate post-onboarding LOOP defaults use this reserved gitignored path when they are explicitly staged:
+
+* `.cache/leanatlas/onboarding/loop_preferences.json`
+
 Notes:
 
 * `completed=true` means environment setup is done.
@@ -111,6 +115,25 @@ On first prompt (any content, including a simple `hi`), Codex should:
    - where artifacts were written
    - mandatory operational gate: install/verify all `status=active` automations in Codex App
    - what remains optional (for example: Phase6 real-agent eval)
+     - after the environment is operational-ready, explain the bounded post-onboarding LOOP presets and the reserved local artifact path
+       `.cache/leanatlas/onboarding/loop_preferences.json`
+       using the bounded presets:
+     - `Budget Saver`
+       - current default: `FAST + low`
+       - current default reviewer tier policy: `LOW_PLUS_MEDIUM`
+       - use this unless there is a reason to spend more review budget
+     - `Balanced`
+     - `Auditable`
+     - `LOW_PLUS_MEDIUM` is the committed default reviewer tier policy
+     - `medium` is the standard bounded escalation tier
+     - `medium` is a bounded escalation only for small-scope high-risk core logic
+     - `STRICT / xhigh` is exceptional, not the default
+     - do not imply that onboarding already auto-writes or auto-applies this preference artifact unless that wiring has landed
+     - explicitly surface the reviewer exhaustiveness path:
+       - reviewer exhaustiveness is the anti-dribble prompt protocol for provider-invoked review
+       - canonical protocol id: `review.prompt.exhaustive.v1`
+       - implementation entrypoint: `tools/loop/review_prompting.py`
+       - route readers to `docs/agents/LOOP_MAINLINE.md` when they need the current mainline reviewer behavior and capability matrix
 
 ### Required operational gate: install active automations in Codex App
 
@@ -156,6 +179,33 @@ Required behavior:
 * Never reinstall dependencies blindly when preflight says the environment is already ready.
 * Always report what was skipped vs executed.
 * Run verification gates even when install steps are skipped.
+* Treat LOOP preferences as post-onboarding defaults; do not turn them into bootstrap blockers.
+
+## Post-onboarding reviewer routing
+
+Once onboarding is environment-complete or operational-ready, Codex should not leave reviewer behavior implicit.
+
+Required discoverability:
+
+* mention that reviewer exhaustiveness is a committed mainline capability
+* name the canonical anti-dribble protocol id: `review.prompt.exhaustive.v1`
+* point directly to `tools/loop/review_prompting.py`
+* route maintainers to `docs/agents/LOOP_MAINLINE.md` for the current reviewer policy, capability matrix, and review entrypoints
+
+This is a routing/discoverability requirement only. It does not mean onboarding itself rewrites review defaults or runs review experiments.
+
+## Repository-external paper ingress (hard rule)
+
+LeanAtlas instructions are repository-scoped. If the user asks Codex to formalize a LaTeX/PDF/paper source that lives outside this repository, LeanAtlas `AGENTS.md` and skills do not automatically attach to that external path.
+
+Required routing:
+
+* Do not imply that repository-external sources automatically inherit LeanAtlas workflow rules.
+* Before expecting OPERATOR or formalization guidance to apply, ingress the paper into LeanAtlas-controlled scope.
+* Supported staging examples:
+  * stage the source under `.cache/leanatlas/tmp/<paper_id>/source/**` for experimental/formalization work
+  * or prepare a bounded `Problems/<slug>/` problem contract and proceed through `docs/agents/OPERATOR_WORKFLOW.md`
+* If the user only points at an external file and never ingresses it, LeanAtlas-specific routing is not guaranteed; Codex must say so explicitly.
 
 ## Override activation rule (hard rule)
 

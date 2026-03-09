@@ -41,6 +41,25 @@ def main() -> int:
         "verify_automation_install.py --mark-done" in skill,
         "leanatlas-onboard skill must include automation verification command",
     )
+    for snippet in (
+        "install_repo_git_hooks.sh",
+        "importGraph",
+        "lake build LeanAtlas",
+        "lake lint",
+        "bootstrap` + `doctor` + `real_agent_cmd`",
+        "do not mark the environment complete",
+        "After `bootstrap` + `doctor` + `real_agent_cmd` all pass: `.cache/leanatlas/onboarding/state.json` with environment completion.",
+        "After `bootstrap` + `doctor` + `real_agent_cmd` all pass: compacted root `AGENTS.md` onboarding block.",
+    ):
+        _require(snippet in skill, f"leanatlas-onboard skill missing required onboarding gate snippet `{snippet}`")
+    _require(
+        "On success: `.cache/leanatlas/onboarding/state.json` with environment completion." not in skill,
+        "leanatlas-onboard skill must not promise environment completion before real_agent_cmd",
+    )
+    _require(
+        "After bootstrap+doctor success: compacted root `AGENTS.md` onboarding block." not in skill,
+        "leanatlas-onboard skill must not promise AGENTS compaction before real_agent_cmd",
+    )
     _require(
         "block normal task work until verified" in skill.lower(),
         "leanatlas-onboard skill must include blocking behavior",

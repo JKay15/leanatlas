@@ -1,0 +1,241 @@
+{
+  "$defs": {
+    "closeoutRun": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "mode": {
+          "const": "REVIEW_RUN",
+          "type": "string"
+        },
+        "prompt_ref": {
+          "type": "string"
+        },
+        "response_ref": {
+          "type": "string"
+        },
+        "summary_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "prompt_ref",
+        "response_ref",
+        "evidence_refs"
+      ],
+      "type": "object"
+    },
+    "closeoutSkipped": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "mode": {
+          "const": "REVIEW_SKIPPED",
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "skip_reason_code": {
+          "enum": [
+            "TRIAGED_TOOLING",
+            "SCOPE_TEXT_ONLY",
+            "USER_EXPLICIT_SKIP",
+            "NO_EFFECTIVE_CHANGE",
+            "OTHER"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode",
+        "skip_reason_code",
+        "evidence_refs"
+      ],
+      "type": "object"
+    },
+    "finding": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "finding_id": {
+          "type": "string"
+        },
+        "repairable": {
+          "type": "boolean"
+        },
+        "severity": {
+          "enum": [
+            "S1_CRITICAL",
+            "S2_MAJOR",
+            "S3_MINOR",
+            "INFO"
+          ],
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "finding_id",
+        "severity",
+        "repairable",
+        "evidence",
+        "summary"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://leanatlas.local/schemas/AgentFidelityReview.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "agent_profile": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "agent_provider_id": {
+      "type": "string"
+    },
+    "confidence": {
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/finding"
+      },
+      "type": "array"
+    },
+    "generated_at_utc": {
+      "type": "string"
+    },
+    "instruction_scope_refs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "prompt_ref": {
+      "type": "string"
+    },
+    "required_fixes": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "resolved_invocation_signature": {
+      "type": "string"
+    },
+    "response_ref": {
+      "type": "string"
+    },
+    "review_closeout": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/closeoutRun"
+        },
+        {
+          "$ref": "#/$defs/closeoutSkipped"
+        }
+      ]
+    },
+    "review_history_consistency": {
+      "additionalProperties": false,
+      "properties": {
+        "contradiction_count": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "contradiction_refs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "nitpick_refs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "potential_nitpick_count": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "contradiction_count",
+        "potential_nitpick_count",
+        "contradiction_refs",
+        "nitpick_refs"
+      ],
+      "type": "object"
+    },
+    "scope_ref": {
+      "type": "string"
+    },
+    "verdict": {
+      "enum": [
+        "PASS",
+        "REPAIRABLE",
+        "UNRESOLVED_BLOCKER",
+        "NON_RETRYABLE"
+      ],
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "agent_provider_id",
+    "confidence",
+    "findings",
+    "generated_at_utc",
+    "instruction_scope_refs",
+    "review_closeout",
+    "resolved_invocation_signature",
+    "review_history_consistency",
+    "scope_ref",
+    "verdict",
+    "version"
+  ],
+  "title": "AgentFidelityReview",
+  "type": "object"
+}

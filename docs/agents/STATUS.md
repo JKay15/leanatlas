@@ -3,7 +3,27 @@
 >Purpose: To prevent discussion drift and “the next step is forgotten”. This document should be updated as the phases progress.
 > Read by Codex and maintainers by default: short, executable, and verifiable.
 
-## Where are we now (as of 2026-02-24)
+## Where are we now (as of 2026-03-08)
+
+### LOOP mainline completion (project-level update, 2026-03-08)
+- The remaining LOOP master-plan surfaces are now implemented on the current mainline.
+- Newly completed mainline surfaces:
+  - parent batch supervisor/autopilot
+  - capability publication + bounded human-ingress + context rematerialization
+  - default staged review execution backed by stored LOOP preferences
+  - LeanAtlas worktree orchestration as a host adapter
+  - reusable in-repo `looplib` packaging/docs/examples plus generic LOOP skills
+- Canonical entry remains: `docs/agents/LOOP_MAINLINE.md`
+- Standalone/non-LeanAtlas entry now also exists: `docs/setup/LOOP_LIBRARY_QUICKSTART.md`
+
+### LOOP mainline (project-level update, 2026-03-07)
+- LOOP is now a committed mainline system in LeanAtlas rather than a `.cache`-only experiment.
+- Canonical entry: `docs/agents/LOOP_MAINLINE.md`
+- That page is the authoritative matrix for:
+  - implemented vs partial vs planned LOOP capabilities
+  - `LOOP core` vs `LeanAtlas adapters`
+  - how `.cache/leanatlas/tmp/**` experimental assets relate to mainline
+- Project-level workflow/status docs must now stay aligned with that page.
 
 ### Phase 1 (completed and frozen): Reporting + Schemas + Determinism
 - Schema and contract constraints of `RunReport.json / RetrievalTrace.json / AttemptLog.jsonl` have been frozen
@@ -20,6 +40,7 @@
 ### Codex document system (main skeleton has been implemented)
 - OPERATOR:`docs/agents/OPERATOR_WORKFLOW.md`
 - MAINTAINER:`docs/agents/MAINTAINER_WORKFLOW.md`
+- LOOP mainline entry: `docs/agents/LOOP_MAINLINE.md`
 - Lake standard entry: `lake test` / `lake lint` bound to workflow tests
 - Automations: specifications + TDD into core gate (registry + contracts + tests)
 - MCP: access contract skeleton (`docs/contracts/MCP_*`) + healthcheck stub (`tools/mcp/healthcheck.py`)
@@ -28,8 +49,8 @@
 ### Phase 3 (in progress): Library Growth System minimum closed loop (Dedup / Promotion / GC)
 - Already have: JSON Schema + fixtures for `DedupReport / PromotionReport / GCReport`
 - Already have: JSON Schema + fixtures for `PromotionPlan` (promotion proposal input)
-- Finalized (and documented):
-- DedupGate V0: Give priority to reusing the canonicalization project route of the mathlib community's duplicate-declaration linter (its properties meet the "B" we previously decided on, but we will not reinvent the wheel)
+- DedupGate V0 current implementation: source-backed instance scan via `tools/dedup/dedup.py`.
+- Compiled-environment DedupGate scanning remains follow-on work.
 - PromotionGate V0: Feed back "advanced experience" - Rule-of-Three default strategy, deprecated alias/module compat, min_imports / directoryDependency / upstreamableDecl structure signal
 
 ### When will V1/V2 be considered?
@@ -40,8 +61,8 @@
 
 ### Next 3.1: DedupGate V0 (instances deduplication, hard access control)
 - ExecPlan: `docs/agents/execplans/phase3_dedup_gate_v0.md` (written, added "bad duplication vs good duplication" alignment clause)
-- Goal: Output `DedupReport.{json,md}` and serve as a strong frontend for Promotion
-- Current progress: The Dedup implementation entrance has been connected (`tools/dedup/dedup.py`), `nightly_dedup_instances` of `automations/registry.json` has been activated, and the document closed loop has been synchronized
+- Goal: keep the current `DedupReport.{json,md}` path reliable while Phase3 still uses the source-backed V0 scanner
+- Current progress: the source-backed scanner entrypoint exists at `tools/dedup/dedup.py`, `nightly_dedup_instances` in `automations/registry.json` is active, and compiled-environment scanning remains follow-on work
 
 ### Next 3.2: PromotionGate V0 (minimum promotion closed loop)
 - Contract: `docs/contracts/PROMOTION_GATE_CONTRACT.md` (upgraded to v0.2: advanced experience feedback)

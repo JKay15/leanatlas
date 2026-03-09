@@ -1,0 +1,21 @@
+{
+  "count": 1,
+  "generated_at_utc": "2026-03-05T00:00:00Z",
+  "items": [
+    {
+      "confidence": 0.75,
+      "entity_id": "claim.1",
+      "entity_type": "CLAIM",
+      "issue_codes": [
+        "MISSING_PROOF"
+      ],
+      "issue_count": 1,
+      "risk_score": 0.8,
+      "state": "AUTO_EXTRACTED",
+      "suggested_action": "ATTEMPT_PROOF",
+      "uncertainty_score": 0.2
+    }
+  ],
+  "schema_version": "0.1",
+  "threshold": 0.5
+}

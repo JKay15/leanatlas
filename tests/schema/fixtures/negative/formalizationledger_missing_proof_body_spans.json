@@ -1,0 +1,54 @@
+{
+  "atom_mappings": [],
+  "audit": {
+    "coverage": {},
+    "notes": []
+  },
+  "claim_proof_links": [],
+  "claims": [],
+  "clause_atoms": [],
+  "external_results": [],
+  "formalization_bindings": [],
+  "index": {
+    "by_kind": {},
+    "by_section": {},
+    "tokens": []
+  },
+  "lean_anchors": [],
+  "lean_reverse_links": [],
+  "ledger_meta": {
+    "canonical_json": true,
+    "doc": {},
+    "extraction_pipeline": {},
+    "id_policy": {},
+    "ledger_schema_version": "0.1"
+  },
+  "proofs": [
+    {
+      "for_claim_ids": [
+        "claim.1"
+      ],
+      "proof_id": "proof.1",
+      "proof_type": "EXPLICIT",
+      "review": {
+        "confidence": 0.5,
+        "last_updated_utc": "2026-03-05T00:00:00Z",
+        "note": "test",
+        "reviewer": null,
+        "state": "AUTO_EXTRACTED",
+        "uncertainty_score": 0.5
+      },
+      "uses_external_result_ids": [],
+      "uses_internal_claim_ids": []
+    }
+  ],
+  "review_workflow": {
+    "states": [
+      "AUTO_EXTRACTED"
+    ],
+    "thresholds": {},
+    "transitions": [],
+    "workflow_version": "0.1"
+  },
+  "source_spans": []
+}

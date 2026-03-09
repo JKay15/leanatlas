@@ -87,7 +87,13 @@ uv run --locked python tools/agent_eval/run_scenario.py \
   --scenario tests/agent_eval/scenarios/<scenario_id>/scenario.yaml \
   --mode materialize
 
-# Run (requires a non-interactive agent command)
+# Run (requires a non-interactive agent configuration)
+uv run --locked python tools/agent_eval/run_scenario.py \
+  --scenario tests/agent_eval/scenarios/<scenario_id>/scenario.yaml \
+  --mode run \
+  --agent-provider <provider_id>
+
+# Legacy run mode (still supported)
 uv run --locked python tools/agent_eval/run_scenario.py \
   --scenario tests/agent_eval/scenarios/<scenario_id>/scenario.yaml \
   --mode run \

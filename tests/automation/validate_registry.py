@@ -115,9 +115,31 @@ def main() -> int:
 
     advisor = a.get("advisor")
     if isinstance(advisor, dict):
+      agent_provider = advisor.get("agent_provider")
+      if agent_provider is not None:
+        require(
+            isinstance(agent_provider, str) and agent_provider.strip(),
+            f"advisor.agent_provider must be non-empty string when present: {aid}",
+        )
+
+      agent_profile = advisor.get("agent_profile")
+      if agent_profile is not None:
+        require(
+            isinstance(agent_profile, str) and agent_profile.strip(),
+            f"advisor.agent_profile must be non-empty string when present: {aid}",
+        )
+        p = ROOT / str(agent_profile)
+        require(p.exists(), f"advisor.agent_profile path missing: {aid} -> {agent_profile}")
+
       enabled = bool(advisor.get("enabled"))
       if enabled:
         require(advisor.get("when") == "findings", f"advisor.when must be 'findings' when enabled: {aid}")
+        has_provider_bridge = bool(str(agent_provider or "").strip()) or bool(str(agent_profile or "").strip())
+        has_exec_cmd = advisor.get("exec_cmd") is not None
+        require(
+            has_provider_bridge or has_exec_cmd,
+            f"enabled advisor must provide executor default (advisor.agent_provider/agent_profile or advisor.exec_cmd): {aid}",
+        )
 
       probe = advisor.get("probe")
       if probe is not None:

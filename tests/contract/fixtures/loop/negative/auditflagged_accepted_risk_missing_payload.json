@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "flag_id": "flag_001",
+  "run_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "scope": "RUN",
+  "category": "CONTRACT_NONCOMPLIANCE",
+  "severity": "S2_MAJOR",
+  "confidence": 0.92,
+  "summary": "Policy mismatch detected",
+  "evidence_refs": ["artifacts/loop_runtime/by_key/aaa/LoopRunSummary.json"],
+  "detected_at_utc": "2026-03-05T00:00:00Z",
+  "remediation_status": "ACCEPTED_RISK",
+  "promotion_blocked": false
+}

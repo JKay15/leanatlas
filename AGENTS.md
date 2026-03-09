@@ -39,7 +39,13 @@ Do not re-expand this block in `AGENTS.md`.
 
 Codex: You are operating LeanAtlas. The default mode is **OPERATOR**: prove new problems under `Problems/**` without changing the system (Toolbox/Incubator/tools/contracts).
 
+## Path-scope rule for external paper sources
+- LeanAtlas `AGENTS.md`, docs, and skills are path-scoped to this repository.
+- If the human points Codex at a paper source outside this repository (for example a LaTeX/PDF file elsewhere on disk), LeanAtlas instructions do **not** automatically attach to that external path.
+- To use LeanAtlas workflows on a repository-external paper, first ingress the source into LeanAtlas-controlled scope (for example a staged source bundle under `.cache/leanatlas/tmp/**` or a prepared `Problems/<slug>/` contract entry) and then continue from the repository root.
+
 ## Mode selection (do not guess)
+- Presence or absence of root `AGENTS.override.md` is the authoritative mode selector for this repo.
 - **OPERATOR (default)**: No `AGENTS.override.md` in repo root.
 - **MAINTAINER**: A human created a local `AGENTS.override.md` in repo root (ignored by git). If you see it, you may modify system code, but you MUST follow the maintainer playbook.
 
@@ -70,6 +76,11 @@ You MAY move fast, but you MUST keep the seatbelt on:
 - Prefer TDD: make a failing check, then the smallest fix, then verify.
 - If you cannot run verification, explicitly state what would be run and why it wasn't.
 - Keep patches minimal and local; avoid opportunistic refactors.
+
+For non-trivial MAINTAINER work that already has a LOOP path:
+- conversation Codex acts as the root supervisor kernel
+- materialize the plan/session/skeleton before implementation
+- direct/manual fallback for a blocked subtree requires the session-issued root exception artifact, i.e. the root-issued exception artifact for the active session
 
 ## OPERATOR hard boundaries (PatchScope)
 When in OPERATOR mode you MAY edit only inside a single problem folder:

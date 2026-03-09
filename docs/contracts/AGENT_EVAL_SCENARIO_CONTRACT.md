@@ -158,6 +158,11 @@ The scenario runner supports 3 modes:
 - `plan`: validate + expand steps; write `Plan.json` (runner may still materialize workspace for inspection)
 - `materialize`: create workspace + write prompts/contexts; **no agent execution**
 - `run`: additionally execute the agent command for each `run_task` step
+  - invocation options (choose one):
+    - `--agent-cmd "<shell command>"` (legacy-compatible direct command)
+    - `--agent-profile <path/to/profile.json>` (recommended)
+    - `--agent-provider <provider_id>` (built-in defaults, currently `codex_cli`, `claude_code`)
+  - profile v0.2 optional fields (`prompt_transport`, `prompt_arg`, `env_map`, `capabilities`) are supported through the shared resolver.
 
 Typical local workflows:
 
@@ -168,7 +173,8 @@ Typical local workflows:
   - `python tools/agent_eval/run_scenario.py --scenario ... --mode materialize`
 
 - Run with Codex (or another agent runner):
-  - `python tools/agent_eval/run_scenario.py --scenario ... --mode run --agent-cmd "codex ..."`
+  - `python tools/agent_eval/run_scenario.py --scenario ... --mode run --agent-provider codex_cli`
+  - or `python tools/agent_eval/run_scenario.py --scenario ... --mode run --agent-profile tests/agent_eval/profiles/<name>.profile.json`
 
 Grading:
 

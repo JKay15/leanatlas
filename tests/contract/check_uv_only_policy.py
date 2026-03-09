@@ -9,6 +9,7 @@ This repo currently allows:
 Policy enforced here:
 - `python3` command forms are forbidden in docs/skills/automations (use `python`).
 - Legacy `--tier` flag is forbidden in critical onboarding/setup entry docs.
+- Strict uv-only scope (loop/automation/operator skills + wave closeout plan docs) must not use bare `python ...`.
 """
 
 from __future__ import annotations
@@ -35,6 +36,16 @@ CRITICAL_FILES = [
 
 RE_PY3_LINE = re.compile(r"^\s*python3\s+")
 RE_PY3_INLINE = re.compile(r"`python3\s+")
+RE_BARE_PY_LINE = re.compile(r"^\s*(?:[-*]\s*)?python\s+")
+RE_BARE_PY_INLINE = re.compile(r"`python\s+")
+
+STRICT_UV_FILES = [
+    ROOT / "docs" / "agents" / "execplans" / "20260305_waveA_execution_meta_loop_v0.md",
+    ROOT / ".agents" / "skills" / "leanatlas-automations" / "SKILL.md",
+    ROOT / ".agents" / "skills" / "leanatlas-domain-mcp" / "SKILL.md",
+    ROOT / ".agents" / "skills" / "leanatlas-maintainer-execplan" / "SKILL.md",
+    ROOT / ".agents" / "skills" / "leanatlas-operator-proof-loop" / "SKILL.md",
+]
 
 
 def _iter_md_files():
@@ -89,6 +100,21 @@ def _scan_registry_python3() -> list[str]:
     return out
 
 
+def _scan_strict_uv(path: Path) -> list[str]:
+    out: list[str] = []
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    for i, line in enumerate(text.splitlines(), start=1):
+        if "python" not in line:
+            continue
+        if re.search(r"\buv\s+run\b.*\bpython\b", line):
+            if "uv run --locked python" not in line:
+                out.append(f"{path.relative_to(ROOT)}:{i}: uv run python must include --locked: {line.rstrip()}")
+            continue
+        if RE_BARE_PY_LINE.search(line) or RE_BARE_PY_INLINE.search(line):
+            out.append(f"{path.relative_to(ROOT)}:{i}: {line.rstrip()}")
+    return out
+
+
 def main() -> int:
     violations: list[str] = []
 
@@ -100,6 +126,9 @@ def main() -> int:
             violations.extend(_scan_legacy_tier(p))
 
     violations.extend(_scan_registry_python3())
+    for p in STRICT_UV_FILES:
+        if p.exists():
+            violations.extend(_scan_strict_uv(p))
 
     if violations:
         print("[python-policy] FAIL", file=sys.stderr)

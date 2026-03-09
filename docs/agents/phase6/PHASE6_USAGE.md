@@ -5,7 +5,7 @@ This document explains how Phase6 ("real agent eval") is *intended* to be used.
 Phase6 is designed around a single abstraction boundary:
 
 - **Runner** (this repo): orchestrates the evaluation workflow.
-- **Agent** (external): invoked via `--agent-cmd`.
+- **Agent** (external): configured via provider/profile (`--agent-provider`, optional `--agent-profile`) or legacy `--agent-cmd`.
 
 The runner does **not** assume a particular authentication method. If your chosen agent implementation needs API keys, you configure those for the agent itself.
 
@@ -24,7 +24,7 @@ The runner is *not* the agent. The runner is the harness.
 There are two distinct ways "Codex" can be involved:
 
 1. **Codex as the evaluated agent (inner loop)**
-   - The runner spawns Codex via `--agent-cmd "codex ..."`.
+   - The runner spawns Codex via `--agent-provider codex_cli` (or legacy `--agent-cmd "codex ..."`).
    - Codex reads the rendered `PROMPT.md` and operates inside the workspace.
    - The runner collects the artifacts Codex writes and grades them.
 
@@ -33,7 +33,11 @@ There are two distinct ways "Codex" can be involved:
    - `LEANATLAS_EVAL_PROMPT` = path to the rendered `PROMPT.md`
    - `LEANATLAS_EVAL_WORKSPACE` = workspace root (also the process CWD)
 
-   A robust `--agent-cmd` for Codex CLI is:
+   Recommended provider path for Codex CLI:
+
+   - `--agent-provider codex_cli`
+
+   Legacy robust `--agent-cmd` for Codex CLI:
 
    - `--agent-cmd "codex exec - < \"$LEANATLAS_EVAL_PROMPT\""`
 
@@ -57,18 +61,18 @@ This is the default for a user who just cloned the repo and wants to run Phase6.
 
 - Repo is cloned.
 - Python env is ready (`uv sync --locked` recommended).
-- A real agent is available as an executable command.
+- A real agent is available via provider/profile or executable command.
 
 ### What the user does
 
-- Run a pack or scenario evaluation with `--agent-cmd`.
+- Run a pack or scenario evaluation with provider/profile (or `--agent-cmd`).
 
-Key point: **the only framework-level requirement is `--agent-cmd`.**
+Key point: framework-level requirement is a valid agent configuration (provider/profile or command).
 
 If the agent command requires credentials:
 
 - API keys / tokens are configured for the *agent*, not the runner.
-- If your `--agent-cmd` is **Codex CLI** (`codex exec ...`), authenticate the CLI (e.g. `codex login`) or provide an API key via `CODEX_API_KEY` (per Codex CLI docs).
+- If your agent config maps to **Codex CLI** (`codex_cli` or `codex exec ...`), authenticate the CLI (e.g. `codex login`) or provide an API key via `CODEX_API_KEY` (per Codex CLI docs).
 - If your `--agent-cmd` is a **custom OpenAI-API-based agent**, that agent may require `OPENAI_API_KEY` (or whatever env var it documents).
 
 ### Expected outputs
@@ -93,7 +97,7 @@ This is for maintainers developing the framework itself.
 
 1. Run contract tests locally (fast).
 2. Run `--mode plan` for packs/scenarios (validates structure without spawning a real agent).
-3. Run a small `--mode run` with `--limit 1` against a real agent.
+3. Run a small `--mode run` with `--limit 1` against a real agent config.
 
 ### What to watch for
 
@@ -134,4 +138,3 @@ Each automation should:
 - update `feedback/todos.yaml` when failures are detected
 
 See `docs/agents/CODEX_APP_PROMPTS.md` for copy/paste automation prompts.
-

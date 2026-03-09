@@ -80,7 +80,8 @@ Tasks:
 
 - [ ] Run a tiny pack with the dummy agent:
 
-  - `.venv/bin/python tools/agent_eval/run_pack.py --mode run --limit 1 --agent-cmd "python tools/agent_eval/dummy_agent.py" --pack tests/agent_eval/packs/phase6_smoke.json`
+  - `.venv/bin/python tools/agent_eval/run_pack.py --mode run --limit 1 --agent-provider codex_cli --pack tests/agent_eval/packs/phase6_smoke.json`
+  - legacy local dummy path: `.venv/bin/python tools/agent_eval/run_pack.py --mode run --limit 1 --agent-cmd "python tools/agent_eval/dummy_agent.py" --pack tests/agent_eval/packs/phase6_smoke.json`
 
 - [ ] Grade it:
 
